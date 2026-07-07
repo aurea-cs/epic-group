@@ -41,6 +41,7 @@ const upload = multer({
 // ============================================
 
 // Get student courses (sections enrolled)
+
 app.get('/api/students/:studentId/courses', async (req, res) => {
     try {
         const { studentId } = req.params;
@@ -55,6 +56,7 @@ app.get('/api/students/:studentId/courses', async (req, res) => {
             `)
             .eq('student_id', studentId);
 
+        console.log('Enrollments:', enrollments);
         if (enrollmentsError) throw enrollmentsError;
         if (!enrollments || enrollments.length === 0) {
             return res.json([]);
@@ -68,7 +70,6 @@ app.get('/api/students/:studentId/courses', async (req, res) => {
             .select(`
                 id,
                 name,
-                short_name,
                 grade_id
             `)
             .in('id', sectionIds);
@@ -77,14 +78,14 @@ app.get('/api/students/:studentId/courses', async (req, res) => {
 
         // 3. Get grades and centers details to format exactly like ProfessorDashboard expects
         const { data: grades, error: gradesError } = await supabase
-            .from('grades')
+            .from('grades_levels')
             .select('id, name, center_id')
             .in('id', enrollments.map(e => e.grade_id));
             
         if (gradesError) throw gradesError;
 
         const { data: centers, error: centersError } = await supabase
-            .from('centers')
+            .from('educational_centers')
             .select('id, name')
             .in('id', grades?.map(g => g.center_id) || []);
 
@@ -98,7 +99,6 @@ app.get('/api/students/:studentId/courses', async (req, res) => {
             return {
                 id: section.id,
                 name: section.name,
-                short_name: section.short_name,
                 grade_id: grade?.id,
                 grade_name: grade?.name,
                 center_id: center?.id,
@@ -832,6 +832,33 @@ app.delete('/api/admin/centers/:id', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// ========== ENROLLMENTS ==========
+
+// Enroll a new student
+app.post('/api/admin/enrollments', async (req, res) => {
+    try {
+        const { center_id, grade_id, student_id } = req.body;
+
+        if (!center_id || !grade_id || !student_id ) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
+
+        const { data, error } = await supabase
+            .from('enrollments')
+            .insert({ center_id, grade_id, student_id, created_at: new Date().toISOString(), status: 'active' })
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.status(201).json(data);
+    } catch (error: any) {
+        console.error('Error enrolling student:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 
 // ========== CENTER PROFESSORS ==========
 

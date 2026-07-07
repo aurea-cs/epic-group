@@ -31,6 +31,7 @@ interface Results {
 interface StudentManagementProps {
     centerId?: string
     centerName?: string
+    gradeId?: string
 }
 
 // TODOS los usuarios del archivo CSV del Colegio IPDC
@@ -214,7 +215,7 @@ const usersData: UserData[] = [
     { email: 'pdc-12221201@colegiosingles.com', password: 'ingles2025', full_name: 'SANTIAGO MENA PATIÑO', cohort: 'IPDC5' }
 ]
 
-const StudentManagement: React.FC<StudentManagementProps> = ({ centerName }) => {
+const StudentManagement: React.FC<StudentManagementProps> = ({ centerName, centerId, gradeId }) => {
     const [loading, setLoading] = useState(false)
     const [results, setResults] = useState<Results | null>(null)
     const [selectedCohort, setSelectedCohort] = useState<string>('all')
@@ -266,38 +267,70 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerName }) => 
         }
     }
 
+    const createStudent = async (form: typeof createForm) => {
+    const response = await fetch('http://localhost:3001/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            email: form.email,
+            password: form.password,
+            fullName: form.fullName,
+            role: 'student'
+        })
+    })
+
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || 'Error creando alumno')
+
+    return data.user
+}
+
+    const enrollStudent = async (studentId: string) => {
+    const response = await fetch('http://localhost:3001/api/admin/enrollments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            center_id: centerId,
+            grade_id: gradeId, 
+            student_id: studentId,
+        })
+    })
+
+    
+
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || 'Error inscribiendo alumno')
+
+    return data
+}
+
+
     const handleCreateStudent = async () => {
-        try {
-            setCreating(true)
+    try {
+        setCreating(true)
 
-            // Call Backend API
-            const response = await fetch('http://localhost:3001/api/admin/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: createForm.email,
-                    password: createForm.password,
-                    fullName: createForm.fullName,
-                    role: 'student'
-                })
-            })
+        // 1. Create student
+        const user = await createStudent(createForm)
 
-            const data = await response.json()
-
-            if (!response.ok) throw new Error(data.error || 'Error creando alumno')
-
-            setCreateForm({ fullName: '', email: '', password: 'ingles2025' })
-            setLocalUsers(prev => [...prev, { ...data.user, cohort: 'Nuevo' }])
-            if (selectedCohort === 'all') fetchUsers()
-
-            alert('Alumno creado exitosamente')
-
-        } catch (err: any) {
-            alert(err.message || 'Error al crear alumno')
-        } finally {
-            setCreating(false)
+        if (user && user.id) {
+            await enrollStudent(user.id)
         }
+
+        // UI updates
+        setCreateForm({ fullName: '', email: '', password: 'ingles2025' })
+        setLocalUsers(prev => [...prev, { ...user, cohort: 'Nuevo' }])
+
+        if (selectedCohort === 'all') fetchUsers()
+
+        alert('Alumno creado e inscrito exitosamente')
+
+    } catch (err: any) {
+        alert(err.message || 'Error al crear alumno')
+    } finally {
+        setCreating(false)
     }
+}
+    
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]

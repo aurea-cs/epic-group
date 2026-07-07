@@ -648,7 +648,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
                                 <h2 style={{ color: '#fff', fontSize: '1.8rem', fontWeight: 'bold' }}>Gestión de Alumnos</h2>
                             </div>
                             <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto', padding: '2rem' }}>
-                                <StudentManagement centerId={center?.id} centerName={center?.name} />
+                                <StudentManagement centerId={center?.id} centerName={center?.name} gradeId={selectedGrade?.id} />
                             </div>
                             <div className="modal-actions" style={{ padding: '0 2rem 2rem 2rem', marginTop: '0' }}>
                                 <button
