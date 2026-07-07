@@ -4,10 +4,10 @@ import { useNavigate } from 'react-router-dom'
 import { auth } from '../lib/supabase'
 import { getUserRole } from '../utils/getUserRole'
 import './DashboardScreen.css'
-import TopNavigation from './TopNavigation'
 import astronautaImage from '../assets/image10.png'
 import elementoDecorativo1 from '../assets/image11.png'
 import elementoDecorativo2 from '../assets/image_9.png'
+import ProfessorDashboard from './ProfessorDashboard'
 
 interface DashboardScreenProps {
   user: User
@@ -38,40 +38,36 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
   const handleOpenNotifications = () => console.log('Abrir notificaciones')
 
   return (
-    <div className="dashboard-screen">
-      <TopNavigation
-        activeKey="dashboard"
-        userDisplayName={displayName}
-        userRole={userRole}
-        onNavigate={handleNavigation}
-        onLogout={handleLogout}
-        logoutLoading={loading}
-        notificationCount={0} // TODO: Fetch from backend
-        onOpenNotifications={handleOpenNotifications}
-      />
+    <div className={`dashboard-screen ${(userRole === 'professor' || userRole === 'student' || userRole === 'admin') ? 'prof-dashboard' : ''}`}>
+      
 
-      <div className="dashboard-content">
-        {/* Sección de bienvenida con fondo morado */}
-        <div className="welcome-section">
-          <div className="welcome-content">
-            <div className="welcome-text">
-              <h1 className="welcome-title">¡Bienvenid@!</h1>
-              <h2 className="user-name">{user.user_metadata?.full_name || user.email}</h2>
-              <div className="progress-info">
-                <span className="medal-icon">🏅</span>
-                <p className="progress-text" color="white">Haz click para checar a tus alumnos y cursos pendientes. ¡Accede a tu agenda!</p>
+      <div className="dashboard-content" style={(userRole === 'professor' || userRole === 'student' || userRole === 'admin') ? { padding: 0 } : {}}>
+        
+        {(userRole === 'professor' || userRole === 'student' || userRole === 'admin') ? (
+          <ProfessorDashboard user={user} />
+        ) : (
+          /* Sección de bienvenida con fondo morado para estudiantes u otros roles */
+          <div className="welcome-section">
+            <div className="welcome-content">
+              <div className="welcome-text">
+                <h1 className="welcome-title">¡Bienvenid@!</h1>
+                <h2 className="user-name">{user.user_metadata?.full_name || user.email}</h2>
+                <div className="progress-info">
+                  <span className="medal-icon">🏅</span>
+                  <p className="progress-text" color="white">¡Sigue así, estás más cerca de llegar al siguiente nivel!</p>
+                </div>
+                <button className="level-up-btn" onClick={() => navigate('/progress')}>Ver mi mapa</button>
               </div>
-              <button className="level-up-btn" onClick={() => navigate('/progress')}>Ver los cursos</button>
+            </div>
+
+            {/* Elementos espaciales */}
+            <div className="space-composition">
+              <img src={astronautaImage} alt="Astronauta" className="astronaut-image_fl" />
+              <img src={elementoDecorativo1} alt="Elemento decorativo" className="space-image_Element_E" />
+              <img src={elementoDecorativo2} alt="Elemento decorativo" className="space-image_green" />
             </div>
           </div>
-
-          {/* Elementos espaciales */}
-          <div className="space-composition">
-            <img src={astronautaImage} alt="Astronauta" className="astronaut-image_fl" />
-            <img src={elementoDecorativo1} alt="Elemento decorativo" className="space-image_Element_E" />
-            <img src={elementoDecorativo2} alt="Elemento decorativo" className="space-image_green" />
-          </div>
-        </div>
+        )}
 
       </div>
 

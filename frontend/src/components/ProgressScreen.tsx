@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { auth } from '../lib/supabase'
 import { getUserRole } from '../utils/getUserRole'
+import TopNavigation from './TopNavigation'
 import './ProgressScreen.css'
 import image30 from '../assets/image30.png'
 import image36 from '../assets/image36.png'
 import image37 from '../assets/image37.png'
 import image38 from '../assets/image38.png'
 import image39 from '../assets/image39.png'
-import TopNavigation from './TopNavigation'
 
 // --- Interfaces ---
 interface Course {
@@ -68,6 +68,7 @@ interface ProgressScreenProps {
 
 const ProgressScreen: React.FC<ProgressScreenProps> = ({ user }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
   const [activeTab, setActiveTab] = useState<'map' | 'students'>('map')
@@ -131,10 +132,13 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ user }) => {
       }
     }
 
-    if (user && (userRole === 'professor' || userRole === 'admin')) {
-      fetchProfessorCourses()
+    if (location.state?.selectedCourse) {
+      setSelectedCourse(location.state.selectedCourse)
+    } else {
+      // If no course is selected, they shouldn't be here, redirect to dashboard
+      navigate('/dashboard')
     }
-  }, [user, userRole])
+  }, [user, userRole, location.state, navigate])
 
   const handleNavigation = (path: string) => {
     navigate(path)
@@ -158,7 +162,7 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ user }) => {
   }
 
   const handleBackToCourses = () => {
-    setSelectedCourse(null)
+    navigate('/dashboard')
   }
 
   const getActivePlanets = () => {
@@ -289,12 +293,14 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ user }) => {
               >
                 Mapa
               </button>
-              <button
-                className={`tab-btn-full ${activeTab === 'students' ? 'active' : ''}`}
-                onClick={() => setActiveTab('students')}
-              >
-                Alumnos
-              </button>
+              {userRole !== 'student' && (
+                <button
+                  className={`tab-btn-full ${activeTab === 'students' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('students')}
+                >
+                  Alumnos
+                </button>
+              )}
             </div>
           </div>
 

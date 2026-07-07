@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
-import TopNavigation from './TopNavigation'
 import { getUserRole } from '../utils/getUserRole'
 import { auth } from '../lib/supabase'
 import { getSectionById, Section } from '../lib/adminApi'
@@ -95,13 +94,7 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
     if (loading) {
         return (
             <div className="dashboard-screen">
-                <TopNavigation
-                    activeKey="courses"
-                    userDisplayName={user.user_metadata?.full_name || user.email || 'Usuario'}
-                    userRole={userRole}
-                    onNavigate={handleNavigate}
-                    onLogout={handleLogout}
-                />
+                
                 <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
                     <p>Cargando curso...</p>
                 </div>
@@ -112,13 +105,7 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
     if (error || !section) {
         return (
             <div className="dashboard-screen">
-                <TopNavigation
-                    activeKey="courses"
-                    userDisplayName={user.user_metadata?.full_name || user.email || 'Usuario'}
-                    userRole={userRole}
-                    onNavigate={handleNavigate}
-                    onLogout={handleLogout}
-                />
+                
                 <div className="dashboard-content" style={{ padding: '2rem', textAlign: 'center' }}>
                     <h2>❌ Error</h2>
                     <p>{error || 'No se encontró el curso'}</p>
@@ -132,13 +119,7 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
 
     return (
         <div className="dashboard-screen">
-            <TopNavigation
-                activeKey="courses"
-                userDisplayName={user.user_metadata?.full_name || user.email || 'Usuario'}
-                userRole={userRole}
-                onNavigate={handleNavigate}
-                onLogout={handleLogout}
-            />
+            
 
             <div className="dashboard-content">
                 <div className="welcome-section" style={{ minHeight: 'auto', padding: '3rem 2rem' }}>

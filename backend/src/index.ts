@@ -40,6 +40,79 @@ const upload = multer({
 // STUDENT PROGRESS ENDPOINTS
 // ============================================
 
+// Get student courses (sections enrolled)
+app.get('/api/students/:studentId/courses', async (req, res) => {
+    try {
+        const { studentId } = req.params;
+
+        // 1. Get enrollments for the student
+        const { data: enrollments, error: enrollmentsError } = await supabase
+            .from('enrollments')
+            .select(`
+                section_id,
+                grade_id,
+                center_id
+            `)
+            .eq('student_id', studentId);
+
+        if (enrollmentsError) throw enrollmentsError;
+        if (!enrollments || enrollments.length === 0) {
+            return res.json([]);
+        }
+
+        const sectionIds = enrollments.map(e => e.section_id);
+
+        // 2. Get sections details
+        const { data: sections, error: sectionsError } = await supabase
+            .from('sections')
+            .select(`
+                id,
+                name,
+                short_name,
+                grade_id
+            `)
+            .in('id', sectionIds);
+
+        if (sectionsError) throw sectionsError;
+
+        // 3. Get grades and centers details to format exactly like ProfessorDashboard expects
+        const { data: grades, error: gradesError } = await supabase
+            .from('grades')
+            .select('id, name, center_id')
+            .in('id', enrollments.map(e => e.grade_id));
+            
+        if (gradesError) throw gradesError;
+
+        const { data: centers, error: centersError } = await supabase
+            .from('centers')
+            .select('id, name')
+            .in('id', grades?.map(g => g.center_id) || []);
+
+        if (centersError) throw centersError;
+
+        // Format the response
+        const formattedCourses = sections?.map(section => {
+            const grade = grades?.find(g => g.id === section.grade_id);
+            const center = centers?.find(c => c.id === grade?.center_id);
+            
+            return {
+                id: section.id,
+                name: section.name,
+                short_name: section.short_name,
+                grade_id: grade?.id,
+                grade_name: grade?.name,
+                center_id: center?.id,
+                center_name: center?.name
+            };
+        });
+
+        res.json(formattedCourses || []);
+    } catch (error: any) {
+        console.error('Error fetching student courses:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get student progress by student ID
 app.get('/api/students/:studentId/progress', async (req, res) => {
     try {
@@ -54,33 +127,42 @@ app.get('/api/students/:studentId/progress', async (req, res) => {
 
         if (studentError) throw studentError;
 
-        // Get enrollments with course info
+        // Get enrollments to find sections
         const { data: enrollments, error: enrollmentsError } = await supabase
             .from('enrollments')
-            .select(`
-                id,
-                progress,
-                completed_steps,
-                course_id,
-                courses (
-                    id,
-                    name,
-                    color,
-                    total_steps
-                )
-            `)
+            .select('section_id')
             .eq('student_id', studentId);
 
         if (enrollmentsError) throw enrollmentsError;
+        
+        const sectionIds = enrollments?.map(e => e.section_id) || [];
+        
+        // Get subjects for those sections
+        const { data: subjects, error: subjectsError } = await supabase
+            .from('subjects')
+            .select('id, name')
+            .in('section_id', sectionIds);
 
-        // Get grades
-        const { data: grades, error: gradesError } = await supabase
-            .from('grades')
-            .select('id, course_name, grade, max_grade, assignment_name, graded_at')
-            .eq('student_id', studentId)
+        // Get student progress for courses
+        const { data: progressData } = await supabase
+            .from('user_progress')
+            .select('*')
+            .eq('user_id', studentId);
+
+        // Get completed tasks with grades
+        const { data: completions, error: completionsError } = await supabase
+            .from('user_task_completions')
+            .select(`
+                id,
+                score,
+                teacher_feedback,
+                graded_at,
+                course_tasks!inner(title, course_id)
+            `)
+            .eq('user_id', studentId)
             .order('graded_at', { ascending: false });
 
-        if (gradesError) throw gradesError;
+        if (completionsError) throw completionsError;
 
         // Get comments
         const { data: comments, error: commentsError } = await supabase
@@ -97,22 +179,22 @@ app.get('/api/students/:studentId/progress', async (req, res) => {
             name: student.full_name || `${student.firstname || ''} ${student.lastname || ''}`.trim() || 'Alumno',
             email: student.email,
             avatar: student.avatar_url,
-            courses: enrollments?.map(e => {
-                const course = e.courses as any; // Type assertion for nested Supabase relation
+            courses: subjects?.map(sub => {
+                const p = progressData?.find(p => p.course_id === sub.id);
                 return {
-                    id: course.id,
-                    name: course.name,
-                    progress: e.progress || 0,
-                    color: course.color || 'purple'
+                    id: sub.id,
+                    name: sub.name,
+                    progress: p?.progress_percentage || 0,
+                    color: 'purple'
                 };
             }) || [],
-            grades: grades?.map(g => ({
-                id: g.id,
-                courseName: g.course_name,
-                grade: g.grade,
-                maxGrade: g.max_grade,
-                assignmentName: g.assignment_name,
-                gradedAt: g.graded_at
+            grades: completions?.filter(c => c.score !== null).map((c: any) => ({
+                id: c.id,
+                courseName: subjects?.find(s => s.id === c.course_tasks.course_id)?.name || 'Materia',
+                grade: c.score,
+                maxGrade: 100,
+                assignmentName: c.course_tasks.title,
+                gradedAt: c.graded_at
             })) || [],
             comments: comments?.map(c => ({
                 id: c.id,
@@ -142,16 +224,23 @@ app.get('/api/students', async (req, res) => {
             return res.status(400).json({ error: 'Professor ID is required' });
         }
 
-        // Get all students enrolled in professor's courses
+        // 1. Get subjects taught by professor to find their sections
+        const { data: profSubjects, error: profSubjError } = await supabase
+            .from('professor_subjects')
+            .select('subjects!inner(section_id)')
+            .eq('professor_id', professorId);
+
+        if (profSubjError) throw profSubjError;
+
+        const sectionIds = [...new Set(profSubjects?.map(ps => (ps.subjects as any).section_id))];
+
+        if (sectionIds.length === 0) return res.json([]);
+
+        // 2. Get enrollments for those sections
         const { data: enrollments, error: enrollmentsError } = await supabase
             .from('enrollments')
-            .select(`
-                student_id,
-                courses!inner (
-                    professor_id
-                )
-            `)
-            .eq('courses.professor_id', professorId);
+            .select('student_id')
+            .in('section_id', sectionIds);
 
         if (enrollmentsError) throw enrollmentsError;
 
@@ -315,15 +404,23 @@ app.get('/api/professors/:professorId/courses', async (req, res) => {
     try {
         const { professorId } = req.params;
 
-        const { data: courses, error } = await supabase
-            .from('courses')
-            .select('id, name, description, color, total_steps, created_at')
-            .eq('professor_id', professorId)
-            .order('created_at', { ascending: false });
+        const { data: profSubjects, error } = await supabase
+            .from('professor_subjects')
+            .select('subjects(id, name, description, created_at)')
+            .eq('professor_id', professorId);
 
         if (error) throw error;
+        
+        const courses = profSubjects?.map(ps => {
+            const subject = ps.subjects as any;
+            return {
+                ...subject,
+                color: 'purple',
+                total_steps: 0
+            };
+        }) || [];
 
-        res.json(courses || []);
+        res.json(courses);
     } catch (error: any) {
         console.error('Error fetching courses:', error);
         res.status(500).json({ error: error.message });
@@ -335,27 +432,31 @@ app.get('/api/professors/:professorId/grades-summary', async (req, res) => {
     try {
         const { professorId } = req.params;
 
-        // 1. Get students enrolled in professor's courses
+        // 1. Get subjects taught by professor to find their sections
+        const { data: profSubjects, error: profSubjError } = await supabase
+            .from('professor_subjects')
+            .select('subjects!inner(section_id)')
+            .eq('professor_id', professorId);
+
+        if (profSubjError) throw profSubjError;
+
+        const sectionIds = [...new Set(profSubjects?.map(ps => (ps.subjects as any).section_id))];
+
+        if (sectionIds.length === 0) return res.json([]);
+
+        // 2. Get enrollments for those sections
         const { data: enrollments, error: enrollmentsError } = await supabase
             .from('enrollments')
-            .select(`
-                student_id,
-                courses!inner (
-                    id,
-                    professor_id
-                )
-            `)
-            .eq('courses.professor_id', professorId);
+            .select('student_id')
+            .in('section_id', sectionIds);
 
         if (enrollmentsError) throw enrollmentsError;
 
         const studentIds = [...new Set(enrollments?.map(e => e.student_id))];
 
-        if (studentIds.length === 0) {
-            return res.json([]);
-        }
+        if (studentIds.length === 0) return res.json([]);
 
-        // 2. Get Student Info
+        // 3. Get Student Info
         const { data: students, error: studentsError } = await supabase
             .from('users')
             .select('id, full_name, email, firstname, lastname, avatar_url')
@@ -363,40 +464,27 @@ app.get('/api/professors/:professorId/grades-summary', async (req, res) => {
 
         if (studentsError) throw studentsError;
 
-        // 3. Get Grades for these students
-        // Note: Ideally we should filter grades by the professor's courses too, 
-        // to avoid averaging grades from other professors.
-        // First get course IDs belonging to professor
-        const courseIds = enrollments!.map(e => (e.courses as any).id);
+        // 4. Get Task Completions for these students
+        const { data: completions, error: completionsError } = await supabase
+            .from('user_task_completions')
+            .select('user_id, score')
+            .in('user_id', studentIds)
+            .not('score', 'is', null);
 
-        const { data: grades, error: gradesError } = await supabase
-            .from('grades')
-            .select('student_id, grade, max_grade')
-            .in('student_id', studentIds);
-        // .in('course_id', courseIds); // Assuming grades table has course_id, let's verify or assume safe logic. 
-        // Previous GET /progress used course_name but presumably there is a link.
-        // If grades table doesn't have course_id directly queryable or if we want to be simple:
-        // Let's assume for now we take all grades for the student. 
-        // Refinement: The previous endpoint used `grades` table. 
-        // Let's optimize: fetch grades where student_id IN (...) AND course table has professor_id...
-        // Complex query. For MVP, fetching all grades for these students is acceptable 
-        // OR client side filtering if we had course link.
-        // Let's stick to "All grades for the student" for the summary for now.
+        if (completionsError) throw completionsError;
 
-        if (gradesError) throw gradesError;
-
-        // 4. Calculate Averages
+        // 5. Calculate Averages
         const summary = students!.map((student, index) => {
-            const studentGrades = grades?.filter(g => g.student_id === student.id) || [];
+            const studentCompletions = completions?.filter(c => c.user_id === student.id) || [];
 
             let average = 0;
-            if (studentGrades.length > 0) {
-                const sum = studentGrades.reduce((acc, g) => acc + (g.grade / g.max_grade) * 100, 0);
-                average = sum / studentGrades.length;
+            if (studentCompletions.length > 0) {
+                const sum = studentCompletions.reduce((acc, c) => acc + (c.score || 0), 0);
+                average = sum / studentCompletions.length;
             }
 
             return {
-                id: index + 1, // Frontend expects a number ID for display? Or UUID?
+                id: index + 1,
                 userId: student.id,
                 name: student.full_name || `${student.firstname || ''} ${student.lastname || ''}`.trim() || 'Alumno',
                 email: student.email,
@@ -425,8 +513,8 @@ app.put('/api/grades/:gradeId', async (req, res) => {
         }
 
         const { data, error } = await supabase
-            .from('grades')
-            .update({ grade, graded_at: new Date().toISOString() })
+            .from('user_task_completions')
+            .update({ score: grade, graded_at: new Date().toISOString() })
             .eq('id', gradeId)
             .select()
             .single();
@@ -440,52 +528,69 @@ app.put('/api/grades/:gradeId', async (req, res) => {
     }
 });
 
-// Get unique assignments (derived from grades)
+// Get unique assignments (derived from course_tasks and completions)
 app.get('/api/professors/:professorId/assignments', async (req, res) => {
     try {
         const { professorId } = req.params;
 
-        // Get enrollments to link professor to courses
-        // Actually, we can just get courses for professor, then get grades for those courses
-        const { data: courses, error: coursesError } = await supabase
-            .from('courses')
-            .select('id, name')
+        // Get subjects for professor
+        const { data: profSubjects, error: profSubjError } = await supabase
+            .from('professor_subjects')
+            .select('subject_id, subjects(name)')
             .eq('professor_id', professorId);
 
-        if (coursesError) throw coursesError;
+        if (profSubjError) throw profSubjError;
 
-        if (!courses || courses.length === 0) return res.json([]);
+        if (!profSubjects || profSubjects.length === 0) return res.json([]);
 
-        const courseNames = courses.map(c => c.name);
+        const subjectIds = profSubjects.map(ps => ps.subject_id);
 
-        // Get unique assignment names from grades for these courses
-        // Note: supabase doesn't support 'distinct' easily on select with other columns for counting
-        // We will fetch all grades and aggregate in JS for MVP (assuming not millions of rows yet)
-        const { data: grades, error: gradesError } = await supabase
-            .from('grades')
-            .select('id, assignment_name, course_name, grade')
-            .in('course_name', courseNames); // Assuming course_name matches
+        // Get tasks for those subjects
+        const { data: tasks, error: tasksError } = await supabase
+            .from('course_tasks')
+            .select('id, course_id, title')
+            .in('course_id', subjectIds);
 
-        if (gradesError) throw gradesError;
+        if (tasksError) throw tasksError;
+
+        if (!tasks || tasks.length === 0) return res.json([]);
+
+        const taskIds = tasks.map(t => t.id);
+
+        // Get completions
+        const { data: completions, error: completionsError } = await supabase
+            .from('user_task_completions')
+            .select('task_id, score')
+            .in('task_id', taskIds);
+
+        if (completionsError) throw completionsError;
 
         // Aggregate
         const assignmentsMap = new Map();
 
-        grades?.forEach(g => {
-            const key = `${g.course_name}-${g.assignment_name}`;
-            if (!assignmentsMap.has(key)) {
-                assignmentsMap.set(key, {
-                    id: key, // Virtual ID
-                    title: g.assignment_name,
-                    courseName: g.course_name,
-                    total: 0,
-                    graded: 0
-                });
-            }
+        tasks.forEach(task => {
+            const subjectName = (profSubjects.find(ps => ps.subject_id === task.course_id)?.subjects as any)?.name || 'Materia';
+            const key = `${task.course_id}-${task.id}`;
+            
+            assignmentsMap.set(key, {
+                id: key,
+                title: task.title,
+                courseName: subjectName,
+                total: 0,
+                graded: 0
+            });
+        });
+        
+        completions?.forEach(c => {
+            const task = tasks.find(t => t.id === c.task_id);
+            if (!task) return;
+            const key = `${task.course_id}-${task.id}`;
             const assignment = assignmentsMap.get(key);
-            assignment.total++;
-            if (g.grade !== null && g.grade > 0) { // Assuming 0 or null is pending
-                assignment.graded++;
+            if (assignment) {
+                assignment.total++;
+                if (c.score !== null) {
+                    assignment.graded++;
+                }
             }
         });
 
@@ -505,37 +610,49 @@ app.get('/api/assignments/submissions', async (req, res) => {
         if (!assignment || !course) {
             return res.status(400).json({ error: 'Assignment and Course are required' });
         }
+        
+        // Find subject by name
+        const { data: subjects, error: subjError } = await supabase
+            .from('subjects')
+            .select('id')
+            .eq('name', course)
+            .limit(1);
+            
+        if (subjError || !subjects || subjects.length === 0) throw new Error('Subject not found');
+        const subjectId = subjects[0].id;
+        
+        // Find task by title and subject
+        const { data: tasks, error: taskError } = await supabase
+            .from('course_tasks')
+            .select('id')
+            .eq('title', assignment)
+            .eq('course_id', subjectId)
+            .limit(1);
+            
+        if (taskError || !tasks || tasks.length === 0) throw new Error('Task not found');
+        const taskId = tasks[0].id;
 
-        const { data: grades, error } = await supabase
-            .from('grades')
+        const { data: completions, error } = await supabase
+            .from('user_task_completions')
             .select(`
                 id,
-                grade,
-                max_grade,
+                score,
                 graded_at,
-                student_id
+                user_id,
+                users!inner(full_name)
              `)
-            .eq('assignment_name', assignment)
-            .eq('course_name', course);
+            .eq('task_id', taskId);
 
         if (error) throw error;
 
-        // We also need student names. 
-        const studentIds = grades?.map(g => g.student_id);
-        const { data: students } = await supabase
-            .from('users')
-            .select('id, full_name, email')
-            .in('id', studentIds || []);
-
-        const result = grades?.map(g => {
-            const student = students?.find(s => s.id === g.student_id);
+        const result = completions?.map(c => {
             return {
-                gradeId: g.id,
-                studentId: g.student_id,
-                studentName: student?.full_name || 'Estudiante',
-                grade: g.grade,
-                maxGrade: g.max_grade,
-                status: (g.grade !== null && g.grade > 0) ? 'Calificado' : 'Pendiente'
+                gradeId: c.id,
+                studentId: c.user_id,
+                studentName: (c.users as any)?.full_name || 'Estudiante',
+                grade: c.score,
+                maxGrade: 100,
+                status: (c.score !== null) ? 'Calificado' : 'Pendiente'
             };
         });
 
@@ -1130,18 +1247,18 @@ app.delete('/api/admin/sections/:sectionId/professors/:userId', async (req, res)
 
 // ========== COURSE CONTENT (MODULES & ITEMS) ==========
 
-// Get modules for a section
-app.get('/api/admin/sections/:sectionId/modules', async (req, res) => {
+// Get modules for a subject
+app.get('/api/admin/subjects/:subjectId/modules', async (req, res) => {
     try {
-        const { sectionId } = req.params;
+        const { subjectId } = req.params;
 
         const { data, error } = await supabase
-            .from('course_modules')
+            .from('modules')
             .select(`
                 *,
                 items:module_items(*)
             `)
-            .eq('section_id', sectionId)
+            .eq('subject_id', subjectId)
             .order('order_index');
 
         if (error) throw error;
@@ -1171,20 +1288,20 @@ app.get('/api/admin/sections/:sectionId/modules', async (req, res) => {
 
         res.json(modules);
     } catch (error: any) {
-        console.error('Error fetching course modules:', error);
+        console.error('Error fetching modules:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
 // Create module
-app.post('/api/admin/sections/:sectionId/modules', async (req, res) => {
+app.post('/api/admin/subjects/:subjectId/modules', async (req, res) => {
     try {
-        const { sectionId } = req.params;
+        const { subjectId } = req.params;
         const { title, order_index } = req.body;
 
         const { data, error } = await supabase
-            .from('course_modules')
-            .insert({ section_id: sectionId, title, order_index })
+            .from('modules')
+            .insert({ subject_id: subjectId, title, order_index })
             .select()
             .single();
 
@@ -1203,7 +1320,7 @@ app.put('/api/admin/modules/:id', async (req, res) => {
         const { title, order_index, is_active } = req.body;
 
         const { data, error } = await supabase
-            .from('course_modules')
+            .from('modules')
             .update({ title, order_index, is_active })
             .eq('id', id)
             .select()
@@ -1223,7 +1340,7 @@ app.delete('/api/admin/modules/:id', async (req, res) => {
         const { id } = req.params;
 
         const { error } = await supabase
-            .from('course_modules')
+            .from('modules')
             .delete()
             .eq('id', id);
 

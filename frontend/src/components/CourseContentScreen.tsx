@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
-import TopNavigation from './TopNavigation'
 import { getUserRole } from '../utils/getUserRole'
 import { auth } from '../lib/supabase'
 import {
@@ -179,13 +178,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = ({ user }) => {
 
     return (
         <>
-            <TopNavigation
-                activeKey="schools"
-                userDisplayName={user.user_metadata?.first_name || user.email || 'Usuario'}
-                userRole={userRole}
-                onNavigate={handleNavigate}
-                onLogout={handleLogout}
-            />
+            
 
             <div className="hierarchy-config" style={{ padding: '2rem 4rem' }}>
                 <div style={{ maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
