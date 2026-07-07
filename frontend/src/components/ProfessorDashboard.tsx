@@ -64,46 +64,9 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
             }))
           }
         } else {
-          const centersRes = await fetch(`http://localhost:3001/api/professors/${user.id}/centers`)
-          if (!centersRes.ok) throw new Error('Error fetching centers')
-          const centers = await centersRes.json()
-
-          for (const center of centers) {
-            const hierarchyRes = await fetch(`http://localhost:3001/api/admin/centers/${center.id}/hierarchy`)
-            if (!hierarchyRes.ok) continue
-            const hierarchy = await hierarchyRes.json()
-            const grades = hierarchy.grades || []
-
-            grades.forEach((grade: any) => {
-              const subjects = grade.subjects || []
-              subjects.forEach((subject: any) => {
-                allCourses.push({
-                  id: subject.id,
-                  title: subject.name,
-                  description: `${grade.name} • ${subject.short_name || 'Sin código'}`,
-                  completedSteps: Math.floor(Math.random() * 100), // Mock progress
-                  totalSteps: 100,
-                  gradeId: grade.id,
-                  centerId: center.id,
-                  centerName: center.name
-                })
-              })
-            })
-          }
-        }
-
-        // --- INYECCIÓN DE CURSO MOCK PARA DEMOSTRACIÓN ---
-        if (allCourses.length === 0 && userRole !== 'admin') {
-          allCourses.push({
-            id: 'mock-course-999',
-            title: 'Viaje Intergaláctico (Demo)',
-            description: 'Demostración visual de planetas',
-            completedSteps: 40,
-            totalSteps: 100,
-            gradeId: 'mock-grade',
-            centerId: 'mock-center',
-            centerName: 'Academia EPIC'
-          });
+          const coursesRes = await fetch(`http://localhost:3001/api/professors/${user.id}/courses`)
+          if (!coursesRes.ok) throw new Error('Error fetching professor courses')
+          allCourses = await coursesRes.json()
         }
         // ------------------------------------------------
 

@@ -227,14 +227,12 @@ app.get('/api/students', async (req, res) => {
         // 1. Get subjects taught by professor to find their subjects
         const { data: profSubjects, error: profSubjError } = await supabase
             .from('professor_subjects')
-            .select('subjects!inner(subject_id)')
+            .select('subject_id')
             .eq('professor_id', professorId);
 
         if (profSubjError) throw profSubjError;
 
-        const subjectIds = [...new Set(profSubjects?.map(ps => (ps.subjects as any).subject_id))];
-
-        if (subjectIds.length === 0) return res.json([]);
+        const subjectIds = [...new Set(profSubjects?.map(ps => ps.subject_id))];;
 
         // 2. Get enrollments for those subjects
         const { data: enrollments, error: enrollmentsError } = await supabase
@@ -399,6 +397,73 @@ app.delete('/api/comments/:commentId', async (req, res) => {
     }
 });
 
+// Get students (optionally filtered by professor)
+app.get('/api/students', async (req, res) => {
+    try {
+        const professorId = req.query.professorId as string;
+        
+        let studentIds: string[] = [];
+        
+        if (professorId) {
+            // 1. Get subjects for professor
+            const { data: profSubjects, error: profSubjError } = await supabase
+                .from('professor_subjects')
+                .select('subject_id')
+                .eq('professor_id', professorId);
+
+            if (profSubjError) throw profSubjError;
+
+            const subjectIds = [...new Set(profSubjects?.map(ps => ps.subject_id))];
+
+            if (subjectIds.length === 0) return res.json([]);
+
+            // 2. Get enrollments for those subjects
+            const { data: enrollments, error: enrollmentsError } = await supabase
+                .from('enrollments')
+                .select('student_id')
+                .in('subject_id', subjectIds);
+
+            if (enrollmentsError) throw enrollmentsError;
+
+            studentIds = [...new Set(enrollments?.map(e => e.student_id))];
+
+            if (studentIds.length === 0) return res.json([]);
+        }
+
+        // 3. Get Student Info
+        let query = supabase
+            .from('users')
+            .select('id, full_name, email, firstname, lastname, avatar_url')
+            .eq('role', 'student');
+            
+        if (studentIds.length > 0) {
+            query = query.in('id', studentIds);
+        } else if (professorId) {
+            return res.json([]);
+        }
+
+        const { data: students, error: studentsError } = await query;
+
+        if (studentsError) throw studentsError;
+
+        // Map to format expected by frontend
+        const formattedStudents = students?.map((student, index) => ({
+            id: index + 1,
+            userId: student.id,
+            name: student.full_name || `${student.firstname || ''} ${student.lastname || ''}`.trim() || 'Alumno',
+            email: student.email,
+            description: 'Estudiante',
+            color: ['purple', 'orange', 'salmon', 'blue'][index % 4]
+        })) || [];
+
+        res.json(formattedStudents);
+
+    } catch (error: any) {
+        console.error('Error fetching students:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get professor's courses
 app.get('/api/professors/:professorId/courses', async (req, res) => {
     try {
@@ -406,17 +471,40 @@ app.get('/api/professors/:professorId/courses', async (req, res) => {
 
         const { data: profSubjects, error } = await supabase
             .from('professor_subjects')
-            .select('subjects(id, name, description, created_at)')
+            .select(`
+                subjects (
+                    id, 
+                    name, 
+                    description, 
+                    created_at,
+                    grades_levels (
+                        id,
+                        name,
+                        educational_centers (
+                            id,
+                            name
+                        )
+                    )
+                )
+            `)
             .eq('professor_id', professorId);
 
         if (error) throw error;
         
         const courses = profSubjects?.map(ps => {
             const subject = ps.subjects as any;
+            const grade = subject?.grades_levels || {};
+            const center = grade?.educational_centers || {};
+            
             return {
-                ...subject,
-                color: 'purple',
-                total_steps: 0
+                id: subject.id,
+                title: subject.name,
+                description: `${grade.name || 'Sin grado'} • ${subject.name}`,
+                completedSteps: Math.floor(Math.random() * 100), // Mock progress
+                totalSteps: 100,
+                gradeId: grade.id,
+                centerId: center.id,
+                centerName: center.name || 'Centro Educativo'
             };
         }) || [];
 
@@ -937,7 +1025,7 @@ app.post('/api/admin/centers/:centerId/professors', async (req, res) => {
 
         const { data, error } = await supabase
             .from('center_professors')
-            .insert({ center_id: centerId, professor_id: userId })
+            .insert({ center_id: centerId, user_id: userId })
             .select()
             .single();
 
@@ -964,7 +1052,7 @@ app.get('/api/professors/:professorId/centers', async (req, res) => {
         const { data: relations, error: relationError } = await supabase
             .from('center_professors')
             .select('center_id')
-            .eq('professor_id', professorId);
+            .eq('user_id', professorId);
 
         if (relationError) throw relationError;
 
@@ -996,7 +1084,7 @@ app.delete('/api/admin/centers/:centerId/professors/:userId', async (req, res) =
         const { error } = await supabase
             .from('center_professors')
             .delete()
-            .match({ center_id: centerId, professor_id: userId });
+            .match({ center_id: centerId, user_id: userId });
 
         if (error) throw error;
 

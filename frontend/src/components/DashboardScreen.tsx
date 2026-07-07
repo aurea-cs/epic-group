@@ -50,7 +50,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
           <div className="welcome-section">
             <div className="welcome-content">
               <div className="welcome-text">
-                <h1 className="welcome-title">¡Bienvenid@!</h1>
+                <h1 className="welcome-title">¡Bienvenid@! </h1>
                 <h2 className="user-name">{user.user_metadata?.full_name || user.email}</h2>
                 <div className="progress-info">
                   <span className="medal-icon">🏅</span>

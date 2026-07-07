@@ -26,22 +26,64 @@ import './App.css'
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+useEffect(() => {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    const loggedUser = session?.user ?? null
+    setUser(loggedUser)
+    setLoading(false)
 
-  useEffect(() => {
-    // Restaurar la autenticación real de Supabase
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    if (loggedUser) {
+      // Defer to next tick to avoid deadlocking with getSession()'s internal lock
+      setTimeout(async () => {
+        try {
+          const { data } = await supabase.from('users').select('role').eq('id', loggedUser.id).single()
+          if (data?.role) {
+            setUser(prev => {
+              if (!prev) return prev
+              return {
+                ...prev,
+                user_metadata: { ...prev.user_metadata, role: data.role }
+              }
+            })
+          }
+        } catch (err) {
+          console.error("Error fetching user role:", err)
+        }
+      }, 0)
+    }
+  }).catch((err) => {
+    console.error("getSession failed:", err)
+    setLoading(false)
+  })
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    const loggedUser = session?.user ?? null
+    setUser(loggedUser)
 
-    return () => subscription.unsubscribe()
-  }, [])
+    if (loggedUser) {
+      setTimeout(async () => {
+        try {
+          const { data } = await supabase.from('users').select('role').eq('id', loggedUser.id).single()
+          if (data?.role) {
+            setUser(prev => {
+              if (!prev) return prev
+              return {
+                ...prev,
+                user_metadata: { ...prev.user_metadata, role: data.role }
+              }
+            })
+          }
+        } catch (err) {
+          console.error("Error fetching user role on state change:", err)
+        }
+      }, 0)
+    }
+  })
+
+  return () => subscription.unsubscribe()
+}, [])
 
   if (loading) {
     return (

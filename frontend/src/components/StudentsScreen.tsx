@@ -29,32 +29,16 @@ const StudentsScreen: React.FC<StudentsScreenProps> = ({ user }) => {
                 // Intentamos cargar los alumnos reales
                 const data = await getStudentsByProfessor(user.id)
 
-                // Si hay datos, los usamos. Si no, usamos los datos mock para visualización.
-                if (data && data.length > 0) {
+                // Solo usamos alumnos reales
+                if (data) {
                     setStudents(data)
                 } else {
-                    console.log('No students found')
-                    setStudents([{
-                        id: 1,
-                        userId: 'mock-user-id',
-                        name: 'Raquel López',
-                        email: 'raquel@example.com',
-                        color: 'purple',
-                        description: 'Mock student'
-                    }])
+                    setStudents([])
                 }
             } catch (err: any) {
                 console.error('Error fetching students:', err)
-                // En caso de error, mostramos lista vacía o el mock
-                console.log('Error fetching students, using mock data')
-                setStudents([{
-                    id: 1,
-                    userId: 'mock-user-id',
-                    name: 'Raquel López',
-                    email: 'raquel@example.com',
-                    color: 'purple',
-                    description: 'Mock student'
-                }])
+                setError('Error al cargar alumnos')
+                setStudents([])
             } finally {
                 setLoading(false)
             }
