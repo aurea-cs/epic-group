@@ -10,16 +10,11 @@ import {
     createGrade as _createGrade,
     updateGrade as _updateGrade,
     deleteGrade as _deleteGrade,
-    createSection as _createSection,
-    updateSection as _updateSection,
-    deleteSection as _deleteSection,
-    // getSubjectsBySection,
     createSubject as _createSubject,
     updateSubject as _updateSubject,
     deleteSubject as _deleteSubject,
     type EducationalCenter,
     type GradeLevel as _GradeLevel,
-    type Section as _Section,
     type Subject as _Subject,
 } from '../lib/adminApi'
 import { User } from '@supabase/supabase-js'
@@ -59,7 +54,6 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = ({ user }) => {
     // State for forms
     const [centerForm, setCenterForm] = useState({ name: '', address: '', phone: '', email: '' })
     const [_gradeForm, _setGradeForm] = useState({ name: '', level: 0 })
-    const [_sectionForm, _setSectionForm] = useState({ name: '', max_students: 30 })
     const [_subjectForm, _setSubjectForm] = useState({ name: '', description: '', hours_per_week: 0 })
 
     // State for editing
@@ -122,30 +116,6 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = ({ user }) => {
     //         // setGrades(data)
     //     } catch (err: any) {
     //         setError(err.message || 'Error al cargar grados')
-    //     } finally {
-    //         setLoading(false)
-    //     }
-    // }
-
-    // const _loadSections = async (gradeId: string) => {
-    //     try {
-    //         setLoading(true)
-    //         await getSectionsByGrade(gradeId)
-    //         // setSections(data)
-    //     } catch (err: any) {
-    //         setError(err.message || 'Error al cargar secciones')
-    //     } finally {
-    //         setLoading(false)
-    //     }
-    // }
-
-    // const _loadSubjects = async (sectionId: string) => {
-    //     try {
-    //         setLoading(true)
-    //         await getSubjectsBySection(sectionId)
-    //         // setSubjects(data)
-    //     } catch (err: any) {
-    //         setError(err.message || 'Error al cargar materias')
     //     } finally {
     //         setLoading(false)
     //     }

@@ -40,7 +40,7 @@ const upload = multer({
 // STUDENT PROGRESS ENDPOINTS
 // ============================================
 
-// Get student courses (sections enrolled)
+// Get student courses (subjects enrolled)
 
 app.get('/api/students/:studentId/courses', async (req, res) => {
     try {
@@ -50,7 +50,7 @@ app.get('/api/students/:studentId/courses', async (req, res) => {
         const { data: enrollments, error: enrollmentsError } = await supabase
             .from('enrollments')
             .select(`
-                section_id,
+                subject_id,
                 grade_id,
                 center_id
             `)
@@ -62,19 +62,19 @@ app.get('/api/students/:studentId/courses', async (req, res) => {
             return res.json([]);
         }
 
-        const sectionIds = enrollments.map(e => e.section_id);
+        const subjectIds = enrollments.map(e => e.subject_id);
 
-        // 2. Get sections details
-        const { data: sections, error: sectionsError } = await supabase
-            .from('sections')
+        // 2. Get subjects details
+        const { data: subjects, error: subjectsError } = await supabase
+            .from('subjects')
             .select(`
                 id,
                 name,
                 grade_id
             `)
-            .in('id', sectionIds);
+            .in('id', subjectIds);
 
-        if (sectionsError) throw sectionsError;
+        if (subjectsError) throw subjectsError;
 
         // 3. Get grades and centers details to format exactly like ProfessorDashboard expects
         const { data: grades, error: gradesError } = await supabase
@@ -92,13 +92,13 @@ app.get('/api/students/:studentId/courses', async (req, res) => {
         if (centersError) throw centersError;
 
         // Format the response
-        const formattedCourses = sections?.map(section => {
-            const grade = grades?.find(g => g.id === section.grade_id);
+        const formattedCourses = subjects?.map(subject => {
+            const grade = grades?.find(g => g.id === subject.grade_id);
             const center = centers?.find(c => c.id === grade?.center_id);
             
             return {
-                id: section.id,
-                name: section.name,
+                id: subject.id,
+                name: subject.name,
                 grade_id: grade?.id,
                 grade_name: grade?.name,
                 center_id: center?.id,
@@ -127,21 +127,21 @@ app.get('/api/students/:studentId/progress', async (req, res) => {
 
         if (studentError) throw studentError;
 
-        // Get enrollments to find sections
+        // Get enrollments to find subjects
         const { data: enrollments, error: enrollmentsError } = await supabase
             .from('enrollments')
-            .select('section_id')
+            .select('subject_id')
             .eq('student_id', studentId);
 
         if (enrollmentsError) throw enrollmentsError;
         
-        const sectionIds = enrollments?.map(e => e.section_id) || [];
+        const subjectIds = enrollments?.map(e => e.subject_id) || [];
         
-        // Get subjects for those sections
+        // Get subjects for those subjects
         const { data: subjects, error: subjectsError } = await supabase
             .from('subjects')
             .select('id, name')
-            .in('section_id', sectionIds);
+            .in('id', subjectIds);
 
         // Get student progress for courses
         const { data: progressData } = await supabase
@@ -224,23 +224,23 @@ app.get('/api/students', async (req, res) => {
             return res.status(400).json({ error: 'Professor ID is required' });
         }
 
-        // 1. Get subjects taught by professor to find their sections
+        // 1. Get subjects taught by professor to find their subjects
         const { data: profSubjects, error: profSubjError } = await supabase
             .from('professor_subjects')
-            .select('subjects!inner(section_id)')
+            .select('subjects!inner(subject_id)')
             .eq('professor_id', professorId);
 
         if (profSubjError) throw profSubjError;
 
-        const sectionIds = [...new Set(profSubjects?.map(ps => (ps.subjects as any).section_id))];
+        const subjectIds = [...new Set(profSubjects?.map(ps => (ps.subjects as any).subject_id))];
 
-        if (sectionIds.length === 0) return res.json([]);
+        if (subjectIds.length === 0) return res.json([]);
 
-        // 2. Get enrollments for those sections
+        // 2. Get enrollments for those subjects
         const { data: enrollments, error: enrollmentsError } = await supabase
             .from('enrollments')
             .select('student_id')
-            .in('section_id', sectionIds);
+            .in('subject_id', subjectIds);
 
         if (enrollmentsError) throw enrollmentsError;
 
@@ -432,23 +432,23 @@ app.get('/api/professors/:professorId/grades-summary', async (req, res) => {
     try {
         const { professorId } = req.params;
 
-        // 1. Get subjects taught by professor to find their sections
+        // 1. Get subjects taught by professor to find their subj
         const { data: profSubjects, error: profSubjError } = await supabase
             .from('professor_subjects')
-            .select('subjects!inner(section_id)')
+            .select('subjects!inner(subject_id)')
             .eq('professor_id', professorId);
 
         if (profSubjError) throw profSubjError;
 
-        const sectionIds = [...new Set(profSubjects?.map(ps => (ps.subjects as any).section_id))];
+        const subjectIds = [...new Set(profSubjects?.map(ps => (ps.subjects as any).subject_id))];
 
-        if (sectionIds.length === 0) return res.json([]);
+        if (subjectIds.length === 0) return res.json([]);
 
-        // 2. Get enrollments for those sections
+        // 2. Get enrollments for those subjects
         const { data: enrollments, error: enrollmentsError } = await supabase
             .from('enrollments')
             .select('student_id')
-            .in('section_id', sectionIds);
+            .in('subject_id', subjectIds);
 
         if (enrollmentsError) throw enrollmentsError;
 
@@ -835,7 +835,7 @@ app.delete('/api/admin/centers/:id', async (req, res) => {
 
 // ========== ENROLLMENTS ==========
 
-// Enroll a new student in a grade (and all of its sections)
+// Enroll a new student in a grade (and all of its subjects)
 app.post('/api/admin/enrollments', async (req, res) => {
     try {
         const { center_id, grade_id, student_id } = req.body;
@@ -844,22 +844,22 @@ app.post('/api/admin/enrollments', async (req, res) => {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
-        // 1. Get all sections belonging to this grade
-        const { data: sections, error: sectionsError } = await supabase
-            .from('sections')
+        // 1. Get all subjects belonging to this grade
+        const { data: subjects, error: subjectsError } = await supabase
+            .from('subjects')
             .select('id')
             .eq('grade_id', grade_id);
 
-        if (sectionsError) throw sectionsError;
+        if (subjectsError) throw subjectsError;
 
-        if (!sections || sections.length === 0) {
-            return res.status(400).json({ error: 'This grade has no sections to enroll into' });
+        if (!subjects || subjects.length === 0) {
+            return res.status(400).json({ error: 'This grade has no subjects to enroll into' });
         }
 
-        // 2. Build one enrollment row per section
+        // 2. Build one enrollment row per subject
         const now = new Date().toISOString();
-        const rows = sections.map(section => ({
-            section_id: section.id,
+        const rows = subjects.map(subject => ({
+            subject_id: subject.id,
             grade_id,
             center_id,
             student_id,
@@ -1113,15 +1113,77 @@ app.delete('/api/admin/grades/:id', async (req, res) => {
     }
 });
 
-// ========== SECTIONS ==========
+// ========== SUBJECTS ==========
 
-// Get sections by grade
-app.get('/api/admin/grades/:gradeId/sections', async (req, res) => {
+// Create subject
+app.post('/api/admin/subjects', async (req, res) => {
+    try {
+        const { subject_id, name, description, hours_per_week } = req.body;
+
+        if (!subject_id || !name) {
+            return res.status(400).json({ error: 'Subject ID and name are required' });
+        }
+
+        const { data, error } = await supabase
+            .from('subjects')
+            .insert({ subject_id, name, description, hours_per_week })
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.status(201).json(data);
+    } catch (error: any) {
+        console.error('Error creating subject:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update subject
+app.put('/api/admin/subjects/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description, hours_per_week, is_active } = req.body;
+
+        const { data, error } = await supabase
+            .from('subjects')
+            .update({ name, description, hours_per_week, is_active })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error: any) {
+        console.error('Error updating subject:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete subject
+app.delete('/api/admin/subjects/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { error } = await supabase
+            .from('subjects')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        res.json({ message: 'Subject deleted successfully' });
+    } catch (error: any) {
+        console.error('Error deleting subject:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get subjects by grade
+app.get('/api/admin/grades/:gradeId/subjects', async (req, res) => {
     try {
         const { gradeId } = req.params;
 
         const { data, error } = await supabase
-            .from('sections')
+            .from('subjects')
             .select('*')
             .eq('grade_id', gradeId)
             .order('name');
@@ -1129,7 +1191,7 @@ app.get('/api/admin/grades/:gradeId/sections', async (req, res) => {
         if (error) throw error;
         res.json(data || []);
     } catch (error: any) {
-        console.error('Error fetching sections:', error);
+        console.error('Error fetching subjects:', error);
         res.status(500).json({
             error: error.message,
             details: error.details,
@@ -1139,85 +1201,40 @@ app.get('/api/admin/grades/:gradeId/sections', async (req, res) => {
     }
 });
 
-// Create section
-app.post('/api/admin/sections', async (req, res) => {
-    try {
-        const { grade_id, name, max_students } = req.body;
-
-        if (!grade_id || !name) {
-            return res.status(400).json({ error: 'Grade ID and name are required' });
-        }
-
-        const { data, error } = await supabase
-            .from('sections')
-            .insert({ grade_id, name, max_students })
-            .select()
-            .single();
-
-        if (error) throw error;
-        res.status(201).json(data);
-    } catch (error: any) {
-        console.error('Error creating section:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Update section
-app.put('/api/admin/sections/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, max_students, is_active } = req.body;
-
-        const { data, error } = await supabase
-            .from('sections')
-            .update({ name, max_students, is_active })
-            .eq('id', id)
-            .select()
-            .single();
-
-        if (error) throw error;
-        res.json(data);
-    } catch (error: any) {
-        console.error('Error updating section:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get single section by ID
-app.get('/api/admin/sections/:id', async (req, res) => {
+// Get single subject by ID
+app.get('/api/admin/subjects/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { data, error } = await supabase
-            .from('sections')
+            .from('subjects')
             .select('*')
             .eq('id', id)
             .single();
 
         if (error) throw error;
-        if (!data) return res.status(404).json({ error: 'Section not found' });
+        if (!data) return res.status(404).json({ error: 'Subject not found' });
 
         res.json(data);
     } catch (error: any) {
-        console.error('Error fetching section:', error);
+        console.error('Error fetching subject:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Delete section
-// ========== SECTION PROFESSORS ==========
+// ========== SUBJECT PROFESSORS ==========
 
-// Get professors for a section
-app.get('/api/admin/sections/:sectionId/professors', async (req, res) => {
+// Get professors for a subject
+app.get('/api/admin/subjects/:subjectId/professors', async (req, res) => {
     try {
-        const { sectionId } = req.params;
+        const { subjectId } = req.params;
 
-        console.log(`Fetching professors for section: ${sectionId}`);
+        console.log(`Fetching professors for subject: ${subjectId}`);
 
         // Get user_ids from junction table
         const { data: relations, error: relationError } = await supabase
-            .from('section_professors')
+            .from('professor_subjects')
             .select('user_id')
-            .eq('section_id', sectionId);
+            .eq('subject_id', subjectId);
 
         if (relationError) throw relationError;
 
@@ -1237,7 +1254,7 @@ app.get('/api/admin/sections/:sectionId/professors', async (req, res) => {
 
         res.json(users || []);
     } catch (error: any) {
-        console.error('Error fetching section professors:', error);
+        console.error('Error fetching subject professors:', error);
         // Fallback for missing table
         if (error.code === '42P01') {
             return res.json([]);
@@ -1246,10 +1263,10 @@ app.get('/api/admin/sections/:sectionId/professors', async (req, res) => {
     }
 });
 
-// Assign professor to section
-app.post('/api/admin/sections/:sectionId/professors', async (req, res) => {
+// Assign professor to subject
+app.post('/api/admin/subjects/:subjectId/professors', async (req, res) => {
     try {
-        const { sectionId } = req.params;
+        const { subjectId } = req.params;
         const { userId } = req.body;
 
         if (!userId) {
@@ -1257,40 +1274,40 @@ app.post('/api/admin/sections/:sectionId/professors', async (req, res) => {
         }
 
         const { data, error } = await supabase
-            .from('section_professors')
-            .insert({ section_id: sectionId, user_id: userId })
+            .from('professor_subjects')
+            .insert({ subject_id: subjectId, user_id: userId })
             .select()
             .single();
 
         if (error) {
             if (error.code === '23505') {
-                return res.status(400).json({ error: 'Professor already assigned to this section' });
+                return res.status(400).json({ error: 'Professor already assigned to this subject' });
             }
             throw error;
         }
 
         res.status(201).json(data);
     } catch (error: any) {
-        console.error('Error assigning professor to section:', error);
+        console.error('Error assigning professor to subject:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Unassign professor from section
-app.delete('/api/admin/sections/:sectionId/professors/:userId', async (req, res) => {
+// Unassign professor from subject
+app.delete('/api/admin/subjects/:subjectId/professors/:userId', async (req, res) => {
     try {
-        const { sectionId, userId } = req.params;
+        const { subjectId, userId } = req.params;
 
         const { error } = await supabase
-            .from('section_professors')
+            .from('professor_subjects')
             .delete()
-            .match({ section_id: sectionId, user_id: userId });
+            .match({ subject_id: subjectId, user_id: userId });
 
         if (error) throw error;
 
-        res.json({ message: 'Professor unassigned from section successfully' });
+        res.json({ message: 'Professor unassigned from subject successfully' });
     } catch (error: any) {
-        console.error('Error unassigning professor from section:', error);
+        console.error('Error unassigning professor from subject:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -1563,109 +1580,9 @@ app.delete('/api/admin/items/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/admin/sections/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const { error } = await supabase
-            .from('sections')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
-        res.json({ message: 'Section deleted successfully' });
-    } catch (error: any) {
-        console.error('Error deleting section:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ========== SUBJECTS ==========
-
-// Get subjects by section
-app.get('/api/admin/sections/:sectionId/subjects', async (req, res) => {
-    try {
-        const { sectionId } = req.params;
-
-        const { data, error } = await supabase
-            .from('subjects')
-            .select('*')
-            .eq('section_id', sectionId)
-            .order('name');
-
-        if (error) throw error;
-        res.json(data || []);
-    } catch (error: any) {
-        console.error('Error fetching subjects:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Create subject
-app.post('/api/admin/subjects', async (req, res) => {
-    try {
-        const { section_id, name, description, hours_per_week } = req.body;
-
-        if (!section_id || !name) {
-            return res.status(400).json({ error: 'Section ID and name are required' });
-        }
-
-        const { data, error } = await supabase
-            .from('subjects')
-            .insert({ section_id, name, description, hours_per_week })
-            .select()
-            .single();
-
-        if (error) throw error;
-        res.status(201).json(data);
-    } catch (error: any) {
-        console.error('Error creating subject:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Update subject
-app.put('/api/admin/subjects/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, description, hours_per_week, is_active } = req.body;
-
-        const { data, error } = await supabase
-            .from('subjects')
-            .update({ name, description, hours_per_week, is_active })
-            .eq('id', id)
-            .select()
-            .single();
-
-        if (error) throw error;
-        res.json(data);
-    } catch (error: any) {
-        console.error('Error updating subject:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Delete subject
-app.delete('/api/admin/subjects/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const { error } = await supabase
-            .from('subjects')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
-        res.json({ message: 'Subject deleted successfully' });
-    } catch (error: any) {
-        console.error('Error deleting subject:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // ========== HIERARCHY VIEW ==========
 
-// Get complete hierarchy for a center
+// Get complete hierarchy for a center // TODO: see if it broke
 app.get('/api/admin/centers/:centerId/hierarchy', async (req, res) => {
     try {
         const { centerId } = req.params;
@@ -1679,13 +1596,11 @@ app.get('/api/admin/centers/:centerId/hierarchy', async (req, res) => {
 
         if (centerError) throw centerError;
 
-        // Get grades with sections and subjects
+        // Get grades with subjects
         const { data: grades, error: gradesError } = await supabase
             .from('grades_levels')
             .select(`
             *,
-            sections (
-                *,
                 subjects (*)
             )
         `)
@@ -1707,7 +1622,7 @@ app.get('/api/admin/centers/:centerId/hierarchy', async (req, res) => {
 // ========== GRADE CONTENT MANAGEMENT ==========
 
 // Get all content for a grade (Admin/Professor/Student with access)
-app.get('/api/grades/:gradeId/content', async (req, res) => {
+app.get('/api/grades/:gradeId/content', async (req, res) => { 
     try {
         const { gradeId } = req.params;
         const { userId, role } = req.query;
@@ -1739,23 +1654,16 @@ app.get('/api/grades/:gradeId/content', async (req, res) => {
                 if (relation) hasAccess = true;
             }
         } else if (role === 'student') {
-            // Check if student is enrolled in a course belonging to a section of this grade
-            const { data: sections } = await supabase
-                .from('sections')
-                .select('course_id')
-                .eq('grade_id', gradeId);
-
-            const { data: enrollments } = await supabase
+            // Check if student is enrolled in this grade
+            const { data: enrollment } = await supabase
                 .from('enrollments')
-                .select('course_id')
-                .eq('student_id', userId);
+                .select('id')
+                .eq('student_id', userId)
+                .eq('grade_id', gradeId)
+                .limit(1)
+                .maybeSingle();
 
-            const sectionCourseIds = sections?.map(s => s.course_id).filter(id => id) || [];
-            const studentCourseIds = enrollments?.map(e => e.course_id) || [];
-
-            if (sectionCourseIds.some(id => studentCourseIds.includes(id))) {
-                hasAccess = true;
-            }
+            if (enrollment) hasAccess = true;
         }
 
         if (!hasAccess) {

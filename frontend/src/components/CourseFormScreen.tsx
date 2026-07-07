@@ -4,11 +4,11 @@ import { User } from '@supabase/supabase-js'
 import { getUserRole } from '../utils/getUserRole'
 import { auth } from '../lib/supabase'
 import {
-    getSectionById,
-    createSection,
-    updateSection,
+    getSubjectById,
+    createSubject,
+    updateSubject,
     getGradeContent,
-    type Section,
+    type Subject,
     type GradeContent
 } from '../lib/adminApi'
 import './HierarchyConfig.css' // Reusing styles
@@ -27,7 +27,7 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = ({ user }) => {
     const [error, setError] = useState<string | null>(null)
 
     // Form State
-    const [formData, setFormData] = useState<Partial<Section>>({
+    const [formData, setFormData] = useState<Partial<Subject>>({
         name: '',
         short_name: '',
         description: '',
@@ -45,16 +45,16 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = ({ user }) => {
             if (isEditing && courseId) {
                 try {
                     setPageLoading(true)
-                    const section = await getSectionById(courseId)
+                    const subject = await getSubjectById(courseId)
                     setFormData({
-                        name: section.name || '',
-                        short_name: section.short_name || '',
-                        description: section.description || '',
-                        start_date: section.start_date ? section.start_date.split('T')[0] : '',
-                        end_date: section.end_date ? section.end_date.split('T')[0] : '',
-                        course_id: section.course_id || '',
-                        visibility: section.visibility || 'active',
-                        max_students: section.max_students || 30
+                        name: subject.name || '',
+                        short_name: subject.short_name || '',
+                        description: subject.description || '',
+                        start_date: subject.start_date ? subject.start_date.split('T')[0] : '',
+                        end_date: subject.end_date ? subject.end_date.split('T')[0] : '',
+                        course_id: subject.course_id || '',
+                        visibility: subject.visibility || 'active',
+                        max_students: subject.max_students || 30
                     })
                 } catch (err: any) {
                     setError('Error al cargar datos del curso')
@@ -102,9 +102,9 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = ({ user }) => {
             }
 
             if (isEditing && courseId) {
-                await updateSection(courseId, cleanData)
+                await updateSubject(courseId, cleanData)
             } else {
-                await createSection({ ...cleanData, grade_id: gradeId } as any)
+                await createSubject({ ...cleanData, grade_id: gradeId } as any)
             }
 
             // Navigate back to school detail

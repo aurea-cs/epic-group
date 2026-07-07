@@ -467,7 +467,7 @@
     background: rgba(255, 255, 255, 0.25);
 }
 
-/* Item Cards (Grades, Sections, Subjects) */
+/* Item Cards (Grades, Subjects) */
 .item-card {
     background: #ffffff;
     /* White background */
@@ -676,7 +676,7 @@
 }
 
 /* CSV Upload Area */
-.csv-upload-section {
+.csv-upload-subject {
     background: rgba(255, 255, 255, 0.03);
     border: 2px dashed rgba(255, 255, 255, 0.1);
     border-radius: 12px;
@@ -685,7 +685,7 @@
     margin-bottom: 2rem;
 }
 
-.csv-upload-section h4 {
+.csv-upload-subject h4 {
     color: #fff;
     margin-top: 0;
     margin-bottom: 1rem;

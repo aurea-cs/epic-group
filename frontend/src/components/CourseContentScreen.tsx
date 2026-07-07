@@ -4,7 +4,7 @@ import { User } from '@supabase/supabase-js'
 import { getUserRole } from '../utils/getUserRole'
 import { auth } from '../lib/supabase'
 import {
-    getSectionById,
+    getSubjectById,
     getCourseModules,
     createCourseModule,
     updateCourseModule,
@@ -13,7 +13,7 @@ import {
     uploadModuleItem,
     updateModuleItem,
     deleteModuleItem,
-    type Section,
+    type Subject,
     type CourseModule,
     type ModuleItem
 } from '../lib/adminApi'
@@ -28,7 +28,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = ({ user }) => {
     const navigate = useNavigate()
     const userRole = getUserRole(user)
 
-    const [section, setSection] = useState<Section | null>(null)
+    const [subject, setSubject] = useState<Subject | null>(null)
     const [modules, setModules] = useState<CourseModule[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -63,11 +63,11 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = ({ user }) => {
         if (!courseId) return
         try {
             setLoading(true)
-            const [sectionData, modulesData] = await Promise.all([
-                getSectionById(courseId),
+            const [subjectData, modulesData] = await Promise.all([
+                getSubjectById(courseId),
                 getCourseModules(courseId)
             ])
-            setSection(sectionData)
+            setSubject(subjectData)
             setModules(modulesData)
         } catch (err: any) {
             setError(err.message || 'Error al cargar datos del curso')
@@ -194,7 +194,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = ({ user }) => {
                         </div>
                         <div style={{ flex: 1, textAlign: 'center' }}>
                             <h1 style={{ margin: 0, fontSize: '2rem', color: '#fff' }}>
-                                {section?.name}
+                                {subject?.name}
                             </h1>
                             <p style={{ color: '#aaa', marginTop: '0.5rem' }}>Contenido del Curso</p>
                         </div>

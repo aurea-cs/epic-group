@@ -515,7 +515,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerName, cente
 
             {/* CSV Import Tab */}
             {activeTab === 'csv' && (
-                <div className="csv-upload-section">
+                <div className="csv-upload-subject">
                     <h4>Subir Archivo CSV</h4>
                     <div className="csv-helper-text">
                         Formato requerido: <code>email, password, full_name, [cohort]</code>

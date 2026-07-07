@@ -105,14 +105,14 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ user }) => {
           const hierarchy = await hierarchyRes.json()
           const grades = hierarchy.grades || []
 
-          // Flatten sections to courses
+          // Flatten subjects to courses
           grades.forEach((grade: any) => {
-            const sections = grade.sections || []
-            sections.forEach((section: any) => {
+            const subjects = grade.subjects || []
+            subjects.forEach((subject: any) => {
               allCourses.push({
-                id: section.id,
-                title: `${section.name} - ${grade.name}`, // "Section Name - Grade Name"
-                description: `${center.name} • ${section.short_name || 'Sin código'}`,
+                id: subject.id,
+                title: `${subject.name} - ${grade.name}`, // "Subject Name - Grade Name"
+                description: `${center.name} • ${subject.short_name || 'Sin código'}`,
                 completedSteps: 0, // Logic to be implemented
                 totalSteps: 5, // Default for now
                 gradeId: grade.id,

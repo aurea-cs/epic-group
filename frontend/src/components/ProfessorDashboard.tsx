@@ -36,17 +36,17 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
         if (userRole === 'student') {
           const studentRes = await fetch(`http://localhost:3001/api/students/${user.id}/courses`)
           if (!studentRes.ok) throw new Error('Error fetching student courses')
-          const sections = await studentRes.json()
+          const subjects = await studentRes.json()
 
-          allCourses = sections.map((section: any) => ({
-            id: section.id,
-            title: section.name,
-            description: `${section.grade_name || 'Sin grado'} • ${section.short_name || 'Sin código'}`,
+          allCourses = subjects.map((subject: any) => ({
+            id: subject.id,
+            title: subject.name,
+            description: `${subject.grade_name || 'Sin grado'} • ${subject.short_name || 'Sin código'}`,
             completedSteps: Math.floor(Math.random() * 100), // Mock progress
             totalSteps: 100,
-            gradeId: section.grade_id,
-            centerId: section.center_id,
-            centerName: section.center_name
+            gradeId: subject.grade_id,
+            centerId: subject.center_id,
+            centerName: subject.center_name
           }))
         } else if (userRole === 'admin') {
           const adminCentersRes = await fetch(`http://localhost:3001/api/admin/centers`)
@@ -75,12 +75,12 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
             const grades = hierarchy.grades || []
 
             grades.forEach((grade: any) => {
-              const sections = grade.sections || []
-              sections.forEach((section: any) => {
+              const subjects = grade.subjects || []
+              subjects.forEach((subject: any) => {
                 allCourses.push({
-                  id: section.id,
-                  title: section.name,
-                  description: `${grade.name} • ${section.short_name || 'Sin código'}`,
+                  id: subject.id,
+                  title: subject.name,
+                  description: `${grade.name} • ${subject.short_name || 'Sin código'}`,
                   completedSteps: Math.floor(Math.random() * 100), // Mock progress
                   totalSteps: 100,
                   gradeId: grade.id,

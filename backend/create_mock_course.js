@@ -30,14 +30,14 @@ async function createMockCourse() {
         if (gradeErr) throw gradeErr;
         console.log('✅ Grado creado:', grade.name);
 
-        // 3. Create Section
-        const { data: section, error: secErr } = await supabase
-            .from('sections')
+        // 3. Create Subject
+        const { data: subject, error: subErr } = await supabase
+            .from('subjects')
             .insert([{ name: 'Astronomía 101', short_name: 'AST-101', grade_id: grade.id }])
             .select()
             .single();
-        if (secErr) throw secErr;
-        console.log('✅ Sección creada:', section.name);
+        if (subErr) throw subErr;
+        console.log('✅ Materia creada:', subject.name);
 
         // 4. Get all users
         const { data: users, error: usersErr } = await supabase
@@ -52,12 +52,12 @@ async function createMockCourse() {
 
         for (const user of users) {
             if (user.role === 'professor' || user.role === 'admin') {
-                // Add to section_professors
+                // Add to professor_subjects
                 const { error: spErr } = await supabase
-                    .from('section_professors')
-                    .insert([{ section_id: section.id, professor_id: user.id }]);
+                    .from('professor_subjects')
+                    .insert([{ subject_id: subject.id, professor_id: user.id }]);
                 
-                // Ignore duplicates if they already have one, but here it's a new section anyway
+                // Ignore duplicates if they already have one, but here it's a new subject anyway
                 if (spErr && spErr.code !== '23505') console.error('Error asignando prof:', spErr.message);
                 else profCount++;
             } else if (user.role === 'student') {
@@ -68,7 +68,7 @@ async function createMockCourse() {
                         student_id: user.id, 
                         center_id: center.id,
                         grade_id: grade.id,
-                        section_id: section.id,
+                        subject_id: subject.id,
                         status: 'active'
                     }]);
                 

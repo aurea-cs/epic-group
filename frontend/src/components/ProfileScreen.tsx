@@ -169,8 +169,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
                     <div style={{ fontWeight: 'bold', color: '#334155' }}>{user.user_metadata?.grade || user.user_metadata?.cohort || 'N/A'}</div>
                   </div>
                   <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Sección</div>
-                    <div style={{ fontWeight: 'bold', color: '#334155' }}>{user.user_metadata?.section || 'N/A'}</div>
+                    <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Materia</div>
+                    <div style={{ fontWeight: 'bold', color: '#334155' }}>{user.user_metadata?.subject || 'N/A'}</div>
                   </div>
                 </>
               )}
