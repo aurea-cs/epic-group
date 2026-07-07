@@ -887,45 +887,42 @@ app.post('/api/admin/enrollments', async (req, res) => {
 
 // Get professors for a center
 app.get('/api/admin/centers/:centerId/professors', async (req, res) => {
-    return res.json([{ debug: 'SERVER_IS_UPDATED_AND_RUNNING_MY_CODE' }]);
-    /*
     try {
         const { centerId } = req.params;
-    
+
         console.log(`Fetching professors for center: ${centerId}`);
-    
+
         // Get user_ids from junction table
         const { data: relations, error: relationError } = await supabase
             .from('center_professors')
             .select('user_id')
             .eq('center_id', centerId);
-    
+
         if (relationError) throw relationError;
-    
+
         const userIds = relations?.map(r => r.user_id) || [];
-    
+
         if (userIds.length === 0) {
             return res.json([]);
         }
-    
+
         // Get user details
         const { data: users, error: usersError } = await supabase
             .from('users')
-            .select('id, email, full_name, firstname, lastname') // Removed avatar_url
+            .select('id, email, full_name, firstname, lastname')
             .in('id', userIds);
-    
+
         if (usersError) {
             console.error('Error fetching users in getCenterProfessors:', usersError);
             throw usersError;
         }
-    
+
         console.log(`Found ${users?.length} users for center ${centerId}`);
         res.json(users || []);
     } catch (error: any) {
         console.error('Error fetching center professors FULL:', JSON.stringify(error, null, 2));
         res.status(500).json({ error: error.message, details: error });
     }
-        */
 });
 
 // Assign professor to center
@@ -940,7 +937,7 @@ app.post('/api/admin/centers/:centerId/professors', async (req, res) => {
 
         const { data, error } = await supabase
             .from('center_professors')
-            .insert({ center_id: centerId, user_id: userId })
+            .insert({ center_id: centerId, professor_id: userId })
             .select()
             .single();
 
@@ -967,7 +964,7 @@ app.get('/api/professors/:professorId/centers', async (req, res) => {
         const { data: relations, error: relationError } = await supabase
             .from('center_professors')
             .select('center_id')
-            .eq('user_id', professorId);
+            .eq('professor_id', professorId);
 
         if (relationError) throw relationError;
 
@@ -999,7 +996,7 @@ app.delete('/api/admin/centers/:centerId/professors/:userId', async (req, res) =
         const { error } = await supabase
             .from('center_professors')
             .delete()
-            .match({ center_id: centerId, user_id: userId });
+            .match({ center_id: centerId, professor_id: userId });
 
         if (error) throw error;
 
@@ -1233,12 +1230,12 @@ app.get('/api/admin/subjects/:subjectId/professors', async (req, res) => {
         // Get user_ids from junction table
         const { data: relations, error: relationError } = await supabase
             .from('professor_subjects')
-            .select('user_id')
+            .select('professor_id')
             .eq('subject_id', subjectId);
 
         if (relationError) throw relationError;
 
-        const userIds = relations?.map(r => r.user_id) || [];
+        const userIds = relations?.map(r => r.professor_id) || [];
 
         if (userIds.length === 0) {
             return res.json([]);
@@ -1275,7 +1272,7 @@ app.post('/api/admin/subjects/:subjectId/professors', async (req, res) => {
 
         const { data, error } = await supabase
             .from('professor_subjects')
-            .insert({ subject_id: subjectId, user_id: userId })
+            .insert({ subject_id: subjectId, professor_id: userId })
             .select()
             .single();
 
