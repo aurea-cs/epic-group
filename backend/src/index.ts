@@ -835,29 +835,52 @@ app.delete('/api/admin/centers/:id', async (req, res) => {
 
 // ========== ENROLLMENTS ==========
 
-// Enroll a new student
+// Enroll a new student in a grade (and all of its sections)
 app.post('/api/admin/enrollments', async (req, res) => {
     try {
         const { center_id, grade_id, student_id } = req.body;
 
-        if (!center_id || !grade_id || !student_id ) {
+        if (!center_id || !grade_id || !student_id) {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
+        // 1. Get all sections belonging to this grade
+        const { data: sections, error: sectionsError } = await supabase
+            .from('sections')
+            .select('id')
+            .eq('grade_id', grade_id);
+
+        if (sectionsError) throw sectionsError;
+
+        if (!sections || sections.length === 0) {
+            return res.status(400).json({ error: 'This grade has no sections to enroll into' });
+        }
+
+        // 2. Build one enrollment row per section
+        const now = new Date().toISOString();
+        const rows = sections.map(section => ({
+            section_id: section.id,
+            grade_id,
+            center_id,
+            student_id,
+            created_at: now,
+            status: 'active'
+        }));
+
+        // 3. Insert all enrollments at once
         const { data, error } = await supabase
             .from('enrollments')
-            .insert({ center_id, grade_id, student_id, created_at: new Date().toISOString(), status: 'active' })
-            .select()
-            .single();
+            .insert(rows)
+            .select();
 
         if (error) throw error;
+
         res.status(201).json(data);
     } catch (error: any) {
         console.error('Error enrolling student:', error);
         res.status(500).json({ error: error.message });
     }
 });
-
 
 
 // ========== CENTER PROFESSORS ==========
