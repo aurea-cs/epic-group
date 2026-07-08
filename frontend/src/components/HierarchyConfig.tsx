@@ -24,6 +24,7 @@ import StudentManagement from './StudentManagement'
 import CenterContentUpload from './CenterContentUpload'
 import './HierarchyConfig.css'
 import './ProfessorDashboard.css' // Import for the dashboard cards styling
+import { auth } from '../lib/supabase'
 
 interface HierarchyConfigProps {
     user: User
@@ -210,7 +211,7 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = ({ user }) => {
         <>
             <div className="professor-dashboard-container" style={{ padding: '2rem' }}>
                 <div className="prof-main-col" style={{ width: '100%' }}>
-                    
+
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                         <h2 className="section-title-modern">Centros educativos</h2>
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -370,7 +371,7 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = ({ user }) => {
                 {showActionModal && (
                     <div className="modal-overlay" onClick={() => setShowActionModal(false)}>
                         <div className="school-modal-content" style={{ maxWidth: actionType === 'student' ? '900px' : '600px', width: '95%' }} onClick={(e) => e.stopPropagation()}>
-                            
+
                             {actionType === 'pdf' && (
                                 <>
                                     {!actionCenterId ? (
@@ -400,8 +401,8 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = ({ user }) => {
                                             </div>
                                         </div>
                                     ) : (
-                                        <CenterContentUpload 
-                                            centerId={actionCenterId} 
+                                        <CenterContentUpload
+                                            centerId={actionCenterId}
                                             centerName={centers.find(c => c.id === actionCenterId)?.name || ''}
                                             onClose={() => setShowActionModal(false)}
                                         />
