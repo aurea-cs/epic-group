@@ -48,6 +48,21 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
             centerId: subject.center_id,
             centerName: subject.center_name
           }))
+        } else if (userRole === 'tutor') {
+          const tutorRes = await fetch(`http://localhost:3001/api/tutors/${user.id}/courses`)
+          if (!tutorRes.ok) throw new Error('Error fetching tutor courses')
+          const subjects = await tutorRes.json()
+
+          allCourses = subjects.map((subject: any) => ({
+            id: subject.id,
+            title: subject.name,
+            description: `${subject.grade_name || 'Sin grado'} • ${subject.short_name || 'Sin código'}`,
+            completedSteps: Math.floor(Math.random() * 100), // Mock progress
+            totalSteps: 100,
+            gradeId: subject.grade_id,
+            centerId: subject.center_id,
+            centerName: subject.center_name
+          }))
         } else if (userRole === 'admin') {
           const adminCentersRes = await fetch(`http://localhost:3001/api/admin/centers`)
           if (adminCentersRes.ok) {
@@ -78,7 +93,7 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
       }
     }
 
-    if (userRole === 'professor' || userRole === 'admin' || userRole === 'student') {
+    if (userRole === 'professor' || userRole === 'admin' || userRole === 'student' || userRole === 'tutor') {
       fetchProfessorCourses()
     }
   }, [user, userRole])
@@ -97,12 +112,12 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
 
         {/* Classes Section */}
         <div>
-          <h2 className="section-title-modern">{userRole === 'admin' ? 'Centros educativos' : 'Tus cursos'}</h2>
+          <h2 className="section-title-modern">{userRole === 'admin' ? 'Centros educativos' : userRole === 'tutor' ? 'Cursos de tus hijos' : 'Tus cursos'}</h2>
           <div className="classes-grid">
             {loading ? (
-              <p style={{ gridColumn: '1 / -1' }}>Cargando centros...</p>
+              <p style={{ gridColumn: '1 / -1' }}>Cargando...</p>
             ) : courses.length === 0 ? (
-              <p style={{ gridColumn: '1 / -1', color: '#64748b' }}>No tienes clases asignadas actualmente.</p>
+              <p style={{ gridColumn: '1 / -1', color: '#64748b' }}>No hay cursos asignados actualmente.</p>
             ) : (
               courses.map(course => (
                 <div key={course.id} className="class-card" onClick={() => {
