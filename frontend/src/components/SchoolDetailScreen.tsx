@@ -584,25 +584,36 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
                             </div>
                             <div className="form-grid">
                                 <div className="form-group">
-                                    <label>Primaria, secundaria, preparatoria o universidad*</label>
-                                    <input
-                                        type="text"
+                                    <label>Nivel*</label>
+                                    <select
                                         value={gradeForm.name}
                                         onChange={(e) => setGradeForm({ ...gradeForm, name: e.target.value })}
-                                        placeholder="Ej: 1ro Primaria"
                                         className="modern-input"
                                         autoFocus
-                                    />
+                                    >
+                                        <option value="">Seleccione un nivel...</option>
+                                        <option value="Primaria">Primaria</option>
+                                        <option value="Secundaria">Secundaria</option>
+                                        <option value="Preparatoria">Preparatoria</option>
+                                        <option value="Universidad">Universidad</option>
+                                        {/* Fallback for existing data that doesn't match standard options */}
+                                        {gradeForm.name && !['Primaria', 'Secundaria', 'Preparatoria', 'Universidad'].includes(gradeForm.name) && (
+                                            <option value={gradeForm.name}>{gradeForm.name}</option>
+                                        )}
+                                    </select>
                                 </div>
                                 <div className="form-group">
-                                    <label>Grado</label>
-                                    <input
-                                        type="number"
-                                        value={gradeForm.level}
+                                    <label>{gradeForm.name && gradeForm.name !== 'Primaria' ? 'Semestre' : 'Grado'}</label>
+                                    <select
+                                        value={gradeForm.level || ''}
                                         onChange={(e) => setGradeForm({ ...gradeForm, level: parseInt(e.target.value) })}
-                                        placeholder="Ej: 1"
                                         className="modern-input"
-                                    />
+                                    >
+                                        <option value="">Seleccione un {gradeForm.name && gradeForm.name !== 'Primaria' ? 'semestre' : 'grado'}...</option>
+                                        {[1, 2, 3, 4, 5, 6].map(num => (
+                                            <option key={num} value={num}>{num}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                             <div className="modal-actions">

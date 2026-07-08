@@ -277,7 +277,14 @@ export const deleteGrade = async (id: string): Promise<void> => {
 export const getSectionsByGrade = async (gradeId: string): Promise<Section[]> => {
     try {
         const response = await fetch(`${API_URL}/api/admin/grades/${gradeId}/sections`)
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        if (!response.ok) {
+            const errorData = await response.json()
+            console.error('Error Details:', errorData)
+            const errorMessage = errorData.details 
+                ? `${errorData.error}: ${JSON.stringify(errorData.details)}` 
+                : errorData.error || `HTTP error! status: ${response.status}`
+            throw new Error(errorMessage)
+        }
         return await response.json()
     } catch (error) {
         console.error('Error fetching sections:', error)
