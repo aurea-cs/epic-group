@@ -33,7 +33,6 @@ export interface Subject {
     description?: string
     start_date?: string
     end_date?: string
-    course_id?: string
     visibility?: 'active' | 'hidden' | 'archived'
     max_students: number
     is_active: boolean

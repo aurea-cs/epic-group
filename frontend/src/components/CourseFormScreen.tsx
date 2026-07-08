@@ -33,7 +33,6 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = ({ user }) => {
         description: '',
         start_date: '',
         end_date: '',
-        course_id: '',
         visibility: 'active',
         max_students: 30
     })
@@ -52,7 +51,6 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = ({ user }) => {
                         description: subject.description || '',
                         start_date: subject.start_date ? subject.start_date.split('T')[0] : '',
                         end_date: subject.end_date ? subject.end_date.split('T')[0] : '',
-                        course_id: subject.course_id || '',
                         visibility: subject.visibility || 'active',
                         max_students: subject.max_students || 30
                     })
@@ -201,19 +199,6 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = ({ user }) => {
                                     className="modern-input"
                                     style={{ padding: '1rem', background: '#f3f4f6', color: '#1f295a', border: '1px solid #d1d5db' }}
                                     placeholder="Ej: MAT-101"
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label style={{ fontSize: '1rem', marginBottom: '0.5rem', color: '#1f295a', fontWeight: 'bold' }}>ID del Curso (Opcional)</label>
-                                <input
-                                    type="text"
-                                    name="course_id"
-                                    value={formData.course_id}
-                                    onChange={handleChange}
-                                    className="modern-input"
-                                    style={{ padding: '1rem', background: '#f3f4f6', color: '#1f295a', border: '1px solid #d1d5db' }}
-                                    placeholder="Identificador único"
                                 />
                             </div>
 

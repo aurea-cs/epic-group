@@ -1409,17 +1409,36 @@ app.delete('/api/admin/grades/:id', async (req, res) => {
 // ========== SUBJECTS ==========
 
 // Create subject
+// Create subject
 app.post('/api/admin/subjects', async (req, res) => {
     try {
-        const { subject_id, name, description, hours_per_week } = req.body;
+        const {
+            name,
+            short_name,
+            description,
+            start_date,
+            end_date,
+            visibility,
+            max_students,
+            grade_id
+        } = req.body;
 
-        if (!subject_id || !name) {
-            return res.status(400).json({ error: 'Subject ID and name are required' });
+        if (!name || !grade_id) {
+            return res.status(400).json({ error: 'Name and grade ID are required' });
         }
 
         const { data, error } = await supabase
             .from('subjects')
-            .insert({ subject_id, name, description, hours_per_week })
+            .insert({
+                name,
+                short_name,
+                description,
+                start_date: start_date || null,
+                end_date: end_date || null,
+                visibility,
+                max_students,
+                grade_id
+            })
             .select()
             .single();
 
