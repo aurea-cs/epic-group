@@ -5,7 +5,6 @@ interface UserData {
     email: string
     password: string
     full_name: string
-    cohort: string
 }
 
 interface Results {
@@ -406,7 +405,6 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerName, cente
         }
     }
 
-    // ── CSV import ─────────────────────────────────────────────────────
     const importCustomUsers = async (users: UserData[]) => {
         setLoading(true)
         setResults(null)
@@ -414,12 +412,14 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerName, cente
         const res: Results = { success: 0, errors: 0, errorDetails: [], processed: [] }
         for (const user of users) {
             try {
-                const r = await fetch(`${API}/api/admin/users`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: user.email, password: user.password, fullName: user.full_name, role: 'student' })
+                const createdUser = await createStudent({
+                    fullName: user.full_name,
+                    email: user.email,
+                    password: user.password
                 })
-                if (!r.ok) { const d = await r.json(); throw new Error(d.error || 'Failed') }
+                if (createdUser?.id) {
+                    await enrollStudent(createdUser.id)
+                }
                 res.success++
                 res.processed.push({ email: user.email, status: 'success', message: 'OK' })
             } catch (error: any) {
@@ -433,7 +433,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerName, cente
         setLoading(false)
         fetchEnrolledStudents()
     }
-
+    
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
         if (!file) return
@@ -451,7 +451,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerName, cente
                 if (!line) continue
                 const parts = line.split(',')
                 if (parts.length >= 3) {
-                    parsed.push({ email: parts[0].trim(), password: parts[1]?.trim() || 'ingles2025', full_name: parts[2].trim(), cohort: parts[3]?.trim() || 'Imported' })
+                    parsed.push({ email: parts[0].trim(), password: parts[1]?.trim() || 'ingles2025', full_name: parts[2].trim() })
                 }
             }
             if (confirm(`Se encontraron ${parsed.length} usuarios en el CSV. ¿Deseas insertarlos ahora?`)) {
