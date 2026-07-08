@@ -2210,6 +2210,102 @@ app.get('/api/admin/content/:contentId/download-url', async (req, res) => {
     }
 });
 
+// Get aggregated profile details (centers, grades, subjects)
+app.get('/api/users/:userId/profile-details', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { role } = req.query;
+
+        if (role === 'admin') {
+            return res.json({ centers: 'N/A', grades: 'N/A', subjects: 'N/A' });
+        }
+
+        let centerNames: string[] = [];
+        let gradeNames: string[] = [];
+        let subjectNames: string[] = [];
+
+        if (role === 'professor') {
+            const { data: profSubjects, error } = await supabase
+                .from('professor_subjects')
+                .select(`
+                    subjects (
+                        name,
+                        grades_levels (
+                            name,
+                            educational_centers (name)
+                        )
+                    )
+                `)
+                .eq('professor_id', userId);
+            
+            if (error) throw error;
+
+            profSubjects?.forEach(ps => {
+                const sub: any = ps.subjects;
+                if (sub) {
+                    subjectNames.push(sub.name);
+                    if (sub.grades_levels) {
+                        gradeNames.push(sub.grades_levels.name);
+                        if (sub.grades_levels.educational_centers) {
+                            centerNames.push(sub.grades_levels.educational_centers.name);
+                        }
+                    }
+                }
+            });
+        } else if (role === 'tutor' || role === 'student') {
+            let targetStudentIds = [userId];
+
+            if (role === 'tutor') {
+                const { data: studentTutors, error: tutorError } = await supabase
+                    .from('student_tutors')
+                    .select('student_id')
+                    .eq('tutor_id', userId);
+                if (tutorError) throw tutorError;
+                targetStudentIds = studentTutors?.map(st => st.student_id) || [];
+            }
+
+            if (targetStudentIds.length > 0) {
+                const { data: enrollments, error: enrollError } = await supabase
+                    .from('enrollments')
+                    .select(`
+                        subjects (name),
+                        grades_levels (name, educational_centers (name))
+                    `)
+                    .in('student_id', targetStudentIds);
+                
+                if (enrollError) throw enrollError;
+
+                enrollments?.forEach(en => {
+                    const sub: any = en.subjects;
+                    const grade: any = en.grades_levels;
+                    if (sub) subjectNames.push(sub.name);
+                    if (grade) {
+                        gradeNames.push(grade.name);
+                        if (grade.educational_centers) {
+                            centerNames.push(grade.educational_centers.name);
+                        }
+                    }
+                });
+            }
+        }
+
+        // Deduplicate
+        const uniqueCenters = [...new Set(centerNames)].filter(Boolean);
+        const uniqueGrades = [...new Set(gradeNames)].filter(Boolean);
+        const uniqueSubjects = [...new Set(subjectNames)].filter(Boolean);
+
+        res.json({
+            centers: uniqueCenters.length > 0 ? uniqueCenters.join(', ') : 'N/A',
+            grades: uniqueGrades.length > 0 ? uniqueGrades.join(', ') : 'N/A',
+            subjects: uniqueSubjects.length > 0 ? uniqueSubjects.join(', ') : 'N/A'
+        });
+
+    } catch (error: any) {
+        console.error('Error fetching profile details:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Basic Route
 app.get('/', (req, res) => {
     res.send('Backend API Running 🚀');

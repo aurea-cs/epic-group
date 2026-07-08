@@ -23,24 +23,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
   const navigate = useNavigate()
 
   const userRole = getUserRole(user)
-  const isProfessor = userRole === 'professor' || userRole === 'admin' // Admin usually sees professor view in this context? Or just strict professor? 
-  // Base code had: 
-  // const isProfessor =
-  //   user.user_metadata?.role?.toLowerCase() === 'professor' ||
-  //   user.app_metadata?.role?.toLowerCase() === 'professor' ||
-  //   user.user_metadata?.is_professor === true;
-  // Let's stick to strict 'professor' for isProfessor boolean unless admin implies it.
-  // Actually, usually admin has super access. Let's keep it simple:
-  // const isProfessor = getUserRole(user) === 'professor'
+  const isProfessor = userRole === 'professor' || userRole === 'admin' 
 
   const getRoleDisplay = () => {
     const role = getUserRole(user)
     if (role === 'admin') return 'Admin'
     if (role === 'professor') return 'Profesor'
+    if (role === 'tutor') return 'Tutor'
     return 'Alumno'
   }
 
-
+  const [profileDetails, setProfileDetails] = useState<{ centers: string, grades: string, subjects: string } | null>(null)
 
   const handleUploadClick = () => {
     setUploadFeedback(null)
@@ -94,31 +87,33 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
   }
 
   useEffect(() => {
-    const fetchStudentData = async () => {
-      if (user && !isProfessor) { // Fetch only if not professor (or maybe fetch for both if useful?)
-        try {
-          // Note: getStudentProgress expects a student ID. 
-          // If the auth user is a student, we use their ID.
-          // However, the API seems to expect a numeric ID usually?? 
-          // Wait, api.ts says `getStudentProgress(studentId: string)`. 
-          // Let's assume user.id (UUID) works if the backend supports it, 
-          // or we might need the numeric ID from the public users table.
+    const fetchProfileDetails = async () => {
+      try {
+        const res = await fetch(`http://localhost:3001/api/users/${user.id}/profile-details?role=${userRole}`)
+        if (res.ok) {
+          const data = await res.json()
+          setProfileDetails(data)
+        }
+      } catch (err) {
+        console.error('Error fetching profile details:', err)
+      }
+    }
+    fetchProfileDetails()
 
-          // Actually, in StudentProgressScreen it uses `studentId` from params.
-          // Here we are the logged in user.
-          // Let's try passing user.id.
+    const fetchStudentData = async () => {
+      if (user && !isProfessor && userRole !== 'tutor' && userRole !== 'admin') { 
+        try {
           import('../lib/api').then(async ({ getStudentProgress }) => {
             const data = await getStudentProgress(user.id)
             setStudentData(data)
           }).catch(err => console.error("Failed to load api", err));
-
         } catch (error) {
           console.error('Error fetching student data:', error)
         }
       }
     }
     fetchStudentData()
-  }, [user, isProfessor])
+  }, [user, isProfessor, userRole])
 
   return (
     <div style={{ padding: '2rem 4rem', backgroundColor: '#f8fafc', minHeight: '100vh', color: '#1e293b' }}>
@@ -158,29 +153,19 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Centro Educativo</div>
-                <div style={{ fontWeight: 'bold', color: '#334155' }}>{user.user_metadata?.school_name || 'N/A'}</div>
+                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Centros Educativos</div>
+                <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.centers : 'Cargando...'}</div>
               </div>
 
-              {!isProfessor && (
-                <>
-                  <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Grado</div>
-                    <div style={{ fontWeight: 'bold', color: '#334155' }}>{user.user_metadata?.grade || user.user_metadata?.cohort || 'N/A'}</div>
-                  </div>
-                  <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Materia</div>
-                    <div style={{ fontWeight: 'bold', color: '#334155' }}>{user.user_metadata?.subject || 'N/A'}</div>
-                  </div>
-                </>
-              )}
+              <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Grados</div>
+                <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.grades : 'Cargando...'}</div>
+              </div>
 
-              {isProfessor && (
-                <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                  <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Materia principal</div>
-                  <div style={{ fontWeight: 'bold', color: '#334155' }}>{user.user_metadata?.subject || 'N/A'}</div>
-                </div>
-              )}
+              <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9', gridColumn: '1 / -1' }}>
+                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Materias</div>
+                <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.subjects : 'Cargando...'}</div>
+              </div>
             </div>
           </div>
 
