@@ -164,7 +164,7 @@ const CenterContentUpload: React.FC<CenterContentUploadProps> = ({ centerId, cen
                 </div>
             )}
 
-            {/* Upload Section */}
+            {/* Upload Subject */}
             <div
                 style={{
                     background: 'rgba(255, 255, 255, 0.03)',

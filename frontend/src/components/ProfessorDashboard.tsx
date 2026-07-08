@@ -36,17 +36,32 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
         if (userRole === 'student') {
           const studentRes = await fetch(`http://localhost:3001/api/students/${user.id}/courses`)
           if (!studentRes.ok) throw new Error('Error fetching student courses')
-          const sections = await studentRes.json()
+          const subjects = await studentRes.json()
 
-          allCourses = sections.map((section: any) => ({
-            id: section.id,
-            title: section.name,
-            description: `${section.grade_name || 'Sin grado'} • ${section.short_name || 'Sin código'}`,
+          allCourses = subjects.map((subject: any) => ({
+            id: subject.id,
+            title: subject.name,
+            description: `${subject.grade_name || 'Sin grado'} • ${subject.short_name || 'Sin código'}`,
             completedSteps: Math.floor(Math.random() * 100), // Mock progress
             totalSteps: 100,
-            gradeId: section.grade_id,
-            centerId: section.center_id,
-            centerName: section.center_name
+            gradeId: subject.grade_id,
+            centerId: subject.center_id,
+            centerName: subject.center_name
+          }))
+        } else if (userRole === 'tutor') {
+          const tutorRes = await fetch(`http://localhost:3001/api/tutors/${user.id}/courses`)
+          if (!tutorRes.ok) throw new Error('Error fetching tutor courses')
+          const subjects = await tutorRes.json()
+
+          allCourses = subjects.map((subject: any) => ({
+            id: subject.id,
+            title: subject.name,
+            description: `${subject.grade_name || 'Sin grado'} • ${subject.short_name || 'Sin código'}`,
+            completedSteps: Math.floor(Math.random() * 100), // Mock progress
+            totalSteps: 100,
+            gradeId: subject.grade_id,
+            centerId: subject.center_id,
+            centerName: subject.center_name
           }))
         } else if (userRole === 'admin') {
           const adminCentersRes = await fetch(`http://localhost:3001/api/admin/centers`)
@@ -64,46 +79,9 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
             }))
           }
         } else {
-          const centersRes = await fetch(`http://localhost:3001/api/professors/${user.id}/centers`)
-          if (!centersRes.ok) throw new Error('Error fetching centers')
-          const centers = await centersRes.json()
-
-          for (const center of centers) {
-            const hierarchyRes = await fetch(`http://localhost:3001/api/admin/centers/${center.id}/hierarchy`)
-            if (!hierarchyRes.ok) continue
-            const hierarchy = await hierarchyRes.json()
-            const grades = hierarchy.grades || []
-
-            grades.forEach((grade: any) => {
-              const sections = grade.sections || []
-              sections.forEach((section: any) => {
-                allCourses.push({
-                  id: section.id,
-                  title: section.name,
-                  description: `${grade.name} • ${section.short_name || 'Sin código'}`,
-                  completedSteps: Math.floor(Math.random() * 100), // Mock progress
-                  totalSteps: 100,
-                  gradeId: grade.id,
-                  centerId: center.id,
-                  centerName: center.name
-                })
-              })
-            })
-          }
-        }
-
-        // --- INYECCIÓN DE CURSO MOCK PARA DEMOSTRACIÓN ---
-        if (allCourses.length === 0 && userRole !== 'admin') {
-          allCourses.push({
-            id: 'mock-course-999',
-            title: 'Viaje Intergaláctico (Demo)',
-            description: 'Demostración visual de planetas',
-            completedSteps: 40,
-            totalSteps: 100,
-            gradeId: 'mock-grade',
-            centerId: 'mock-center',
-            centerName: 'Academia EPIC'
-          });
+          const coursesRes = await fetch(`http://localhost:3001/api/professors/${user.id}/courses`)
+          if (!coursesRes.ok) throw new Error('Error fetching professor courses')
+          allCourses = await coursesRes.json()
         }
         // ------------------------------------------------
 
@@ -115,7 +93,7 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
       }
     }
 
-    if (userRole === 'professor' || userRole === 'admin' || userRole === 'student') {
+    if (userRole === 'professor' || userRole === 'admin' || userRole === 'student' || userRole === 'tutor') {
       fetchProfessorCourses()
     }
   }, [user, userRole])
@@ -134,12 +112,12 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
 
         {/* Classes Section */}
         <div>
-          <h2 className="section-title-modern">{userRole === 'admin' ? 'Centros educativos' : 'Tus cursos'}</h2>
+          <h2 className="section-title-modern">{userRole === 'admin' ? 'Centros educativos' : userRole === 'tutor' ? 'Cursos de tu(s) hijo(s)' : 'Tus cursos'}</h2>
           <div className="classes-grid">
             {loading ? (
-              <p style={{ gridColumn: '1 / -1' }}>Cargando centros...</p>
+              <p style={{ gridColumn: '1 / -1' }}>Cargando...</p>
             ) : courses.length === 0 ? (
-              <p style={{ gridColumn: '1 / -1', color: '#64748b' }}>No tienes clases asignadas actualmente.</p>
+              <p style={{ gridColumn: '1 / -1', color: '#64748b' }}>No hay cursos asignados actualmente.</p>
             ) : (
               courses.map(course => (
                 <div key={course.id} className="class-card" onClick={() => {

@@ -36,6 +36,12 @@ const STUDENT_NAV_ITEMS: NavItem[] = [
     { key: 'profile', label: 'Configuración de perfil', path: '/profile', icon: <UserIcon size={20} /> },
 ]
 
+const TUTOR_NAV_ITEMS: NavItem[] = [
+    { key: 'dashboard', label: 'Inicio', path: '/dashboard', icon: <Layout size={20} /> },
+    { key: 'assignments', label: 'Tareas', path: '/assignments', icon: <FileText size={20} /> },
+    { key: 'profile', label: 'Configuración de perfil', path: '/profile', icon: <UserIcon size={20} /> },
+]
+
 const Sidebar: React.FC<SidebarProps> = ({ userRole, onNavigate }) => {
     const navigate = useNavigate()
     const location = useLocation()
@@ -44,7 +50,9 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, onNavigate }) => {
         ? ADMIN_NAV_ITEMS 
         : userRole === 'student' 
             ? STUDENT_NAV_ITEMS 
-            : PROFESSOR_NAV_ITEMS
+            : userRole === 'tutor' 
+                ? TUTOR_NAV_ITEMS 
+                : PROFESSOR_NAV_ITEMS
 
     const isActive = (path: string) => location.pathname.startsWith(path)
 

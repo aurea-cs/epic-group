@@ -9,13 +9,13 @@ import {
     createGrade,
     updateGrade,
     deleteGrade,
-    getSectionsByGrade,
-    createSection,
-    updateSection,
-    deleteSection,
+    getSubjectsByGrade,
+    createSubject,
+    updateSubject,
+    deleteSubject,
     type EducationalCenter,
     type GradeLevel,
-    type Section,
+    type Subject,
 } from '../lib/adminApi'
 import StudentManagement from './StudentManagement'
 import TeacherManagement from './TeacherManagement'
@@ -43,8 +43,8 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
     const [center, setCenter] = useState<EducationalCenter | null>(null)
     const [grades, setGrades] = useState<GradeLevel[]>([])
     const [selectedGrade, setSelectedGrade] = useState<GradeLevel | null>(null)
-    const [sections, setSections] = useState<Section[]>([])
-    const [selectedSection, setSelectedSection] = useState<Section | null>(null)
+    const [subjects, setSubjects] = useState<Subject[]>([])
+    const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null)
 
     // State for loading and errors
     const [loading, setLoading] = useState(false)
@@ -52,7 +52,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
 
     // State for modals
     const [showGradeModal, setShowGradeModal] = useState(false)
-    const [showSectionModal, setShowSectionModal] = useState(false)
+    const [showSubjectModal, setShowSubjectModal] = useState(false)
     const [showStudentModal, setShowStudentModal] = useState(false)
     const [showTeacherModal, setShowTeacherModal] = useState(false)
     const [showContentModal, setShowContentModal] = useState(false)
@@ -61,7 +61,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
 
     // State for forms
     const [gradeForm, setGradeForm] = useState({ name: '', level: 0 })
-    const [sectionForm, setSectionForm] = useState({
+    const [subjectForm, setSubjectForm] = useState({
         name: '',
         max_students: 30,
         short_name: '',
@@ -74,7 +74,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
 
     // State for editing
     const [editingGrade, setEditingGrade] = useState<GradeLevel | null>(null)
-    const [editingSection, setEditingSection] = useState<Section | null>(null)
+    const [editingSubject, setEditingSubject] = useState<Subject | null>(null)
 
     // Load center and grades on mount
     useEffect(() => {
@@ -84,15 +84,15 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
         }
     }, [centerId])
 
-    // Load sections when grade is selected
+    // Load subjects when grade is selected
     useEffect(() => {
         if (selectedGrade) {
-            loadSections(selectedGrade.id)
+            loadSubjects(selectedGrade.id)
         } else if (grades.length > 0) {
             // Auto-select first grade if none is selected
             setSelectedGrade(grades[0])
         } else {
-            setSections([])
+            setSubjects([])
         }
     }, [selectedGrade, grades])
 
@@ -124,13 +124,13 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
         }
     }
 
-    const loadSections = async (gradeId: string) => {
+    const loadSubjects = async (gradeId: string) => {
         try {
             setLoading(true)
-            const data = await getSectionsByGrade(gradeId)
-            setSections(data)
+            const data = await getSubjectsByGrade(gradeId)
+            setSubjects(data)
         } catch (err: any) {
-            setError(err.message || 'Error al cargar secciones')
+            setError(err.message || 'Error al cargar materias')
         } finally {
             setLoading(false)
         }
@@ -190,14 +190,14 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
         }
     }
 
-    // ========== SECTION FUNCTIONS ==========
+    // ========== SUBJECT FUNCTIONS ==========
 
-    const handleCreateSection = () => {
+    const handleCreateSubject = () => {
         if (!selectedGrade) {
             alert('Selecciona un grado primero')
             return
         }
-        setSectionForm({
+        setSubjectForm({
             name: '',
             max_students: 30,
             short_name: '',
@@ -207,50 +207,50 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
             course_id: '',
             visibility: 'active'
         })
-        setEditingSection(null)
-        setShowSectionModal(true)
+        setEditingSubject(null)
+        setShowSubjectModal(true)
     }
 
 
-    const openCourseDetail = (section: Section) => {
+    const openSubjectDetail = (subject: Subject) => {
         // Navigate to course content view (Moodle-like)
         if (selectedGrade && centerId) {
-            navigate(`/admin/school/${centerId}/grade/${selectedGrade.id}/course/${section.id}/content`)
+            navigate(`/admin/school/${centerId}/grade/${selectedGrade.id}/course/${subject.id}/content`)
         }
     }
 
-    const handleSaveSection = async () => {
+    const handleSaveSubject = async () => {
         if (!selectedGrade) return
 
         try {
             setLoading(true)
-            if (editingSection) {
-                await updateSection(editingSection.id, { ...sectionForm, visibility: sectionForm.visibility as Section['visibility'] })
+            if (editingSubject) {
+                await updateSubject(editingSubject.id, { ...subjectForm, visibility: subjectForm.visibility as Subject['visibility'] })
             } else {
-                await createSection({ ...sectionForm, grade_id: selectedGrade.id, visibility: sectionForm.visibility as Section['visibility'] })
+                await createSubject({ ...subjectForm, grade_id: selectedGrade.id, visibility: subjectForm.visibility as Subject['visibility'] })
             }
-            await loadSections(selectedGrade.id)
-            setShowSectionModal(false)
+            await loadSubjects(selectedGrade.id)
+            setShowSubjectModal(false)
         } catch (err: any) {
-            setError(err.message || 'Error al guardar sección')
+            setError(err.message || 'Error al guardar materia')
         } finally {
             setLoading(false)
         }
     }
 
-    const handleDeleteSection = async (id: string) => {
-        if (!confirm('¿Estás seguro de eliminar esta sección? Se eliminarán todas las materias asociadas.')) return
+    const handleDeleteSubject = async (id: string) => {
+        if (!confirm('¿Estás seguro de eliminar esta materia? Se eliminarán todas las secciones asociadas.')) return
         if (!selectedGrade) return
 
         try {
             setLoading(true)
-            await deleteSection(id)
-            await loadSections(selectedGrade.id)
-            if (selectedSection?.id === id) {
-                setSelectedSection(null)
+            await deleteSubject(id)
+            await loadSubjects(selectedGrade.id)
+            if (selectedSubject?.id === id) {
+                setSelectedSubject(null)
             }
         } catch (err: any) {
-            setError(err.message || 'Error al eliminar sección')
+            setError(err.message || 'Error al eliminar materia')
         } finally {
             setLoading(false)
         }
@@ -334,29 +334,29 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
                         </div>
 
                         <div className="courses-list-body">
-                            {loading && sections.length === 0 ? (
-                                <p className="empty-text">Cargando cursos...</p>
-                            ) : sections.length === 0 ? (
-                                <p className="empty-text">No hay cursos registrados en este grado.</p>
+                            {loading && subjects.length === 0 ? (
+                                <p className="empty-text">Cargando materias...</p>
+                            ) : subjects.length === 0 ? (
+                                <p className="empty-text">No hay materias registradas en este grado.</p>
                             ) : (
-                                sections.map((section) => (
-                                    <div key={section.id} className="course-list-row" onClick={() => openCourseDetail(section)}>
+                                subjects.map((subject) => (
+                                    <div key={subject.id} className="course-list-row" onClick={() => openSubjectDetail(subject)}>
                                         <div className="col-course">
                                             <div className="course-icon-small">📚</div>
-                                            <span className="course-name">{section.name}</span>
+                                            <span className="course-name">{subject.name}</span>
                                         </div>
                                         <div className="col-code">
-                                            {section.short_name || '-'}
+                                            {'-'}
                                         </div>
                                         <div className="col-students">
-                                            Max. {section.max_students}
+                                            Max. {subject.max_students}
                                         </div>
                                         <div className="col-actions">
                                             <button
                                                 className="btn-icon-small"
                                                 onClick={(e) => {
                                                     e.stopPropagation()
-                                                    openCourseDetail(section)
+                                                    openSubjectDetail(subject)
                                                 }}
                                                 title="Ver Detalle"
                                             >
@@ -366,7 +366,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
                                                 className="btn-icon-small delete"
                                                 onClick={(e) => {
                                                     e.stopPropagation()
-                                                    handleDeleteSection(section.id)
+                                                    handleDeleteSubject(subject.id)
                                                 }}
                                                 title="Eliminar"
                                             >
@@ -384,20 +384,20 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
 
 
             {
-                showSectionModal && (
-                    <div className="modal-overlay" onClick={() => setShowSectionModal(false)}>
+                showSubjectModal && (
+                    <div className="modal-overlay" onClick={() => setShowSubjectModal(false)}>
                         <div className="school-modal-content" onClick={(e) => e.stopPropagation()}>
                             <div className="modal-header">
                                 <div className="modal-icon">👥</div>
-                                <h2>{editingSection ? 'Editar Sección' : 'Nueva Sección'}</h2>
+                                <h2>{editingSubject ? 'Editar Materia' : 'Nueva Materia'}</h2>
                             </div>
                             <div className="form-grid">
                                 <div className="form-group">
                                     <label>Nombre *</label>
                                     <input
                                         type="text"
-                                        value={sectionForm.name}
-                                        onChange={(e) => setSectionForm({ ...sectionForm, name: e.target.value })}
+                                        value={subjectForm.name}
+                                        onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })}
                                         placeholder="Ej: A"
                                         className="modern-input"
                                         autoFocus
@@ -407,21 +407,21 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
                                     <label>Máximo de Alumnos</label>
                                     <input
                                         type="number"
-                                        value={sectionForm.max_students}
-                                        onChange={(e) => setSectionForm({ ...sectionForm, max_students: parseInt(e.target.value) })}
+                                        value={subjectForm.max_students}
+                                        onChange={(e) => setSubjectForm({ ...subjectForm, max_students: parseInt(e.target.value) })}
                                         placeholder="Ej: 30"
                                         className="modern-input"
                                     />
                                 </div>
                             </div>
                             <div className="modal-actions">
-                                <button className="btn-cancel-modern" onClick={() => setShowSectionModal(false)}>
+                                <button className="btn-cancel-modern" onClick={() => setShowSubjectModal(false)}>
                                     Cancelar
                                 </button>
                                 <button
                                     className="btn-save-modern"
-                                    onClick={handleSaveSection}
-                                    disabled={!sectionForm.name || loading}
+                                    onClick={handleSaveSubject}
+                                    disabled={!subjectForm.name || loading}
                                 >
                                     {loading ? 'Guardando...' : 'Guardar'}
                                 </button>
@@ -753,7 +753,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
                                     style={{ background: '#1f295a', color: '#ffffff', border: 'none', borderRadius: '30px', padding: '1.5rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '1.5rem', cursor: 'pointer', transition: 'all 0.3s', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
                                     onClick={() => {
                                         setShowCourseTypeModal(false)
-                                        setSelectedSection(null)
+                                        setSelectedSubject(null)
                                         if (selectedGrade && centerId) {
                                             navigate(`/admin/school/${centerId}/grade/${selectedGrade.id}/course/new`)
                                         }
