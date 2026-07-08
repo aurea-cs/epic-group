@@ -36,6 +36,46 @@ const upload = multer({
     }
 });
 
+// ===========================================
+// STUDENT TUTORS
+// ===========================================
+
+// Get tutors linked to a student
+app.get('/api/admin/students/:studentId/tutors', async (req, res) => {
+    try {
+        const { studentId } = req.params;
+
+        const { data: relations, error: relationError } = await supabase
+            .from('student_tutors')
+            .select('tutor_id')
+            .eq('student_id', studentId);
+
+        if (relationError) throw relationError;
+
+        const tutorIds = relations?.map(r => r.tutor_id) || [];
+
+        if (tutorIds.length === 0) {
+            return res.json([]);
+        }
+
+        const { data: tutors, error: tutorsError } = await supabase
+            .from('users')
+            .select('id, full_name, email, firstname, lastname')
+            .in('id', tutorIds);
+
+        if (tutorsError) throw tutorsError;
+
+        res.json(tutors || []);
+    } catch (error: any) {
+        console.error('Error fetching student tutors:', error);
+        // Fallback for missing table
+        if (error.code === '42P01') {
+            return res.json([]);
+        }
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ============================================
 // STUDENT PROGRESS ENDPOINTS
 // ============================================
@@ -215,63 +255,7 @@ app.get('/api/students/:studentId/progress', async (req, res) => {
     }
 });
 
-// Get all students for a professor
-app.get('/api/students', async (req, res) => {
-    try {
-        const { professorId } = req.query;
 
-        if (!professorId) {
-            return res.status(400).json({ error: 'Professor ID is required' });
-        }
-
-        // 1. Get subjects taught by professor to find their subjects
-        const { data: profSubjects, error: profSubjError } = await supabase
-            .from('professor_subjects')
-            .select('subject_id')
-            .eq('professor_id', professorId);
-
-        if (profSubjError) throw profSubjError;
-
-        const subjectIds = [...new Set(profSubjects?.map(ps => ps.subject_id))];;
-
-        // 2. Get enrollments for those subjects
-        const { data: enrollments, error: enrollmentsError } = await supabase
-            .from('enrollments')
-            .select('student_id')
-            .in('subject_id', subjectIds);
-
-        if (enrollmentsError) throw enrollmentsError;
-
-        // Get unique student IDs
-        const studentIds = [...new Set(enrollments?.map(e => e.student_id) || [])];
-
-        if (studentIds.length === 0) {
-            return res.json([]);
-        }
-
-        // Get student details
-        const { data: students, error: studentsError } = await supabase
-            .from('users')
-            .select('id, email, full_name, firstname, lastname, avatar_url')
-            .in('id', studentIds);
-
-        if (studentsError) throw studentsError;
-
-        const formattedStudents = students?.map((student, index) => ({
-            id: index + 1,
-            userId: student.id,
-            name: student.full_name || `${student.firstname || ''} ${student.lastname || ''}`.trim() || 'Alumno',
-            email: student.email,
-            description: student.email,
-            color: ['orange', 'salmon'][index % 2] // Alternate colors
-        })) || [];
-
-        res.json(formattedStudents);
-    } catch (error: any) {
-        console.error('Error fetching students:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
 
 // Add comment to student
 app.post('/api/students/:studentId/comments', async (req, res) => {
@@ -397,7 +381,33 @@ app.delete('/api/comments/:commentId', async (req, res) => {
     }
 });
 
+// Get ALL registered users with role=student (for search-and-enroll)
+app.get('/api/users/students', async (req, res) => {
+    try {
+        const { data: students, error } = await supabase
+            .from('users')
+            .select('id, full_name, email, firstname, lastname, avatar_url')
+            .eq('role', 'student')
+            .order('full_name', { ascending: true });
+
+        if (error) throw error;
+
+        const formatted = (students || []).map((s, i) => ({
+            id: i + 1,
+            userId: s.id,
+            name: s.full_name || `${s.firstname || ''} ${s.lastname || ''}`.trim() || s.email,
+            email: s.email,
+        }));
+
+        res.json(formatted);
+    } catch (error: any) {
+        console.error('Error fetching all students:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get students (optionally filtered by professor)
+
 app.get('/api/students', async (req, res) => {
     try {
         const professorId = req.query.professorId as string;
@@ -821,7 +831,71 @@ app.post('/api/admin/users', async (req, res) => {
     }
 });
 
+// Create a tutor account and link it to a student
+app.post('/api/admin/students/:studentId/tutor', async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { email, password, fullName } = req.body;
+
+        if (!email || !password || !fullName) {
+            return res.status(400).json({ error: 'Email, password, and full name are required' });
+        }
+
+        // 1. Create the tutor user in Supabase Auth
+        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name: fullName }
+        });
+
+        if (authError) throw authError;
+        if (!authUser.user) throw new Error('Failed to create tutor user');
+
+        const tutorId = authUser.user.id;
+
+        // 2. Insert into public.users with role='tutor'
+        const { error: profileError } = await supabase
+            .from('users')
+            .upsert({
+                id: tutorId,
+                email,
+                full_name: fullName,
+                role: 'tutor',
+                firstname: fullName.split(' ')[0],
+                lastname: fullName.split(' ').slice(1).join(' ')
+            });
+
+        if (profileError) throw profileError;
+
+        // 3. Link tutor to student in student_tutors table
+        const { error: linkError } = await supabase
+            .from('student_tutors')
+            .insert({ student_id: studentId, tutor_id: tutorId });
+
+        if (linkError) {
+            // If the table doesn't exist yet, still return success with a warning
+            console.warn('Could not link tutor to student (student_tutors table may not exist):', linkError.message);
+            return res.status(201).json({
+                message: 'Tutor created but could not be linked (student_tutors table missing)',
+                tutor: { id: tutorId, email, fullName, role: 'tutor' },
+                warning: linkError.message
+            });
+        }
+
+        res.status(201).json({
+            message: 'Tutor created and linked to student successfully',
+            tutor: { id: tutorId, email, fullName, role: 'tutor' }
+        });
+
+    } catch (error: any) {
+        console.error('Error creating tutor:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ========== EDUCATIONAL CENTERS ==========
+
 
 // Get all educational centers
 app.get('/api/admin/centers', async (req, res) => {
@@ -970,8 +1044,71 @@ app.post('/api/admin/enrollments', async (req, res) => {
     }
 });
 
+// Get students enrolled in a specific grade
+app.get('/api/admin/grades/:gradeId/students', async (req, res) => {
+    try {
+        const { gradeId } = req.params;
+
+        // 1. Get distinct student_ids enrolled in this grade
+        const { data: enrollments, error: enrollErr } = await supabase
+            .from('enrollments')
+            .select('student_id')
+            .eq('grade_id', gradeId);
+
+        if (enrollErr) throw enrollErr;
+
+        if (!enrollments || enrollments.length === 0) {
+            return res.json([]);
+        }
+
+        const studentIds = [...new Set(enrollments.map(e => e.student_id))];
+
+        // 2. Fetch user details for those students
+        const { data: students, error: studErr } = await supabase
+            .from('users')
+            .select('id, full_name, email, firstname, lastname, avatar_url')
+            .in('id', studentIds)
+            .order('full_name', { ascending: true });
+
+        if (studErr) throw studErr;
+
+        const formatted = (students || []).map(s => ({
+            id: s.id,
+            name: s.full_name || `${s.firstname || ''} ${s.lastname || ''}`.trim() || s.email,
+            email: s.email,
+            avatar_url: s.avatar_url,
+        }));
+
+        res.json(formatted);
+    } catch (error: any) {
+        console.error('Error fetching grade students:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+// Remove a student from a grade (delete their enrollments for that grade)
+app.delete('/api/admin/grades/:gradeId/students/:studentId', async (req, res) => {
+    try {
+        const { gradeId, studentId } = req.params;
+
+        const { error } = await supabase
+            .from('enrollments')
+            .delete()
+            .eq('grade_id', gradeId)
+            .eq('student_id', studentId);
+
+        if (error) throw error;
+
+        res.json({ message: 'Student removed from grade successfully' });
+    } catch (error: any) {
+        console.error('Error removing student from grade:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // ========== CENTER PROFESSORS ==========
+
 
 // Get professors for a center
 app.get('/api/admin/centers/:centerId/professors', async (req, res) => {
@@ -2026,3 +2163,4 @@ app.get('/health', (req, res) => {
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 })
+

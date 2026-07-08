@@ -346,7 +346,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
                                             <span className="course-name">{subject.name}</span>
                                         </div>
                                         <div className="col-code">
-                                            {subject.code || '-'}
+                                            {'-'}
                                         </div>
                                         <div className="col-students">
                                             Max. {subject.max_students}
