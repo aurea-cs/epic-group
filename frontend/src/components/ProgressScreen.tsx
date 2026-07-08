@@ -293,7 +293,7 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ user }) => {
               >
                 Mapa
               </button>
-              {userRole !== 'student' && (
+              {userRole !== 'student' && userRole !== 'tutor' && (
                 <button
                   className={`tab-btn-full ${activeTab === 'students' ? 'active' : ''}`}
                   onClick={() => setActiveTab('students')}

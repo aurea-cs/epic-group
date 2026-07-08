@@ -36,16 +36,14 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
   const displayName = user.user_metadata?.full_name || user.email || 'Usuario'
   const userRole = getUserRole(user)
   const handleOpenNotifications = () => console.log('Abrir notificaciones')
+  const showProfessorDashboard = ['professor', 'student', 'admin', 'tutor'].includes(userRole)
 
-  return (
-    <div className={`dashboard-screen ${(userRole === 'professor' || userRole === 'student' || userRole === 'admin') ? 'prof-dashboard' : ''}`}>
-      
-
-      <div className="dashboard-content" style={(userRole === 'professor' || userRole === 'student' || userRole === 'admin') ? { padding: 0 } : {}}>
-        
-        {(userRole === 'professor' || userRole === 'student' || userRole === 'admin') ? (
-          <ProfessorDashboard user={user} />
-        ) : (
+return (
+  <div className={`dashboard-screen ${showProfessorDashboard ? 'prof-dashboard' : ''}`}>
+    <div className="dashboard-content" style={showProfessorDashboard ? { padding: 0 } : {}}>
+      {showProfessorDashboard ? (
+        <ProfessorDashboard user={user} />
+      ) : (
           /* Sección de bienvenida con fondo morado para estudiantes u otros roles */
           <div className="welcome-section">
             <div className="welcome-content">
@@ -68,11 +66,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
             </div>
           </div>
         )}
-
-      </div>
-
     </div>
-  )
+  </div>
+)
 }
 
 export default DashboardScreen

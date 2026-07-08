@@ -112,7 +112,7 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
 
         {/* Classes Section */}
         <div>
-          <h2 className="section-title-modern">{userRole === 'admin' ? 'Centros educativos' : userRole === 'tutor' ? 'Cursos de tus hijos' : 'Tus cursos'}</h2>
+          <h2 className="section-title-modern">{userRole === 'admin' ? 'Centros educativos' : userRole === 'tutor' ? 'Cursos de tu(s) hijo(s)' : 'Tus cursos'}</h2>
           <div className="classes-grid">
             {loading ? (
               <p style={{ gridColumn: '1 / -1' }}>Cargando...</p>
