@@ -28,6 +28,7 @@ interface Planet {
   id: number
   number: number
   stars: number
+  totalStars?: number
   completed: boolean
   image: string
   position: { top: string; left: string }
@@ -338,7 +339,7 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ user }) => {
                     />
                     <div className="planet-number">{planet.number}</div>
                     <div className="planet-stars">
-                      {Array.from({ length: 3 }, (_, index) => (
+                      {Array.from({ length: planet.totalStars || 3 }, (_, index) => (
                         <div
                           key={index}
                           className={`star ${index < planet.stars ? 'filled' : 'empty'}`}

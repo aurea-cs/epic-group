@@ -403,8 +403,8 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = ({ user }) => {
                                                 onClick={() => handleAddItem(module.id)}
                                                 style={{
                                                     background: 'transparent',
-                                                    border: '1px dashed rgba(255,255,255,0.5)',
-                                                    color: '#ffffff',
+                                                    border: '1px dashed rgba(31, 41, 90, 0.5)',
+                                                    color: '#1f295a',
                                                     padding: '0.5rem 1rem',
                                                     borderRadius: '6px',
                                                     cursor: 'pointer'

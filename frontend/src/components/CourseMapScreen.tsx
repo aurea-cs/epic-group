@@ -75,16 +75,31 @@ const CourseMapScreen: React.FC<CourseMapScreenProps> = ({ user }) => {
           { top: '10%', left: '40%' }
         ];
 
-        const planets = data.map((module: any, index: number) => ({
-          id: module.id,
-          number: index + 1,
-          stars: 0,
-          completed: false,
-          image: images[index % images.length],
-          position: positions[index % positions.length],
-          title: module.title,
-          pdfUrl: '' // PDF will be resolved inside planet screen
-        }));
+        const planets = data.map((module: any, index: number) => {
+          const items = module.items || [];
+          const totalItems = items.length;
+          
+          let completedItems = 0;
+          items.forEach((item: any, iIdx: number) => {
+            // Mock logic for completion (can be replaced by backend item.is_completed later)
+            const isMockCompleted = (index === 0) || (index === 1 && iIdx === 0);
+            if (item.is_completed || isMockCompleted) {
+              completedItems++;
+            }
+          });
+
+          return {
+            id: module.id,
+            number: index + 1,
+            stars: completedItems,
+            totalStars: totalItems > 0 ? totalItems : 3, // fallback to 3 if no items, or just totalItems
+            completed: totalItems > 0 && completedItems === totalItems,
+            image: images[index % images.length],
+            position: positions[index % positions.length],
+            title: module.title,
+            pdfUrl: '' // PDF will be resolved inside planet screen
+          };
+        });
 
         setCoursePlanets(planets);
       } catch (err) {
@@ -198,7 +213,7 @@ const CourseMapScreen: React.FC<CourseMapScreenProps> = ({ user }) => {
 
               {/* Estrellas */}
               <div className="planet-stars">
-                {Array.from({ length: 3 }, (_, index) => (
+                {Array.from({ length: planet.totalStars || 0 }, (_, index) => (
                   <div
                     key={index}
                     className={`star ${index < planet.stars ? 'filled' : 'empty'} `}

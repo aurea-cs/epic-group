@@ -21,6 +21,7 @@ import UploadContentScreen from './src/components/UploadContentScreen'
 import CourseContentScreen from './src/components/CourseContentScreen'
 import PlanetDetailScreen from './src/components/PlanetDetailScreen'
 import MainLayout from './src/components/MainLayout'
+import ModuleDraftScreen from './src/components/ModuleDraftScreen'
 // import LandingPage from './src/components/LandingPage'
 import './App.css'
 
@@ -144,6 +145,10 @@ useEffect(() => {
           <Route
             path="/course/:courseId/planet/:planetId"
             element={user ? <PlanetDetailScreen user={user} /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/course/:courseId/module/:moduleId/items"
+            element={user ? <ModuleDraftScreen user={user} /> : <Navigate to="/login" replace />}
           />
         </Routes>
       </div>

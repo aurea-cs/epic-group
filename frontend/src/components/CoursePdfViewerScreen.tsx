@@ -26,7 +26,7 @@ const courseDescriptions: Record<string, string> = {
 const CoursePdfViewerScreen: React.FC<CoursePdfViewerScreenProps> = ({ user }) => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { courseId } = useParams()
+  const { courseId, resourceId } = useParams()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const { title } = (location.state as LocationState) || {}
@@ -55,12 +55,7 @@ const CoursePdfViewerScreen: React.FC<CoursePdfViewerScreenProps> = ({ user }) =
   const userRole = getUserRole(user)
 
   const handleLearnMore = () => {
-    // Navegar al mapa del curso o a otra acción
-    navigate('/course-map', {
-      state: {
-        courseId: courseId
-      }
-    })
+    navigate(`/course/${courseId}/module/${resourceId}/items`)
   }
 
   return (

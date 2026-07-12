@@ -11,7 +11,7 @@ import image40 from '../assets/image40.png';
 import image41 from '../assets/image41.png';
 import image42 from '../assets/image42.png';
 import image43 from '../assets/image43.png';
-import image1 from '../assets/image1.png';
+import image30 from '../assets/image30.png';
 
 const PLANET_ASSETS = [
   image36, image37, image38, image39, image40, image41, image42, image43
@@ -57,7 +57,7 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = ({ user }) => {
   }, [courseId]);
 
   const handleSubPlanetClick = (module: any) => {
-    navigate(`/course/${courseId}/content/${module.moduleId}`, {
+    navigate(`/course/${courseId}/module/${module.moduleId}/items`, {
       state: { title: module.title }
     });
   };
@@ -83,8 +83,8 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = ({ user }) => {
 
       <div className="solar-system">
         {/* Planeta central */}
-        <div className="central-planet" onClick={handleSubPlanetClick}>
-          <img src={image1} alt="Planeta Central" />
+        <div className="central-planet">
+          <img src={image30} alt="Planeta Central" />
           <div className="central-title">Núcleo</div>
         </div>
 

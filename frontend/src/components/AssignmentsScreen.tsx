@@ -33,24 +33,87 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
         
         // Define some planet images and positions
         const images = [image30, image36, image37, image38, image39]
-        const positions = [
-          { top: '80%', left: '20%' },
-          { top: '60%', left: '50%' },
-          { top: '35%', left: '30%' },
-          { top: '20%', left: '70%' },
-          { top: '10%', left: '40%' }
-        ]
+        
+        const getPlanetPosition = (index: number) => {
+          const predefined = [
+            { top: '80%', left: '20%' },
+            { top: '60%', left: '50%' },
+            { top: '35%', left: '30%' },
+            { top: '20%', left: '70%' },
+            { top: '10%', left: '40%' },
+            { top: '75%', left: '75%' },
+            { top: '50%', left: '20%' },
+            { top: '45%', left: '80%' },
+            { top: '85%', left: '50%' },
+            { top: '25%', left: '15%' },
+            { top: '65%', left: '85%' },
+            { top: '15%', left: '85%' },
+            { top: '90%', left: '85%' },
+            { top: '40%', left: '55%' },
+            { top: '15%', left: '20%' }
+          ];
+          
+          if (index < predefined.length) {
+            return predefined[index];
+          }
+          
+          return {
+            top: `${15 + (index * 13) % 70}%`,
+            left: `${15 + (index * 17) % 70}%`
+          };
+        }
 
-        const planets = data.map((course: any, index: number) => ({
-          id: course.id,
-          number: index + 1,
-          stars: 0,
-          completed: false,
-          image: images[index % images.length],
-          position: positions[index % positions.length],
-          title: course.title || course.name,
-          courseData: course
-        }))
+        // Process courses sequentially to avoid overwhelming the backend with simultaneous requests
+        const planets = []
+        for (let index = 0; index < data.length; index++) {
+          const course = data[index]
+          let stars = 0
+          let completed = false
+          
+          try {
+            // Fetch modules for the course to calculate progress
+            const modRes = await fetch(`http://localhost:3001/api/admin/subjects/${course.id}/modules`)
+            if (modRes.ok) {
+              const modules = await modRes.json()
+              let totalItems = 0
+              let completedItems = 0
+              
+              modules.forEach((module: any, mIdx: number) => {
+                const items = module.items || []
+                totalItems += items.length
+                
+                // Temporary mock logic for testing: 
+                // We assume the first module is completed, and half of the second module.
+                // In the future, this should use item.is_completed from the backend.
+                items.forEach((item: any, iIdx: number) => {
+                  const isMockCompleted = (mIdx === 0) || (mIdx === 1 && iIdx === 0)
+                  if (item.is_completed || isMockCompleted) {
+                    completedItems++
+                  }
+                })
+              })
+              
+              if (totalItems > 0) {
+                const progress = completedItems / totalItems
+                stars = Math.round(progress * 3) // 0 to 3 stars
+                completed = stars === 3
+              }
+            }
+          } catch (err) {
+            console.error(`Error fetching modules for course ${course.id}:`, err)
+          }
+
+          planets.push({
+            id: course.id,
+            number: index + 1,
+            stars: stars,
+            completed: completed,
+            image: images[index % images.length],
+            position: getPlanetPosition(index),
+            title: course.title || course.name,
+            courseData: course
+          })
+        }
 
         setCoursePlanets(planets)
       } catch (err) {
