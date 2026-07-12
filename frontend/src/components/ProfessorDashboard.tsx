@@ -34,7 +34,7 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
         let allCourses: Course[] = []
 
         if (userRole === 'student') {
-          const studentRes = await fetch(`http://localhost:3001/api/students/${user.id}/courses`)
+          const studentRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/students/${user.id}/courses`)
           if (!studentRes.ok) throw new Error('Error fetching student courses')
           const subjects = await studentRes.json()
 
@@ -49,7 +49,7 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
             centerName: subject.center_name
           }))
         } else if (userRole === 'tutor') {
-          const tutorRes = await fetch(`http://localhost:3001/api/tutors/${user.id}/courses`)
+          const tutorRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/tutors/${user.id}/courses`)
           if (!tutorRes.ok) throw new Error('Error fetching tutor courses')
           const subjects = await tutorRes.json()
 
@@ -64,7 +64,7 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
             centerName: subject.center_name
           }))
         } else if (userRole === 'admin') {
-          const adminCentersRes = await fetch(`http://localhost:3001/api/admin/centers`)
+          const adminCentersRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/centers`)
           if (adminCentersRes.ok) {
             const adminCenters = await adminCentersRes.json()
             allCourses = adminCenters.map((center: any) => ({
@@ -79,7 +79,7 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
             }))
           }
         } else {
-          const coursesRes = await fetch(`http://localhost:3001/api/professors/${user.id}/courses`)
+          const coursesRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/professors/${user.id}/courses`)
           if (!coursesRes.ok) throw new Error('Error fetching professor courses')
           allCourses = await coursesRes.json()
         }

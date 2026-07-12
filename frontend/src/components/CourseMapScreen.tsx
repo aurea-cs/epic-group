@@ -36,7 +36,7 @@ const CourseMapScreen: React.FC<CourseMapScreenProps> = () => {
     const fetchModules = async () => {
       try {
         if (activeCourseId === 'general') return;
-        const res = await fetch(`http://localhost:3001/api/admin/subjects/${activeCourseId}/modules`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/subjects/${activeCourseId}/modules`);
         if (!res.ok) throw new Error('Error fetching modules');
         const data = await res.json();
         

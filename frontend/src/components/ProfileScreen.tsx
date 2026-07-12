@@ -86,7 +86,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
   useEffect(() => {
     const fetchProfileDetails = async () => {
       try {
-        const res = await fetch(`http://localhost:3001/api/users/${user.id}/profile-details?role=${userRole}`)
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/users/${user.id}/profile-details?role=${userRole}`)
         if (res.ok) {
           const data = await res.json()
           setProfileDetails(data)
