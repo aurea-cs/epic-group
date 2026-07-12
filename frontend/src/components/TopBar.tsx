@@ -13,7 +13,6 @@ interface TopBarProps {
 
 const TopBar: React.FC<TopBarProps> = ({
     userDisplayName,
-    userRole,
     onLogout,
     notificationCount = 0,
     onOpenNotifications

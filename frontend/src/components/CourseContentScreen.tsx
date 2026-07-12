@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
-import { getUserRole } from '../utils/getUserRole'
-import { auth } from '../lib/supabase'
 import {
     getSubjectById,
     getCourseModules,
@@ -11,7 +9,6 @@ import {
     deleteCourseModule,
     createModuleItem,
     uploadModuleItem,
-    updateModuleItem,
     deleteModuleItem,
     getSubjectProfessors,
     assignSubjectProfessor,
@@ -19,7 +16,6 @@ import {
     getCenterProfessors,
     type Subject,
     type CourseModule,
-    type ModuleItem
 } from '../lib/adminApi'
 import './HierarchyConfig.css'
 
@@ -27,15 +23,14 @@ interface CourseContentScreenProps {
     user: User
 }
 
-const CourseContentScreen: React.FC<CourseContentScreenProps> = ({ user }) => {
+const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     const { centerId, gradeId, courseId } = useParams<{ centerId: string, gradeId: string, courseId: string }>()
     const navigate = useNavigate()
-    const userRole = getUserRole(user)
 
     const [subject, setSubject] = useState<Subject | null>(null)
     const [modules, setModules] = useState<CourseModule[]>([])
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
+    const [, setError] = useState<string | null>(null)
 
     // Professor state
     const [subjectProfessors, setSubjectProfessors] = useState<any[]>([])

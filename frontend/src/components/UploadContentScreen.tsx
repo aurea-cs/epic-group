@@ -1,8 +1,5 @@
 import React from 'react'
 import { User } from '@supabase/supabase-js'
-import { useNavigate } from 'react-router-dom'
-import { auth } from '../lib/supabase'
-import { getUserRole } from '../utils/getUserRole'
 import './UploadContentScreen.css'
 import manoverde from '../assets/manoverde.png'
 import element from '../assets/element.png'
@@ -16,25 +13,7 @@ interface UploadContentScreenProps {
   user: User
 }
 
-const UploadContentScreen: React.FC<UploadContentScreenProps> = ({ user }) => {
-  const navigate = useNavigate()
-
-  const handleNavigation = (path: string) => {
-    navigate(path)
-  }
-
-  const handleLogout = async () => {
-    try {
-      await auth.signOut()
-      navigate('/login')
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error)
-    }
-  }
-
-  const displayName = user.user_metadata?.full_name || user.email || 'Usuario'
-  const userRole = getUserRole(user)
-  const handleOpenNotifications = () => console.log('Abrir notificaciones')
+const UploadContentScreen: React.FC<UploadContentScreenProps> = () => {
 
   return (
     <div className="upload-content-screen">

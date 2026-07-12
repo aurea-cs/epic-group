@@ -21,8 +21,8 @@ interface PlanetDetailScreenProps {
   user: User;
 }
 
-const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = ({ user }) => {
-  const { courseId, planetId } = useParams();
+const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = () => {
+  const { courseId, } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as { pdfUrl?: string; title?: string } | null;

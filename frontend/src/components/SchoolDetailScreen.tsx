@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
-import { getUserRole } from '../utils/getUserRole'
-import { auth } from '../lib/supabase'
 import {
     getCenterById,
     getGradesByCenter,
     createGrade,
     updateGrade,
-    deleteGrade,
     getSubjectsByGrade,
     createSubject,
     updateSubject,
@@ -26,18 +23,10 @@ interface SchoolDetailScreenProps {
     user: User
 }
 
-const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
+const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
     const { centerId } = useParams<{ centerId: string }>()
     const navigate = useNavigate()
-    const userRole = getUserRole(user)
 
-    const handleNavigate = (path: string) => {
-        navigate(path)
-    }
-
-    const handleLogout = async () => {
-        await auth.signOut()
-    }
 
     // State for data
     const [center, setCenter] = useState<EducationalCenter | null>(null)
@@ -74,7 +63,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
 
     // State for editing
     const [editingGrade, setEditingGrade] = useState<GradeLevel | null>(null)
-    const [editingSubject, setEditingSubject] = useState<Subject | null>(null)
+    const [editingSubject, ] = useState<Subject | null>(null)
 
     // Load center and grades on mount
     useEffect(() => {
@@ -147,12 +136,6 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
         setShowGradeModal(true)
     }
 
-    const handleEditGrade = (grade: GradeLevel) => {
-        setGradeForm({ name: grade.name, level: grade.level || 0 })
-        setEditingGrade(grade)
-        setShowGradeModal(true)
-    }
-
     const handleSaveGrade = async () => {
         if (!center) return
 
@@ -171,46 +154,6 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
             setLoading(false)
         }
     }
-
-    const handleDeleteGrade = async (id: string) => {
-        if (!confirm('¿Estás seguro de eliminar este grado? Se eliminarán todas las secciones y materias asociadas.')) return
-        if (!center) return
-
-        try {
-            setLoading(true)
-            await deleteGrade(id)
-            await loadGrades(center.id)
-            if (selectedGrade?.id === id) {
-                setSelectedGrade(null)
-            }
-        } catch (err: any) {
-            setError(err.message || 'Error al eliminar grado')
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    // ========== SUBJECT FUNCTIONS ==========
-
-    const handleCreateSubject = () => {
-        if (!selectedGrade) {
-            alert('Selecciona un grado primero')
-            return
-        }
-        setSubjectForm({
-            name: '',
-            max_students: 30,
-            short_name: '',
-            description: '',
-            start_date: '',
-            end_date: '',
-            course_id: '',
-            visibility: 'active'
-        })
-        setEditingSubject(null)
-        setShowSubjectModal(true)
-    }
-
 
     const openSubjectDetail = (subject: Subject) => {
         // Navigate to course content view (Moodle-like)

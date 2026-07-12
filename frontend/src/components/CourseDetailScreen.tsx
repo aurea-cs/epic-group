@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
 import { getUserRole } from '../utils/getUserRole'
-import { auth } from '../lib/supabase'
 import { getSubjectById, Subject } from '../lib/adminApi'
 import './DashboardScreen.css' // Reusing dashboard styles for consistency
 
@@ -81,14 +80,6 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
         } catch (error: any) {
             alert('Error : ' + error.message)
         }
-    }
-
-    const handleNavigate = (path: string) => {
-        navigate(path)
-    }
-
-    const handleLogout = async () => {
-        await auth.signOut()
     }
 
     if (loading) {

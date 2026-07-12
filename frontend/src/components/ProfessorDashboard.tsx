@@ -98,12 +98,6 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
     }
   }, [user, userRole])
 
-  // Get current date formatted
-  const today = new Date()
-  const options: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }
-  const formattedDate = today.toLocaleDateString('es-ES', options).replace(',', '')
-  const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)
-
   return (
     <div className="professor-dashboard-container">
 

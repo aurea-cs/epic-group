@@ -18,30 +18,18 @@ import {
     type Subject as _Subject,
 } from '../lib/adminApi'
 import { User } from '@supabase/supabase-js'
-import { getUserRole } from '../utils/getUserRole'
 import { getGradesByCenter } from '../lib/adminApi'
 import StudentManagement from './StudentManagement'
 import CenterContentUpload from './CenterContentUpload'
 import './HierarchyConfig.css'
 import './ProfessorDashboard.css' // Import for the dashboard cards styling
-import { auth } from '../lib/supabase'
 
 interface HierarchyConfigProps {
     user: User
 }
 
-const HierarchyConfig: React.FC<HierarchyConfigProps> = ({ user }) => {
+const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
     const navigate = useNavigate()
-    const userRole = getUserRole(user)
-
-    const handleNavigate = (path: string) => {
-        navigate(path)
-    }
-
-    const handleLogout = async () => {
-        await auth.signOut()
-    }
-
     // State for data
     const [centers, setCenters] = useState<EducationalCenter[]>([])
     const [selectedCenter, setSelectedCenter] = useState<EducationalCenter | null>(null)
@@ -61,8 +49,8 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = ({ user }) => {
     const [editingCenter, setEditingCenter] = useState<EducationalCenter | null>(null)
 
     // State for hierarchy view
-    const [activeCenterId, setActiveCenterId] = useState<string>('')
-    const [hierarchy, setHierarchy] = useState<Hierarchy | null>(null)
+    const [activeCenterId,] = useState<string>('')
+    const [, setHierarchy] = useState<Hierarchy | null>(null)
 
     // State for quick actions modal
     const [showActionModal, setShowActionModal] = useState(false)

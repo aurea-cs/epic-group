@@ -1,7 +1,5 @@
-import React, { useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { useNavigate } from 'react-router-dom'
-import { auth } from '../lib/supabase'
 import { getUserRole } from '../utils/getUserRole'
 import './DashboardScreen.css'
 import astronautaImage from '../assets/image10.png'
@@ -15,27 +13,8 @@ interface DashboardScreenProps {
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
 
-  const handleNavigation = (path: string) => {
-    navigate(path)
-  }
-
-  const handleLogout = async () => {
-    setLoading(true)
-    try {
-      await auth.signOut()
-      navigate('/login')
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const displayName = user.user_metadata?.full_name || user.email || 'Usuario'
   const userRole = getUserRole(user)
-  const handleOpenNotifications = () => console.log('Abrir notificaciones')
   const showProfessorDashboard = ['professor', 'student', 'admin', 'tutor'].includes(userRole)
 
 return (

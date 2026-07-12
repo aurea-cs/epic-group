@@ -8,7 +8,7 @@ interface ModuleDraftScreenProps {
   user: User
 }
 
-const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
+const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
   const navigate = useNavigate()
   const [moduleData, setModuleData] = useState<CourseModule | null>(null)
