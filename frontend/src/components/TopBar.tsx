@@ -1,7 +1,6 @@
 import React from 'react'
 import NavbarProfileControls from './NavbarProfileControls'
 import './TopBar.css'
-import { Search } from 'lucide-react'
 
 interface TopBarProps {
     userDisplayName: string
