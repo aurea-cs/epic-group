@@ -1613,7 +1613,7 @@ app.delete('/api/admin/subjects/:subjectId/professors/:userId', async (req, res)
         const { error } = await supabase
             .from('professor_subjects')
             .delete()
-            .match({ subject_id: subjectId, user_id: userId });
+            .match({ subject_id: subjectId, professor_id: userId });
 
         if (error) throw error;
 
