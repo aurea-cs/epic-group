@@ -93,14 +93,6 @@ const LoginScreen: React.FC = () => {
               />
             </div>
 
-            <div className="form-options">
-              <label className="remember-me">
-                <input type="checkbox" />
-                <span>Recordarme</span>
-              </label>
-              <a href="#" className="forgot-password">¿Olvidaste tu contraseña?</a>
-            </div>
-
             <button type="submit" className="login-button" disabled={isLoading}>
               {isLoading ? (
                 <div className="loading-spinner"></div>
@@ -111,7 +103,7 @@ const LoginScreen: React.FC = () => {
           </form>
 
           <div className="form-footer">
-            <p>¿No tienes cuenta? <a href="#" className="signup-link">Regístrate aquí</a></p>
+            <p>¿No tienes cuenta? <b>Contacta a un administrador</b></p>
           </div>
         </div>
       </div>

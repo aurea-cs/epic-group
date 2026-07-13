@@ -334,16 +334,26 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                 <div className="modal-icon">👥</div>
                                 <h2>{editingSubject ? 'Editar Materia' : 'Nueva Materia'}</h2>
                             </div>
-                            <div className="form-grid">
-                                <div className="form-group">
+                            <div className="form-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                                <div className="form-group" style={{ gridColumn: 'span 2' }}>
                                     <label>Nombre *</label>
                                     <input
                                         type="text"
                                         value={subjectForm.name}
                                         onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })}
-                                        placeholder="Ej: A"
+                                        placeholder="Ej: Matemáticas Avanzadas"
                                         className="modern-input"
                                         autoFocus
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Nombre Corto</label>
+                                    <input
+                                        type="text"
+                                        value={subjectForm.short_name}
+                                        onChange={(e) => setSubjectForm({ ...subjectForm, short_name: e.target.value })}
+                                        placeholder="Ej: MAT-101"
+                                        className="modern-input"
                                     />
                                 </div>
                                 <div className="form-group">
@@ -355,6 +365,46 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                         placeholder="Ej: 30"
                                         className="modern-input"
                                     />
+                                </div>
+                                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                    <label>Descripción</label>
+                                    <textarea
+                                        value={subjectForm.description}
+                                        onChange={(e) => setSubjectForm({ ...subjectForm, description: e.target.value })}
+                                        placeholder="Descripción general..."
+                                        className="modern-input"
+                                        style={{ minHeight: '80px', resize: 'vertical' }}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Fecha de Inicio</label>
+                                    <input
+                                        type="date"
+                                        value={subjectForm.start_date}
+                                        onChange={(e) => setSubjectForm({ ...subjectForm, start_date: e.target.value })}
+                                        className="modern-input"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Fecha de Fin</label>
+                                    <input
+                                        type="date"
+                                        value={subjectForm.end_date}
+                                        onChange={(e) => setSubjectForm({ ...subjectForm, end_date: e.target.value })}
+                                        className="modern-input"
+                                    />
+                                </div>
+                                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                    <label>Visibilidad</label>
+                                    <select
+                                        value={subjectForm.visibility}
+                                        onChange={(e) => setSubjectForm({ ...subjectForm, visibility: e.target.value })}
+                                        className="modern-input"
+                                    >
+                                        <option value="active">Mostrar</option>
+                                        <option value="hidden">Ocultar</option>
+                                        <option value="archived">Archivar</option>
+                                    </select>
                                 </div>
                             </div>
                             <div className="modal-actions">
