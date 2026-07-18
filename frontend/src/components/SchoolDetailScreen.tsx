@@ -203,7 +203,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
 
 
     return (
-        <>
+        <div className='course-content-screen'>
             
             <div className="hierarchy-config" style={{ marginTop: '0px', padding: '2rem 4rem' }}>
                 {/* MAIN HEADER */}
@@ -768,7 +768,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                     </div>
                 )
             }
-        </>
+        </div>
     )
 }
 

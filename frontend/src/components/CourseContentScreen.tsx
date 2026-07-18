@@ -224,7 +224,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     }
 
     return (
-        <>
+        <div className="course-content-screen">
             <div className="hierarchy-config" style={{ padding: '2rem 4rem' }}>
                 <div style={{ maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
 
@@ -239,10 +239,10 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                             </button>
                         </div>
                         <div style={{ flex: 1, textAlign: 'center' }}>
-                            <h1 style={{ margin: 0, fontSize: '2rem', color: '#1f295a' }}>
+                            <h1 style={{ margin: 0, fontSize: '2rem', color: 'white' }}>
                                 {subject?.name}
                             </h1>
-                            <p style={{ color: '#1f295a', marginTop: '0.5rem', opacity: 0.8 }}>Contenido del Curso</p>
+                            <p style={{ color: 'white', marginTop: '0.5rem', opacity: 0.8 }}>Contenido del Curso</p>
                         </div>
                         <div className="header-action-right" style={{ width: '150px', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                             <button
@@ -277,7 +277,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                         <span style={{ color: '#c084fc', fontWeight: '600', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>👨‍🏫 Profesores:</span>
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', flex: 1, alignItems: 'center' }}>
                             {subjectProfessors.length === 0 ? (
-                                <span style={{ color: 'rgba(31, 41, 90, 0.5)', fontSize: '0.9rem', fontStyle: 'italic' }}>Sin profesores asignados</span>
+                                <span style={{ color: 'white', fontSize: '0.9rem', fontStyle: 'italic' }}>Sin profesores asignados</span>
                             ) : (
                                 subjectProfessors.map(prof => (
                                     <div key={prof.id} style={{
@@ -296,7 +296,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                         }}>
                                             {(prof.full_name || prof.email || 'P').substring(0, 2).toUpperCase()}
                                         </div>
-                                        <span style={{ fontSize: '0.875rem', color: '#1f295a' }}>{prof.full_name || prof.email}</span>
+                                        <span style={{ fontSize: '0.875rem', color: '#d0d7f4ff' }}>{prof.full_name || prof.email}</span>
                                         <button
                                             onClick={() => handleUnassignProfessor(prof.id)}
                                             disabled={professorLoading}
@@ -583,7 +583,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                     </div>
                 </div>
             )}
-        </>
+        </div>
     )
 }
 
