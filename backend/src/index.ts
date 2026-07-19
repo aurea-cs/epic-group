@@ -1454,11 +1454,11 @@ app.post('/api/admin/subjects', async (req, res) => {
 app.put('/api/admin/subjects/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, hours_per_week, is_active } = req.body;
+        const { name, short_name, description, start_date, end_date, visibility, max_students, is_active } = req.body;
 
         const { data, error } = await supabase
             .from('subjects')
-            .update({ name, description, hours_per_week, is_active })
+            .update({ name, short_name, description, start_date: start_date || null, end_date: end_date || null, visibility, max_students, is_active })
             .eq('id', id)
             .select()
             .single();
@@ -1613,7 +1613,7 @@ app.delete('/api/admin/subjects/:subjectId/professors/:userId', async (req, res)
         const { error } = await supabase
             .from('professor_subjects')
             .delete()
-            .match({ subject_id: subjectId, user_id: userId });
+            .match({ subject_id: subjectId, professor_id: userId });
 
         if (error) throw error;
 

@@ -2,8 +2,6 @@ import React, { useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { useLocation, useNavigate } from 'react-router-dom'
 import './CourseMapScreen.css'
-import { auth } from '../lib/supabase'
-import { getUserRole } from '../utils/getUserRole'
 import { useEffect } from 'react'
 
 import image30 from '../assets/image30.png'
@@ -24,36 +22,13 @@ interface CourseMapLocationState {
 
 
 
-const CourseMapScreen: React.FC<CourseMapScreenProps> = ({ user }) => {
+const CourseMapScreen: React.FC<CourseMapScreenProps> = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const locationState = (location.state as CourseMapLocationState) || {}
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const handleNavigation = (path: string) => {
-    navigate(path)
-  }
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true)
-    try {
-      await auth.signOut()
-      navigate('/login')
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error)
-    } finally {
-      setIsLoggingOut(false)
-    }
-  }
-
-  const handleOpenNotifications = () => console.log('Abrir notificaciones')
-
-  const displayName = user.user_metadata?.full_name || user.email || 'Usuario'
   const activeCourseId = locationState.courseId ?? 'general'
   const activeCourseTitle = locationState.courseTitle ?? 'Mapa del curso'
-  const planetResources = locationState.planetResources ?? {}
-
-  const userRole = getUserRole(user)
 
   const [coursePlanets, setCoursePlanets] = useState<any[]>([])
 
@@ -61,7 +36,7 @@ const CourseMapScreen: React.FC<CourseMapScreenProps> = ({ user }) => {
     const fetchModules = async () => {
       try {
         if (activeCourseId === 'general') return;
-        const res = await fetch(`http://localhost:3001/api/admin/subjects/${activeCourseId}/modules`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/subjects/${activeCourseId}/modules`);
         if (!res.ok) throw new Error('Error fetching modules');
         const data = await res.json();
         

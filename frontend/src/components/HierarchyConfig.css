@@ -1012,3 +1012,9 @@
     background: rgba(255, 255, 255, 0.2);
     color: #ffffff;
 }
+
+.course-content-screen {
+    height: calc(100vh - 90px); /* 90px = visible height of the pink line */
+    overflow-y: auto;
+    box-sizing: border-box;
+}

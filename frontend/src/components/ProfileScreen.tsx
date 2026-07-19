@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { auth, supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import userTeacherUrl from '../assets/user_teacher.png'
 import './ProfileScreen.css'
@@ -14,13 +13,11 @@ interface ProfileScreenProps {
 }
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
-  const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadFeedback, setUploadFeedback] = useState<{ status: 'success' | 'error'; message: string } | null>(null)
   const [studentData, setStudentData] = useState<StudentData | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const navigate = useNavigate()
 
   const userRole = getUserRole(user)
   const isProfessor = userRole === 'professor' || userRole === 'admin' 
@@ -89,7 +86,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
   useEffect(() => {
     const fetchProfileDetails = async () => {
       try {
-        const res = await fetch(`http://localhost:3001/api/users/${user.id}/profile-details?role=${userRole}`)
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/users/${user.id}/profile-details?role=${userRole}`)
         if (res.ok) {
           const data = await res.json()
           setProfileDetails(data)

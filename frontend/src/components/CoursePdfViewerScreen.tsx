@@ -1,7 +1,4 @@
-import React, { useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { auth } from '../lib/supabase'
-import { getUserRole } from '../utils/getUserRole'
 import './CoursePdfViewerScreen.css'
 import type { User } from '@supabase/supabase-js'
 import pencilImage from '../assets/pencil.png'
@@ -23,36 +20,14 @@ const courseDescriptions: Record<string, string> = {
   'default': 'Explora este curso y descubre todo lo que necesitas para avanzar en tu aprendizaje. Aprende conceptos clave, desarrolla nuevas habilidades y alcanza tus objetivos educativos.'
 }
 
-const CoursePdfViewerScreen: React.FC<CoursePdfViewerScreenProps> = ({ user }) => {
+const CoursePdfViewerScreen: React.FC<CoursePdfViewerScreenProps> = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { courseId, resourceId } = useParams()
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const { title } = (location.state as LocationState) || {}
   const courseTitle = title || 'Conoce tu agenda'
   const courseDescription = courseDescriptions[title || ''] || courseDescriptions['default']
-
-  const handleNavigation = (path: string) => {
-    navigate(path)
-  }
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true)
-    try {
-      await auth.signOut()
-      navigate('/login')
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error)
-    } finally {
-      setIsLoggingOut(false)
-    }
-  }
-
-  const handleOpenNotifications = () => console.log('Abrir notificaciones')
-
-  const displayName = user.user_metadata?.full_name || user.email || 'Usuario'
-  const userRole = getUserRole(user)
 
   const handleLearnMore = () => {
     navigate(`/course/${courseId}/module/${resourceId}/items`)

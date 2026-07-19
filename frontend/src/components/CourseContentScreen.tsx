@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
-import { getUserRole } from '../utils/getUserRole'
-import { auth } from '../lib/supabase'
 import {
     getSubjectById,
     getCourseModules,
@@ -11,7 +9,6 @@ import {
     deleteCourseModule,
     createModuleItem,
     uploadModuleItem,
-    updateModuleItem,
     deleteModuleItem,
     getSubjectProfessors,
     assignSubjectProfessor,
@@ -19,7 +16,6 @@ import {
     getCenterProfessors,
     type Subject,
     type CourseModule,
-    type ModuleItem
 } from '../lib/adminApi'
 import './HierarchyConfig.css'
 
@@ -27,15 +23,14 @@ interface CourseContentScreenProps {
     user: User
 }
 
-const CourseContentScreen: React.FC<CourseContentScreenProps> = ({ user }) => {
+const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     const { centerId, gradeId, courseId } = useParams<{ centerId: string, gradeId: string, courseId: string }>()
     const navigate = useNavigate()
-    const userRole = getUserRole(user)
 
     const [subject, setSubject] = useState<Subject | null>(null)
     const [modules, setModules] = useState<CourseModule[]>([])
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
+    const [, setError] = useState<string | null>(null)
 
     // Professor state
     const [subjectProfessors, setSubjectProfessors] = useState<any[]>([])
@@ -229,7 +224,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = ({ user }) => {
     }
 
     return (
-        <>
+        <div className="course-content-screen">
             <div className="hierarchy-config" style={{ padding: '2rem 4rem' }}>
                 <div style={{ maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
 
@@ -244,10 +239,10 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = ({ user }) => {
                             </button>
                         </div>
                         <div style={{ flex: 1, textAlign: 'center' }}>
-                            <h1 style={{ margin: 0, fontSize: '2rem', color: '#1f295a' }}>
+                            <h1 style={{ margin: 0, fontSize: '2rem', color: 'white' }}>
                                 {subject?.name}
                             </h1>
-                            <p style={{ color: '#1f295a', marginTop: '0.5rem', opacity: 0.8 }}>Contenido del Curso</p>
+                            <p style={{ color: 'white', marginTop: '0.5rem', opacity: 0.8 }}>Contenido del Curso</p>
                         </div>
                         <div className="header-action-right" style={{ width: '150px', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                             <button
@@ -282,7 +277,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = ({ user }) => {
                         <span style={{ color: '#c084fc', fontWeight: '600', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>👨‍🏫 Profesores:</span>
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', flex: 1, alignItems: 'center' }}>
                             {subjectProfessors.length === 0 ? (
-                                <span style={{ color: 'rgba(31, 41, 90, 0.5)', fontSize: '0.9rem', fontStyle: 'italic' }}>Sin profesores asignados</span>
+                                <span style={{ color: 'white', fontSize: '0.9rem', fontStyle: 'italic' }}>Sin profesores asignados</span>
                             ) : (
                                 subjectProfessors.map(prof => (
                                     <div key={prof.id} style={{
@@ -301,7 +296,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = ({ user }) => {
                                         }}>
                                             {(prof.full_name || prof.email || 'P').substring(0, 2).toUpperCase()}
                                         </div>
-                                        <span style={{ fontSize: '0.875rem', color: '#1f295a' }}>{prof.full_name || prof.email}</span>
+                                        <span style={{ fontSize: '0.875rem', color: '#d0d7f4ff' }}>{prof.full_name || prof.email}</span>
                                         <button
                                             onClick={() => handleUnassignProfessor(prof.id)}
                                             disabled={professorLoading}
@@ -588,7 +583,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = ({ user }) => {
                     </div>
                 </div>
             )}
-        </>
+        </div>
     )
 }
 

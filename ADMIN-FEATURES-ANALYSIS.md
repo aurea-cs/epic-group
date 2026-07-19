@@ -227,7 +227,7 @@
 ### Fase 2: Gestión de Usuarios (Alta Prioridad)
 1. Actualizar tabla users con nuevos campos ✅
 2. Crear endpoints de gestión de usuarios
-3. Crear componente `UserManagement`
+3. Crear componente `UserManagement` 
 4. Implementar alta de usuarios
 5. Implementar baja de usuarios
 6. Implementar suspensión/reactivación

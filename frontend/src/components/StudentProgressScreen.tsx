@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { auth } from '../lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import { getStudentProgress, type StudentData } from '../lib/api'
 import './StudentProgressScreen.css'
@@ -17,7 +16,7 @@ interface StudentProgressScreenProps {
     user: User
 }
 
-const StudentProgressScreen: React.FC<StudentProgressScreenProps> = ({ user }) => {
+const StudentProgressScreen: React.FC<StudentProgressScreenProps> = () => {
     const [dataLoading, setDataLoading] = useState(true)
     const [studentData, setStudentData] = useState<StudentData | null>(null)
     const [error, setError] = useState<string | null>(null)

@@ -15,8 +15,9 @@ interface DashboardScreenProps {
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
   const navigate = useNavigate()
+
   const userRole = getUserRole(user)
-  const isAdmin = userRole === 'admin'
+  const isAdmin = ['admin'].includes(userRole)
 
   return (
     <div className="dashboard-screen">

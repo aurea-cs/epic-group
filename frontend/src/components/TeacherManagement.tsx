@@ -53,7 +53,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
             setLoading(true)
 
             // Call Backend API to create user securely
-            const response = await fetch('http://localhost:3001/api/admin/users', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/users`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

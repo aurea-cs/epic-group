@@ -78,60 +78,14 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ user }) => {
   const [newNote, setNewNote] = useState('')
 
   // Real Data State
-  const [courses, setCourses] = useState<Course[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [courses, ] = useState<Course[]>([])
+  const [loading, ] = useState(false)
+  const [error, ] = useState<string | null>(null)
 
   const userRole = getUserRole(user)
 
   // Fetch Courses for Professor
   useEffect(() => {
-    const fetchProfessorCourses = async () => {
-      if (userRole !== 'professor' && userRole !== 'admin') return // For now only handle professor logic here
-
-      setLoading(true)
-      try {
-        // 1. Get assigned centers
-        const centersRes = await fetch(`http://localhost:3001/api/professors/${user.id}/centers`)
-        if (!centersRes.ok) throw new Error('Error fetching centers')
-        const centers = await centersRes.json()
-
-        let allCourses: Course[] = []
-
-        // 2. Get hierarchy for each center
-        for (const center of centers) {
-          const hierarchyRes = await fetch(`http://localhost:3001/api/admin/centers/${center.id}/hierarchy`)
-          if (!hierarchyRes.ok) continue
-
-          const hierarchy = await hierarchyRes.json()
-          const grades = hierarchy.grades || []
-
-          // Flatten subjects to courses
-          grades.forEach((grade: any) => {
-            const subjects = grade.subjects || []
-            subjects.forEach((subject: any) => {
-              allCourses.push({
-                id: subject.id,
-                title: `${subject.name} - ${grade.name}`, // "Subject Name - Grade Name"
-                description: `${center.name} • ${subject.short_name || 'Sin código'}`,
-                completedSteps: 0, // Logic to be implemented
-                totalSteps: 5, // Default for now
-                gradeId: grade.id,
-                centerId: center.id,
-                centerName: center.name
-              })
-            })
-          })
-        }
-
-        setCourses(allCourses)
-      } catch (err: any) {
-        console.error('Error loading courses:', err)
-        setError('No se pudieron cargar los cursos asignados')
-      } finally {
-        setLoading(false)
-      }
-    }
 
     if (location.state?.selectedCourse) {
       setSelectedCourse(location.state.selectedCourse)

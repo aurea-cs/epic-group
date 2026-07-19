@@ -27,7 +27,7 @@ interface StudentManagementProps {
     gradeId?: string
 }
 
-const API = 'http://localhost:3001'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 // ── Tutor Modal ──────────────────────────────────────────────────────────────
 interface TutorModalProps {
@@ -259,7 +259,7 @@ const TutorsListModal: React.FC<TutorsListModalProps> = ({ student, tutors, onCl
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-const StudentManagement: React.FC<StudentManagementProps> = ({ centerName, centerId, gradeId }) => {
+const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId }) => {
     // ── Registered students in this grade ──────────────────────────────
     const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>([])
     const [loadingEnrolled, setLoadingEnrolled] = useState(false)
@@ -283,7 +283,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerName, cente
     // ── CSV import ─────────────────────────────────────────────────────
     const [loading, setLoading] = useState(false)
     const [results, setResults] = useState<Results | null>(null)
-    const [failedUsers, setFailedUsers] = useState<UserData[]>([])
+    const [, setFailedUsers] = useState<UserData[]>([])
     const [parsing, setParsing] = useState(false)
 
     // ── Delete ─────────────────────────────────────────────────────────

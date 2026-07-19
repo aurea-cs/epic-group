@@ -27,7 +27,7 @@ const ProfessorAssignmentModal: React.FC<ProfessorAssignmentModalProps> = ({
 }) => {
     const [professors, setProfessors] = useState<User[]>([])
     const [loading, setLoading] = useState(false)
-    const [assigning, setAssigning] = useState<string | null>(null)
+    const [assigning,] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {

@@ -2,7 +2,7 @@ import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import './Sidebar.css'
 import logoImage from '../assets/epic2.png'
-import { FileText, Users, Calendar, Layout, BookOpen, Settings, User as UserIcon } from 'lucide-react'
+import { Users, Layout, BookOpen, Settings, User as UserIcon } from 'lucide-react'
 
 interface NavItem {
     key: string

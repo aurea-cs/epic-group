@@ -1,7 +1,6 @@
 import React from 'react'
 import NavbarProfileControls from './NavbarProfileControls'
 import './TopBar.css'
-import { Search } from 'lucide-react'
 
 interface TopBarProps {
     userDisplayName: string
@@ -13,7 +12,6 @@ interface TopBarProps {
 
 const TopBar: React.FC<TopBarProps> = ({
     userDisplayName,
-    userRole,
     onLogout,
     notificationCount = 0,
     onOpenNotifications
@@ -36,11 +34,7 @@ const TopBar: React.FC<TopBarProps> = ({
             </div>
 
             <div className="top-bar-right">
-                <div className="search-container">
-                    <Search className="search-icon" size={18} />
-                    <input type="text" placeholder="Buscar..." className="search-input" />
-                </div>
-                
+
                 <NavbarProfileControls
                     userDisplayName={userDisplayName}
                     onNavigate={() => {}}

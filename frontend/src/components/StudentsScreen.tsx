@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
 import { useNavigate } from 'react-router-dom'
-import { auth } from '../lib/supabase'
-import { getUserRole } from '../utils/getUserRole'
 import './StudentsScreen.css'
 import { getStudentsByProfessor, type Student } from '../lib/api'
 
@@ -15,7 +13,7 @@ interface StudentsScreenProps {
 
 const StudentsScreen: React.FC<StudentsScreenProps> = ({ user }) => {
     const navigate = useNavigate()
-    const [_isLoggingOut, setIsLoggingOut] = useState(false)
+    const [_isLoggingOut, ] = useState(false)
     const [students, setStudents] = useState<Student[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -47,27 +45,9 @@ const StudentsScreen: React.FC<StudentsScreenProps> = ({ user }) => {
         fetchStudents()
     }, [user.id])
 
-    const handleNavigation = (path: string) => {
-        navigate(path)
-    }
-
-    const handleLogout = async () => {
-        setIsLoggingOut(true)
-        try {
-            await auth.signOut()
-            navigate('/login')
-        } catch (error) {
-            console.error('Error al cerrar sesión:', error)
-        } finally {
-            setIsLoggingOut(false)
-        }
-    }
-
     // Splitting for columns
     const leftStudents = students.slice(0, Math.ceil(students.length / 2))
     const rightStudents = students.slice(Math.ceil(students.length / 2))
-    const displayName = user.user_metadata?.full_name || user.email || 'Usuario'
-    const userRole = getUserRole(user)
 
     return (
         <div className="students-screen">

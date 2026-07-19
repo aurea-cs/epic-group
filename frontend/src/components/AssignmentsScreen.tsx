@@ -26,8 +26,8 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
     const fetchCourses = async () => {
       try {
         const endpoint = userRole === 'student' 
-          ? `${API_URL}/api/students/${user.id}/courses`
-          : `${API_URL}/api/professors/${user.id}/courses`;
+          ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/students/${user.id}/courses`
+          : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/professors/${user.id}/courses`;
           
         const res = await fetch(endpoint)
         if (!res.ok) throw new Error('Error fetching courses')
@@ -84,7 +84,7 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
           
           try {
             // Fetch modules for the course to calculate progress
-            const modRes = await fetch(`${API_URL}/api/admin/subjects/${course.id}/modules`)
+            const modRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/subjects/${course.id}/modules`)
             if (modRes.ok) {
               const modules = await modRes.json()
               let totalItems = 0

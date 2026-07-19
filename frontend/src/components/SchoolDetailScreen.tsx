@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
-import { getUserRole } from '../utils/getUserRole'
-import { auth } from '../lib/supabase'
 import {
     getCenterById,
     getGradesByCenter,
     createGrade,
     updateGrade,
-    deleteGrade,
     getSubjectsByGrade,
     createSubject,
     updateSubject,
@@ -26,18 +23,10 @@ interface SchoolDetailScreenProps {
     user: User
 }
 
-const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
+const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
     const { centerId } = useParams<{ centerId: string }>()
     const navigate = useNavigate()
-    const userRole = getUserRole(user)
 
-    const handleNavigate = (path: string) => {
-        navigate(path)
-    }
-
-    const handleLogout = async () => {
-        await auth.signOut()
-    }
 
     // State for data
     const [center, setCenter] = useState<EducationalCenter | null>(null)
@@ -74,7 +63,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
 
     // State for editing
     const [editingGrade, setEditingGrade] = useState<GradeLevel | null>(null)
-    const [editingSubject, setEditingSubject] = useState<Subject | null>(null)
+    const [editingSubject, ] = useState<Subject | null>(null)
 
     // Load center and grades on mount
     useEffect(() => {
@@ -147,12 +136,6 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
         setShowGradeModal(true)
     }
 
-    const handleEditGrade = (grade: GradeLevel) => {
-        setGradeForm({ name: grade.name, level: grade.level || 0 })
-        setEditingGrade(grade)
-        setShowGradeModal(true)
-    }
-
     const handleSaveGrade = async () => {
         if (!center) return
 
@@ -171,46 +154,6 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
             setLoading(false)
         }
     }
-
-    const handleDeleteGrade = async (id: string) => {
-        if (!confirm('¿Estás seguro de eliminar este grado? Se eliminarán todas las secciones y materias asociadas.')) return
-        if (!center) return
-
-        try {
-            setLoading(true)
-            await deleteGrade(id)
-            await loadGrades(center.id)
-            if (selectedGrade?.id === id) {
-                setSelectedGrade(null)
-            }
-        } catch (err: any) {
-            setError(err.message || 'Error al eliminar grado')
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    // ========== SUBJECT FUNCTIONS ==========
-
-    const handleCreateSubject = () => {
-        if (!selectedGrade) {
-            alert('Selecciona un grado primero')
-            return
-        }
-        setSubjectForm({
-            name: '',
-            max_students: 30,
-            short_name: '',
-            description: '',
-            start_date: '',
-            end_date: '',
-            course_id: '',
-            visibility: 'active'
-        })
-        setEditingSubject(null)
-        setShowSubjectModal(true)
-    }
-
 
     const openSubjectDetail = (subject: Subject) => {
         // Navigate to course content view (Moodle-like)
@@ -260,7 +203,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
 
 
     return (
-        <>
+        <div className='course-content-screen'>
             
             <div className="hierarchy-config" style={{ marginTop: '0px', padding: '2rem 4rem' }}>
                 {/* MAIN HEADER */}
@@ -391,16 +334,26 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
                                 <div className="modal-icon">👥</div>
                                 <h2>{editingSubject ? 'Editar Materia' : 'Nueva Materia'}</h2>
                             </div>
-                            <div className="form-grid">
-                                <div className="form-group">
+                            <div className="form-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                                <div className="form-group" style={{ gridColumn: 'span 2' }}>
                                     <label>Nombre *</label>
                                     <input
                                         type="text"
                                         value={subjectForm.name}
                                         onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })}
-                                        placeholder="Ej: A"
+                                        placeholder="Ej: Matemáticas Avanzadas"
                                         className="modern-input"
                                         autoFocus
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Nombre Corto</label>
+                                    <input
+                                        type="text"
+                                        value={subjectForm.short_name}
+                                        onChange={(e) => setSubjectForm({ ...subjectForm, short_name: e.target.value })}
+                                        placeholder="Ej: MAT-101"
+                                        className="modern-input"
                                     />
                                 </div>
                                 <div className="form-group">
@@ -412,6 +365,46 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
                                         placeholder="Ej: 30"
                                         className="modern-input"
                                     />
+                                </div>
+                                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                    <label>Descripción</label>
+                                    <textarea
+                                        value={subjectForm.description}
+                                        onChange={(e) => setSubjectForm({ ...subjectForm, description: e.target.value })}
+                                        placeholder="Descripción general..."
+                                        className="modern-input"
+                                        style={{ minHeight: '80px', resize: 'vertical' }}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Fecha de Inicio</label>
+                                    <input
+                                        type="date"
+                                        value={subjectForm.start_date}
+                                        onChange={(e) => setSubjectForm({ ...subjectForm, start_date: e.target.value })}
+                                        className="modern-input"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Fecha de Fin</label>
+                                    <input
+                                        type="date"
+                                        value={subjectForm.end_date}
+                                        onChange={(e) => setSubjectForm({ ...subjectForm, end_date: e.target.value })}
+                                        className="modern-input"
+                                    />
+                                </div>
+                                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                    <label>Visibilidad</label>
+                                    <select
+                                        value={subjectForm.visibility}
+                                        onChange={(e) => setSubjectForm({ ...subjectForm, visibility: e.target.value })}
+                                        className="modern-input"
+                                    >
+                                        <option value="active">Mostrar</option>
+                                        <option value="hidden">Ocultar</option>
+                                        <option value="archived">Archivar</option>
+                                    </select>
                                 </div>
                             </div>
                             <div className="modal-actions">
@@ -775,7 +768,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = ({ user }) => {
                     </div>
                 )
             }
-        </>
+        </div>
     )
 }
 

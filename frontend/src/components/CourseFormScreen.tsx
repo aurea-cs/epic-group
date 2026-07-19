@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
-import { getUserRole } from '../utils/getUserRole'
-import { auth } from '../lib/supabase'
 import {
     getSubjectById,
     createSubject,
     updateSubject,
-    getGradeContent,
     type Subject,
-    type GradeContent
 } from '../lib/adminApi'
 import './HierarchyConfig.css' // Reusing styles
 
@@ -17,10 +13,9 @@ interface CourseFormScreenProps {
     user: User
 }
 
-const CourseFormScreen: React.FC<CourseFormScreenProps> = ({ user }) => {
+const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
     const { centerId, gradeId, courseId } = useParams<{ centerId: string, gradeId: string, courseId?: string }>()
     const navigate = useNavigate()
-    const userRole = getUserRole(user)
 
     const [loading, setLoading] = useState(false)
     const [pageLoading, setPageLoading] = useState(true)
@@ -66,14 +61,6 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = ({ user }) => {
         }
         loadData()
     }, [courseId, isEditing])
-
-    const handleNavigate = (path: string) => {
-        navigate(path)
-    }
-
-    const handleLogout = async () => {
-        await auth.signOut()
-    }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target
