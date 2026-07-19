@@ -120,6 +120,10 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
                   alt={pdfItem.title || "Contenido PDF"}
                   onClick={() => {
                     if (pdfItem.content_url) {
+                      const readItems = JSON.parse(localStorage.getItem('readItems') || '{}');
+                      readItems[pdfItem.id] = true;
+                      localStorage.setItem('readItems', JSON.stringify(readItems));
+                      
                       window.open(pdfItem.content_url, '_blank');
                     } else {
                       alert('Este PDF no tiene una URL configurada aún.');

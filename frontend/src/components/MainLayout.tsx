@@ -39,7 +39,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, user }) => {
                 userRole={userRole} 
                 onNavigate={handleNavigate} 
                 onLogout={handleLogout}
-                backgroundColor={location.pathname.startsWith('/alumnos') ? '#a3d92a' : undefined}
             />
             <main className="main-layout-main">
                 {children}

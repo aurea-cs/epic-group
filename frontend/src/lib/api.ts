@@ -48,9 +48,13 @@ export interface Comment {
 /**
  * Fetch student progress data
  */
-export const getStudentProgress = async (studentId: string): Promise<StudentData> => {
+export const getStudentProgress = async (studentId: string, professorId?: string): Promise<StudentData> => {
     try {
-        const response = await fetch(`${API_URL}/api/students/${studentId}/progress`)
+        let url = `${API_URL}/api/students/${studentId}/progress`
+        if (professorId) {
+            url += `?professorId=${encodeURIComponent(professorId)}`
+        }
+        const response = await fetch(url)
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`)

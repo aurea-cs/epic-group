@@ -3,18 +3,15 @@ import { User } from '@supabase/supabase-js';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './PlanetDetailScreen.css';
 
-import image36 from '../assets/image36.png';
-import image37 from '../assets/image37.png';
-import image38 from '../assets/image38.png';
-import image39 from '../assets/image39.png';
-import image40 from '../assets/image40.png';
-import image41 from '../assets/image41.png';
-import image42 from '../assets/image42.png';
-import image43 from '../assets/image43.png';
+import planetasolito1 from '../assets/planetasolito1.png';
+import planetasolito2 from '../assets/planetasolito2.png';
+import planetasolito3 from '../assets/planetasolito3.png';
+import planetasolito4 from '../assets/planetasolito4.png';
+import planetasolito5 from '../assets/planetasolito5.png';
 import image30 from '../assets/image30.png';
 
 const PLANET_ASSETS = [
-  image36, image37, image38, image39, image40, image41, image42, image43
+  planetasolito1, planetasolito2, planetasolito3, planetasolito4, planetasolito5
 ];
 
 interface PlanetDetailScreenProps {
@@ -46,7 +43,26 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = () => {
           const x = Math.cos(angle) * radius;
           const y = Math.sin(angle) * radius;
           const asset = PLANET_ASSETS[i % PLANET_ASSETS.length];
-          return { id: module.id, moduleId: module.id, title: module.title, x, y, asset };
+          
+          const mItems = (module.items || []).filter((item: any) => item.type === 'pdf');
+          const totalItems = mItems.length;
+          
+          const readItems = JSON.parse(localStorage.getItem('readItems') || '{}');
+          const completedItems = mItems.filter((it: any) => it.is_completed || readItems[it.id]).length;
+          
+          let stars = 0;
+          if (totalItems > 0) {
+            const progress = completedItems / totalItems;
+            if (progress === 1) {
+              stars = 3;
+            } else if (progress >= 0.5) {
+              stars = 2;
+            } else if (progress > 0) {
+              stars = 1;
+            }
+          }
+          
+          return { id: module.id, moduleId: module.id, title: module.title, x, y, asset, stars };
         });
         setSubPlanets(items);
       } catch (err) {
@@ -98,6 +114,14 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = () => {
             }}
             onClick={() => handleSubPlanetClick(sp)}
           >
+            <div className="planet-stars-top">
+              {Array.from({ length: 3 }, (_, index) => (
+                <div
+                  key={index}
+                  className={`star ${index < sp.stars ? 'filled' : 'empty'}`}
+                ></div>
+              ))}
+            </div>
             <img src={sp.asset} alt={`Sub-planeta ${sp.id}`} />
             <div className="sub-title">{sp.title}</div>
           </div>

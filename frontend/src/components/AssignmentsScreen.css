@@ -130,8 +130,8 @@
 
 .planet-frame {
   position: relative;
-  width: 120px;
-  height: 120px;
+  width: 80px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -139,8 +139,8 @@
 }
 
 .planet-image {
-  width: 100px;
-  height: 100px;
+  width: 70px;
+  height: 70px;
   object-fit: contain;
   transition: all 0.3s ease;
   filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4)) brightness(0.9);
@@ -170,37 +170,25 @@
   z-index: 20;
 }
 
-.planet-number {
-  position: absolute;
-  top: -15px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #FFC000;
-  color: #fff;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
-  z-index: 15;
-}
-
 .planet-stars {
   position: absolute;
-  bottom: -15px;
+  bottom: 100%;
+  margin-bottom: 5px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 60px;
   gap: 4px;
-  z-index: 15;
+  z-index: 25;
 }
 
 .star {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  position: relative;
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
   transition: all 0.3s ease;
 }
@@ -211,7 +199,7 @@
 }
 
 .star.empty {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.6);
 }
 
 /* Cohete y Botón Start */

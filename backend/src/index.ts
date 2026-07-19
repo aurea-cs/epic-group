@@ -229,6 +229,7 @@ app.get('/api/students/:studentId/courses', async (req, res) => {
 app.get('/api/students/:studentId/progress', async (req, res) => {
     try {
         const { studentId } = req.params;
+        const professorId = req.query.professorId as string;
 
         // Get student basic info
         const { data: student, error: studentError } = await supabase
@@ -239,7 +240,6 @@ app.get('/api/students/:studentId/progress', async (req, res) => {
 
         if (studentError) throw studentError;
 
-        // Get enrollments to find subjects
         const { data: enrollments, error: enrollmentsError } = await supabase
             .from('enrollments')
             .select('subject_id')
@@ -247,7 +247,18 @@ app.get('/api/students/:studentId/progress', async (req, res) => {
 
         if (enrollmentsError) throw enrollmentsError;
         
-        const subjectIds = enrollments?.map(e => e.subject_id) || [];
+        let subjectIds = enrollments?.map(e => e.subject_id) || [];
+        
+        if (professorId && subjectIds.length > 0) {
+            const { data: profSubjects, error: profSubjError } = await supabase
+                .from('professor_subjects')
+                .select('subject_id')
+                .eq('professor_id', professorId)
+                .in('subject_id', subjectIds);
+                
+            if (profSubjError) throw profSubjError;
+            subjectIds = profSubjects?.map(ps => ps.subject_id) || [];
+        }
         
         // Get subjects for those subjects
         const { data: subjects, error: subjectsError } = await supabase
