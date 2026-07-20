@@ -1645,7 +1645,10 @@ app.post('/api/admin/subjects', async (req, res) => {
             end_date,
             visibility,
             max_students,
-            grade_id
+            grade_id,
+            schedule_days,
+            schedule_start_time,
+            schedule_end_time
         } = req.body;
 
         if (!name || !grade_id) {
@@ -1662,7 +1665,10 @@ app.post('/api/admin/subjects', async (req, res) => {
                 end_date: end_date || null,
                 visibility,
                 max_students,
-                grade_id
+                grade_id,
+                schedule_days: schedule_days || null,
+                schedule_start_time: schedule_start_time || null,
+                schedule_end_time: schedule_end_time || null
             })
             .select()
             .single();
@@ -1679,11 +1685,23 @@ app.post('/api/admin/subjects', async (req, res) => {
 app.put('/api/admin/subjects/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, short_name, description, start_date, end_date, visibility, max_students, is_active } = req.body;
+        const { name, short_name, description, start_date, end_date, visibility, max_students, is_active, schedule_days, schedule_start_time, schedule_end_time } = req.body;
 
         const { data, error } = await supabase
             .from('subjects')
-            .update({ name, short_name, description, start_date: start_date || null, end_date: end_date || null, visibility, max_students, is_active })
+            .update({ 
+                name, 
+                short_name, 
+                description, 
+                start_date: start_date || null, 
+                end_date: end_date || null, 
+                visibility, 
+                max_students, 
+                is_active,
+                schedule_days: schedule_days !== undefined ? schedule_days : undefined,
+                schedule_start_time: schedule_start_time !== undefined ? schedule_start_time : undefined,
+                schedule_end_time: schedule_end_time !== undefined ? schedule_end_time : undefined
+            })
             .eq('id', id)
             .select()
             .single();
@@ -2546,6 +2564,64 @@ app.get('/api/users/:userId/profile-details', async (req, res) => {
 
     } catch (error: any) {
         console.error('Error fetching profile details:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get user agenda (schedule of subjects)
+app.get('/api/agenda/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { role } = req.query; // 'student', 'professor', 'tutor', 'admin'
+
+        if (role === 'admin') {
+            return res.json([]);
+        }
+
+        let subjectsList: any[] = [];
+
+        if (role === 'professor') {
+            const { data, error } = await supabase
+                .from('professor_subjects')
+                .select(`
+                    subjects (
+                        id, name, short_name, schedule_days, schedule_start_time, schedule_end_time
+                    )
+                `)
+                .eq('professor_id', userId);
+            if (error) throw error;
+            subjectsList = (data || []).map(d => d.subjects).filter(Boolean);
+        } else if (role === 'student' || role === 'tutor') {
+            let targetStudentIds = [userId];
+
+            if (role === 'tutor') {
+                const { data, error } = await supabase
+                    .from('student_tutors')
+                    .select('student_id')
+                    .eq('tutor_id', userId);
+                if (error) throw error;
+                targetStudentIds = (data || []).map(st => st.student_id);
+            }
+
+            if (targetStudentIds.length > 0) {
+                const { data, error } = await supabase
+                    .from('enrollments')
+                    .select(`
+                        subjects (
+                            id, name, short_name, schedule_days, schedule_start_time, schedule_end_time
+                        )
+                    `)
+                    .in('student_id', targetStudentIds);
+                if (error) throw error;
+                subjectsList = (data || []).map(d => d.subjects).filter(Boolean);
+            }
+        }
+
+        // Deduplicate subjects by ID in case a tutor has multiple students in the same class
+        const uniqueSubjects = Array.from(new Map(subjectsList.map(s => [s.id, s])).values());
+        res.json(uniqueSubjects);
+    } catch (error: any) {
+        console.error('Error fetching agenda:', error);
         res.status(500).json({ error: error.message });
     }
 });

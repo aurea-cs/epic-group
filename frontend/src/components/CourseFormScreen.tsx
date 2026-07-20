@@ -29,7 +29,10 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
         start_date: '',
         end_date: '',
         visibility: 'active',
-        max_students: 30
+        max_students: 30,
+        schedule_days: [],
+        schedule_start_time: '',
+        schedule_end_time: ''
     })
 
     const isEditing = !!courseId && courseId !== 'new'
@@ -47,7 +50,10 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
                         start_date: subject.start_date ? subject.start_date.split('T')[0] : '',
                         end_date: subject.end_date ? subject.end_date.split('T')[0] : '',
                         visibility: subject.visibility || 'active',
-                        max_students: subject.max_students || 30
+                        max_students: subject.max_students || 30,
+                        schedule_days: subject.schedule_days || [],
+                        schedule_start_time: subject.schedule_start_time || '',
+                        schedule_end_time: subject.schedule_end_time || ''
                     })
                 } catch (err: any) {
                     setError('Error al cargar datos del curso')
@@ -68,6 +74,17 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
             ...prev,
             [name]: value
         }))
+    }
+
+    const handleDayToggle = (day: string) => {
+        setFormData(prev => {
+            const currentDays = prev.schedule_days || []
+            if (currentDays.includes(day)) {
+                return { ...prev, schedule_days: currentDays.filter(d => d !== day) }
+            } else {
+                return { ...prev, schedule_days: [...currentDays, day] }
+            }
+        })
     }
 
     const handleSubmit = async () => {
@@ -224,6 +241,49 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
                                     className="modern-input"
                                     style={{ padding: '1rem', background: '#f3f4f6', color: '#1f295a', border: '1px solid #d1d5db' }}
                                 />
+                            </div>
+
+                            {/* Horarios */}
+                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                <label style={{ fontSize: '1rem', marginBottom: '0.8rem', color: '#1f295a', fontWeight: 'bold' }}>Días de Clase</label>
+                                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                                    {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => (
+                                        <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f3f4f6', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #d1d5db', cursor: 'pointer', color: '#1f295a' }}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={(formData.schedule_days || []).includes(day)}
+                                                onChange={() => handleDayToggle(day)}
+                                                style={{ cursor: 'pointer' }}
+                                            />
+                                            {day}
+                                        </label>
+                                    ))}
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                    <div>
+                                        <label style={{ fontSize: '1rem', marginBottom: '0.5rem', color: '#1f295a', fontWeight: 'bold' }}>Hora de Inicio</label>
+                                        <input
+                                            type="time"
+                                            name="schedule_start_time"
+                                            value={formData.schedule_start_time || ''}
+                                            onChange={handleChange}
+                                            className="modern-input"
+                                            style={{ padding: '1rem', width: '100%', background: '#f3f4f6', color: '#1f295a', border: '1px solid #d1d5db', boxSizing: 'border-box' }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '1rem', marginBottom: '0.5rem', color: '#1f295a', fontWeight: 'bold' }}>Hora de Finalización</label>
+                                        <input
+                                            type="time"
+                                            name="schedule_end_time"
+                                            value={formData.schedule_end_time || ''}
+                                            onChange={handleChange}
+                                            className="modern-input"
+                                            style={{ padding: '1rem', width: '100%', background: '#f3f4f6', color: '#1f295a', border: '1px solid #d1d5db', boxSizing: 'border-box' }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Settings */}

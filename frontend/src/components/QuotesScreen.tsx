@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
 import { useNavigate } from 'react-router-dom'
 import './QuotesScreen.css'
@@ -52,50 +52,72 @@ const QuotesScreen: React.FC<QuotesScreenProps> = ({ user }) => {
   })
   const [loading, setLoading] = useState(false)
 
-  // Local State for Tasks (Mocking Backend)
+  // Real data state
+  const [subjects, setSubjects] = useState<any[]>([])
   const [allTasks, setAllTasks] = useState<Array<{
     id: string
     title: string
     date: string
     time: string
     description: string
-  }>>([
-    {
-      id: '1',
-      title: 'Startech Class',
-      date: '2020-08-12',
-      time: '09 AM - 10 AM',
-      description: 'Mock'
-    },
-    {
-      id: '2',
-      title: 'English Class',
-      date: '2020-08-12',
-      time: '10 AM - 06 PM',
-      description: 'Mock'
-    },
-    {
-      id: '3',
-      title: 'Review',
-      date: '2020-08-13',
-      time: '09 AM - 12 PM',
-      description: 'Mock'
-    },
-    {
-      id: '4',
-      title: 'Class Game',
-      date: '2020-08-13',
-      time: '12 PM - 04 PM',
-      description: 'Mock'
-    },
-    {
-      id: '5',
-      title: 'Califications',
-      date: '2020-08-13',
-      time: '04 PM - 06 PM',
-      description: 'Mock'
+  }>>([])
+
+  useEffect(() => {
+    const fetchAgenda = async () => {
+      try {
+        const role = getUserRole(user)
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/agenda/${user.id}?role=${role}`)
+        if (!response.ok) throw new Error('Error fetching agenda')
+        const data = await response.json()
+        setSubjects(data)
+        
+        // Map recurring classes to current month dates
+        const dayMap: Record<string, number> = {
+          'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6
+        }
+
+        const today = new Date()
+        const year = today.getFullYear()
+        const month = today.getMonth() // 0-indexed
+        const daysInMonth = new Date(year, month + 1, 0).getDate()
+        
+        const tasks = []
+        for (let d = 1; d <= daysInMonth; d++) {
+          const currentDate = new Date(year, month, d)
+          const currentDayOfWeek = currentDate.getDay()
+          
+          for (const sub of data) {
+            if (sub.schedule_days && Array.isArray(sub.schedule_days)) {
+              for (const sd of sub.schedule_days) {
+                if (dayMap[sd] === currentDayOfWeek) {
+                  // Format time to 12h if needed, or keep 24h
+                  const startStr = sub.schedule_start_time ? sub.schedule_start_time.substring(0,5) : ''
+                  const endStr = sub.schedule_end_time ? sub.schedule_end_time.substring(0,5) : ''
+                  const timeStr = startStr && endStr ? `${startStr} - ${endStr}` : (startStr || 'Sin horario')
+                  
+                  // Format date to YYYY-MM-DD
+                  const formattedDate = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+                  
+                  tasks.push({
+                    id: `${sub.id}-${d}`,
+                    title: sub.name,
+                    date: formattedDate,
+                    time: timeStr,
+                    description: sub.short_name || ''
+                  })
+                }
+              }
+            }
+          }
+        }
+        
+        setAllTasks(tasks)
+      } catch (err) {
+        console.error('Error fetching agenda:', err)
+      }
     }
-  ])
+    fetchAgenda()
+  }, [user])
 
   const handleCreateTask = () => {
     setTaskForm({
@@ -138,12 +160,14 @@ const QuotesScreen: React.FC<QuotesScreenProps> = ({ user }) => {
 
     return sortedDates.map(dateStr => {
       const dateObj = new Date(dateStr)
-      const dayNum = dateObj.getDate()
-      const dayName = dateObj.toLocaleDateString('es-ES', { weekday: 'long' })
+      // Correct for timezone offset when parsing YYYY-MM-DD
+      const localDate = new Date(dateObj.getTime() + dateObj.getTimezoneOffset() * 60000)
+      const dayNum = localDate.getDate()
+      const dayName = localDate.toLocaleDateString('es-ES', { weekday: 'long' })
 
       return {
         id: dateStr,
-        dateLabel: `${dayName} ${dayNum}`, // New Label for column
+        dateLabel: `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${dayNum}`, // New Label for column
         tasks: tasksByDate[dateStr].map(t => ({
           day: dayNum,
           title: t.title,
@@ -203,13 +227,26 @@ const QuotesScreen: React.FC<QuotesScreenProps> = ({ user }) => {
           <div className="month-tasks">
             <div className="month-tasks-header">
               <span>{new Date().toLocaleDateString('es-ES', { month: 'long' }).toUpperCase()} TASKS</span>
-              <span>0 Total</span>
+              <span>{allTasks.length} Total</span>
             </div>
 
-            {/* TODO: Render tasks from backend */}
-            <div className="empty-state">
-              <p>No hay tareas para este mes</p>
-            </div>
+            {allTasks.length === 0 ? (
+              <div className="empty-state">
+                <p>No hay tareas para este mes</p>
+              </div>
+            ) : (
+              <div className="sidebar-task-list" style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {allTasks.slice(0, 5).map(task => (
+                  <div key={`side-${task.id}`} style={{ padding: '0.8rem', background: '#f8fafc', borderRadius: '8px', borderLeft: '4px solid #4f46e5' }}>
+                    <h4 style={{ margin: '0 0 0.2rem 0', fontSize: '0.9rem', color: '#1f295a' }}>{task.title}</h4>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>{task.date} | {task.time}</p>
+                  </div>
+                ))}
+                {allTasks.length > 5 && (
+                  <p style={{ fontSize: '0.8rem', color: '#64748b', textAlign: 'center', margin: '0.5rem 0' }}>+{allTasks.length - 5} más</p>
+                )}
+              </div>
+            )}
           </div>
         </aside>
 
@@ -228,20 +265,21 @@ const QuotesScreen: React.FC<QuotesScreenProps> = ({ user }) => {
                   <p>TASKS</p>
                 </div>
 
-                {/* Ongoing Task Card - Mock for now */}
-                {col.tasks.length > 0 && (
-                  <div className="ongoing-card">
-                    <div className="ongoing-header">
-                      <span>NEXT TASK</span>
-                      <div className="avatars">
-                        {/* TODO: Dynamic avatars */}
-                      </div>
-                    </div>
-                    <div className="ongoing-body">
-                      <h4>{col.tasks[0].title}</h4>
-                    </div>
-                  </div>
-                )}
+                {
+                // col.tasks.length > 0 && (
+                //   <div className="ongoing-card">
+                //     <div className="ongoing-header">
+                //       <span>NEXT TASK</span>
+                //       <div className="avatars">
+                //         {/* TODO: Dynamic avatars */}
+                //       </div>
+                //     </div>
+                //     <div className="ongoing-body">
+                //       <h4>{col.tasks[0].title}</h4>
+                //     </div>
+                //   </div>
+                // )
+                }
 
                 {/* Task List Group 1 */}
                 <div className="task-list-group">
