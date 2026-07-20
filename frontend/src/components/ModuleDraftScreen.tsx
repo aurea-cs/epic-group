@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
-import { getCourseModules, CourseModule, ModuleItem } from '../lib/adminApi'
+import { getCourseModules, CourseModule } from '../lib/adminApi'
 import group2Img from '../assets/Group_2.png'
 import contenidoMateriaImg from '../assets/contenidomateria.png'
 import pdfImg from '../assets/1pdf.png'
@@ -16,7 +16,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
   const navigate = useNavigate()
   const [moduleData, setModuleData] = useState<CourseModule | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (courseId && moduleId) {

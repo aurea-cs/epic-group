@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
-import { useNavigate } from 'react-router-dom'
 import './GradesScreen.css'
-import { auth } from '../lib/supabase'
-import { getUserRole } from '../utils/getUserRole'
-import TopNavigation from './TopNavigation'
 import { getProfessorGradesSummary, type GradeSummary } from '../lib/api'
 import pencilIcon from '../assets/pencil.png'
 import lapIcon from '../assets/lap.png'
@@ -15,24 +11,9 @@ interface GradesScreenProps {
 }
 
 const GradesScreen: React.FC<GradesScreenProps> = ({ user }) => {
-    const navigate = useNavigate()
-    const [loading, setLoading] = useState(false)
 
-    const handleNavigation = (path: string) => {
-        navigate(path)
-    }
+    const [, setLoading] = useState(false)
 
-    const handleLogout = async () => {
-        setLoading(true)
-        try {
-            await auth.signOut()
-            navigate('/login')
-        } catch (error) {
-            console.error('Error al cerrar sesión:', error)
-        } finally {
-            setLoading(false)
-        }
-    }
 
 
     const [studentGrades, setStudentGrades] = useState<GradeSummary[]>([])
@@ -66,9 +47,6 @@ const GradesScreen: React.FC<GradesScreenProps> = ({ user }) => {
         if (avg >= 60) return 'Suficiente'
         return 'Necesita mejorar'
     }
-
-    const displayName = user.user_metadata?.full_name || user.email || 'Usuario'
-    const userRole = getUserRole(user)
 
     return (
         <div className="grades-screen">

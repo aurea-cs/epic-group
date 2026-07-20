@@ -1,38 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
-import { useNavigate } from 'react-router-dom'
 import './QuotesScreen.css'
-import { auth } from '../lib/supabase'
 import { getUserRole } from '../utils/getUserRole'
-import TopNavigation from './TopNavigation'
 
 interface QuotesScreenProps {
   user: User
 }
 
 const QuotesScreen: React.FC<QuotesScreenProps> = ({ user }) => {
-  const navigate = useNavigate()
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
-
-  const handleNavigation = (path: string) => {
-    navigate(path)
-  }
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true)
-    try {
-      await auth.signOut()
-      navigate('/login')
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error)
-    } finally {
-      setIsLoggingOut(false)
-    }
-  }
-
-  // TODO: Fetch data from backend
-
-
   // TODO: Generate calendar dynamically from current date
   const calendarDays: string[][] = [
     ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -53,7 +28,7 @@ const QuotesScreen: React.FC<QuotesScreenProps> = ({ user }) => {
   const [loading, setLoading] = useState(false)
 
   // Real data state
-  const [subjects, setSubjects] = useState<any[]>([])
+  const [, setSubjects] = useState<any[]>([])
   const [allTasks, setAllTasks] = useState<Array<{
     id: string
     title: string
@@ -181,8 +156,8 @@ const QuotesScreen: React.FC<QuotesScreenProps> = ({ user }) => {
 
   const columns = getColumns()
 
-  const displayName = user.user_metadata?.full_name || user.email || 'Usuario'
-  const userRole = getUserRole(user)
+  // const displayName = user.user_metadata?.full_name || user.email || 'Usuario'
+  // const userRole = getUserRole(user)
 
   return (
     <div className="quotes-screen-container">
