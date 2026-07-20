@@ -22,6 +22,7 @@ import CourseContentScreen from './src/components/CourseContentScreen'
 import PlanetDetailScreen from './src/components/PlanetDetailScreen'
 import MainLayout from './src/components/MainLayout'
 import ModuleDraftScreen from './src/components/ModuleDraftScreen'
+import StudentsAdminScreen from './src/components/StudentsAdminScreen'
 // import LandingPage from './src/components/LandingPage'
 import './App.css'
 
@@ -113,6 +114,7 @@ useEffect(() => {
                     <Route path="/dashboard" element={<DashboardScreen user={user} />} />
                     <Route path="/course/:courseId" element={<CourseDetailScreen user={user} />} />
                     <Route path="/progress" element={<ProgressScreen user={user} />} />
+                    <Route path="/students" element={<StudentsAdminScreen user={user} />} />
                     <Route path="/quotes" element={<QuotesScreen user={user} />} />
                     <Route path="/alumnos" element={<StudentsScreen user={user} />} />
                     <Route path="/alumnos/:studentId" element={<StudentProgressScreen user={user} />} />

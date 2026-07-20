@@ -839,6 +839,220 @@ app.get('/api/assignments/submissions', async (req, res) => {
 
 // ========== USER MANAGEMENT ==========
 
+// Get all students with their enrolled centers
+app.get('/api/admin/students', async (req, res) => {
+    try {
+        // 1. Fetch all users with role=student
+        const { data: students, error: studentsError } = await supabase
+            .from('users')
+            .select('id, full_name, email, firstname, lastname, avatar_url, created_at')
+            .eq('role', 'student')
+            .order('full_name', { ascending: true });
+
+        if (studentsError) throw studentsError;
+
+        if (!students || students.length === 0) return res.json([]);
+
+        const studentIds = students.map(s => s.id);
+
+        // 2. Fetch enrollments with center info for these students
+        const { data: enrollments, error: enrollmentsError } = await supabase
+            .from('enrollments')
+            .select('student_id, center_id')
+            .in('student_id', studentIds);
+
+        if (enrollmentsError) throw enrollmentsError;
+
+        // 3. Get distinct center IDs
+        const centerIds = [...new Set((enrollments || []).map(e => e.center_id).filter(Boolean))];
+        let centersMap: Record<string, string> = {};
+
+        if (centerIds.length > 0) {
+            const { data: centers, error: centersError } = await supabase
+                .from('educational_centers')
+                .select('id, name')
+                .in('id', centerIds);
+
+            if (centersError) throw centersError;
+            (centers || []).forEach(c => { centersMap[c.id] = c.name; });
+        }
+
+        // 4. Build student-to-centers map
+        const studentCentersMap: Record<string, { id: string; name: string }[]> = {};
+        (enrollments || []).forEach(e => {
+            if (!e.center_id) return;
+            if (!studentCentersMap[e.student_id]) studentCentersMap[e.student_id] = [];
+            const centerName = centersMap[e.center_id];
+            if (centerName && !studentCentersMap[e.student_id].find(c => c.id === e.center_id)) {
+                studentCentersMap[e.student_id].push({ id: e.center_id, name: centerName });
+            }
+        });
+
+        // 5. Format response
+        const formatted = students.map(s => ({
+            id: s.id,
+            name: s.full_name || `${s.firstname || ''} ${s.lastname || ''}`.trim() || s.email,
+            email: s.email,
+            avatar_url: s.avatar_url,
+            created_at: s.created_at,
+            centers: studentCentersMap[s.id] || []
+        }));
+
+        res.json(formatted);
+    } catch (error: any) {
+        console.error('Error fetching all students with centers:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update student profile info and center enrollments
+app.put('/api/admin/users/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { fullName, email, centerIds } = req.body;
+
+        if (!fullName || !email) {
+            return res.status(400).json({ error: 'Full name and email are required' });
+        }
+
+        // 1. Update auth email if changed
+        const { error: authError } = await supabase.auth.admin.updateUserById(id, {
+            email,
+            user_metadata: { full_name: fullName }
+        });
+        if (authError) throw authError;
+
+        // 2. Update users table
+        const { error: profileError } = await supabase
+            .from('users')
+            .update({
+                full_name: fullName,
+                email,
+                firstname: fullName.split(' ')[0],
+                lastname: fullName.split(' ').slice(1).join(' ')
+            })
+            .eq('id', id);
+
+        if (profileError) throw profileError;
+
+        // 3. Reconcile center enrollments (add new, remove unchecked)
+        if (Array.isArray(centerIds)) {
+            // Get current enrolled center_ids for this student
+            const { data: currentEnrollments, error: currentEnrollmentsError } = await supabase
+                .from('enrollments')
+                .select('center_id')
+                .eq('student_id', id);
+
+            if (currentEnrollmentsError) throw currentEnrollmentsError;
+
+            const currentCenterIds = [...new Set((currentEnrollments || []).map((e: any) => e.center_id).filter(Boolean))] as string[];
+
+            // Centers to REMOVE = in current but not in the new list
+            const centersToRemove = currentCenterIds.filter(cId => !centerIds.includes(cId));
+            if (centersToRemove.length > 0) {
+                const { error: deleteError } = await supabase
+                    .from('enrollments')
+                    .delete()
+                    .eq('student_id', id)
+                    .in('center_id', centersToRemove);
+                if (deleteError) throw deleteError;
+            }
+
+            // Centers to ADD = in new list but not currently enrolled
+            const centersToAdd = (centerIds as string[]).filter(cId => !currentCenterIds.includes(cId));
+            if (centersToAdd.length > 0) {
+                // For each new center, find all its grades, then all subjects in those grades
+                const { data: grades, error: gradesError } = await supabase
+                    .from('grades_levels')
+                    .select('id, center_id')
+                    .in('center_id', centersToAdd);
+
+                if (gradesError) throw gradesError;
+
+                if (grades && grades.length > 0) {
+                    const gradeIds = grades.map((g: any) => g.id);
+
+                    const { data: subjects, error: subjectsError } = await supabase
+                        .from('subjects')
+                        .select('id, grade_id')
+                        .in('grade_id', gradeIds);
+
+                    if (subjectsError) throw subjectsError;
+
+                    if (subjects && subjects.length > 0) {
+                        // Fetch the student's already-enrolled subject IDs to avoid duplicates
+                        const { data: existingEnrollments } = await supabase
+                            .from('enrollments')
+                            .select('subject_id')
+                            .eq('student_id', id);
+
+                        const enrolledSubjectIds = new Set(
+                            (existingEnrollments || []).map((e: any) => e.subject_id)
+                        );
+
+                        const now = new Date().toISOString();
+                        const rows = subjects
+                            .filter((s: any) => !enrolledSubjectIds.has(s.id)) // skip already-enrolled
+                            .map((s: any) => {
+                                const grade = grades.find((g: any) => g.id === s.grade_id)!;
+                                return {
+                                    student_id: id,
+                                    subject_id: s.id,
+                                    grade_id: s.grade_id,
+                                    center_id: grade.center_id,
+                                    status: 'active',
+                                    created_at: now,
+                                };
+                            });
+
+                        if (rows.length > 0) {
+                            const { error: insertError } = await supabase
+                                .from('enrollments')
+                                .insert(rows);
+                            if (insertError) throw insertError;
+                        }
+                    }
+                }
+            }
+        }
+
+
+        res.json({ message: 'Student updated successfully' });
+    } catch (error: any) {
+        console.error('Error updating student:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete a student (removes from auth and all DB tables)
+app.delete('/api/admin/users/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Delete enrollments
+        await supabase.from('enrollments').delete().eq('student_id', id);
+
+        // 2. Delete student_tutors links
+        await supabase.from('student_tutors').delete().eq('student_id', id);
+
+        // 3. Delete student comments
+        await supabase.from('student_comments').delete().eq('student_id', id);
+
+        // 4. Delete user profile
+        await supabase.from('users').delete().eq('id', id);
+
+        // 5. Delete from auth
+        const { error: authDeleteError } = await supabase.auth.admin.deleteUser(id);
+        if (authDeleteError) throw authDeleteError;
+
+        res.json({ message: 'Student deleted successfully' });
+    } catch (error: any) {
+        console.error('Error deleting student:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 // Create new user (Admin, Teacher, Student)
 app.post('/api/admin/users', async (req, res) => {
     try {
