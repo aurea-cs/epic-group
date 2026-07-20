@@ -2,23 +2,17 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import type { User } from '@supabase/supabase-js'
 import { getStudentProgress, type StudentData } from '../lib/api'
-import './StudentProgressScreen.css'
 
-// Assets - trying to guess existing ones based on directory listing
-import lookplanetUrl from '../assets/lookplanet.png'
-import playUrl from '../assets/play.png'
-import planetUrl from '../assets/planet_.png'
-
-// Fallback user avatar if none provided
 const defaultAvatar = 'https://ui-avatars.com/api/?name=User&background=random'
 
 interface StudentProgressScreenProps {
     user: User
 }
 
-const StudentProgressScreen: React.FC<StudentProgressScreenProps> = () => {
+const StudentProgressScreen: React.FC<StudentProgressScreenProps> = ({ user }) => {
     const [dataLoading, setDataLoading] = useState(true)
     const [studentData, setStudentData] = useState<StudentData | null>(null)
+    const [profileDetails, setProfileDetails] = useState<{ centers: string, grades: string, subjects: string } | null>(null)
     const [error, setError] = useState<string | null>(null)
     const navigate = useNavigate()
     const { studentId } = useParams()
@@ -36,41 +30,39 @@ const StudentProgressScreen: React.FC<StudentProgressScreenProps> = () => {
                 setDataLoading(true)
                 setError(null)
 
-                if (location.state?.studentData) {
-                    setStudentData(location.state.studentData)
-                    // If we want real data we can fetch it, but let's stick to mock or state for UI
-                } else {
-                    const data = await getStudentProgress(studentId)
-                    setStudentData(data)
+                // Fetch Profile Details
+                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/users/${studentId}/profile-details?role=student`)
+                if (res.ok) {
+                    const profileData = await res.json()
+                    setProfileDetails(profileData)
                 }
+
+                const data = await getStudentProgress(studentId, user.id)
+                setStudentData(data)
             } catch (err: any) {
                 console.error('Error fetching student data:', err)
-                if (location.state?.studentData) {
-                    setStudentData(location.state.studentData)
-                } else {
-                    setError('Error al cargar los datos del alumno')
-                }
+                setError('Error al cargar los datos del alumno')
             } finally {
                 setDataLoading(false)
             }
         }
 
         fetchStudentData()
-    }, [studentId, location.state])
+    }, [studentId, location.state, user.id])
 
     const handleBackToStudents = () => {
         navigate('/alumnos')
     }
 
     if (dataLoading) {
-        return <div className="sd-loading">Cargando...</div>
+        return <div style={{ padding: '2rem', textAlign: 'center' }}>Cargando...</div>
     }
 
     if (error && !studentData) {
         return (
-            <div className="sd-error">
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>
                 <p>Error: {error}</p>
-                <button onClick={handleBackToStudents}>Volver</button>
+                <button onClick={handleBackToStudents} style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}>Volver</button>
             </div>
         )
     }
@@ -78,224 +70,107 @@ const StudentProgressScreen: React.FC<StudentProgressScreenProps> = () => {
     if (!studentData) return null
 
     return (
-        <div className="sd-container">
-            {/* Top Right Decoration */}
-            <div className="sd-decoration-top-right">
-                <div className="sd-purple-blob"></div>
-                <img src={lookplanetUrl} alt="Boy looking at planet" className="sd-illustration" onError={(e) => e.currentTarget.style.display = 'none'} />
+        <div style={{ padding: '2rem 4rem 8rem 4rem', backgroundColor: 'transparent', color: '#ffffff' }}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                <div>
+                    <button 
+                        onClick={handleBackToStudents}
+                        style={{ 
+                            background: 'none', 
+                            border: 'none', 
+                            color: '#ffffff', 
+                            cursor: 'pointer', 
+                            fontSize: '1rem', 
+                            fontWeight: 'bold', 
+                            marginBottom: '1rem', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.5rem' 
+                        }}
+                    >
+                        ← Volver a mis alumnos
+                    </button>
+                    <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0, color: '#ffffff' }}>Perfil del Alumno</h1>
+                    <p style={{ color: '#e2e8f0', fontSize: '1.1rem', marginTop: '0.5rem' }}>Información y progreso del estudiante en tus cursos</p>
+                </div>
             </div>
 
-            {/* Left Sidebar */}
-            <aside className="sd-sidebar">
-                <button className="sd-back-button" onClick={handleBackToStudents}>
-                    ← Volver
-                </button>
-                <div className="sd-profile-pic">
-                    <img src={studentData.avatar || defaultAvatar} alt={studentData.name} />
-                </div>
-                <h2 className="sd-profile-name">{studentData.name}</h2>
-                <div className="sd-account-btn">
-                    <div className="sd-account-icon">
-                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem', alignItems: 'start' }}>
+                
+                {/* Left Column - User Info Card */}
+                <div style={{ background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                    <div style={{ width: '120px', height: '120px', borderRadius: '50%', overflow: 'hidden', border: '4px solid #f1f5f9', marginBottom: '1.5rem', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
+                        <img src={studentData.avatar || defaultAvatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
-                    <span>Account</span>
-                    <div className="sd-account-indicator"></div>
-                </div>
-            </aside>
-
-            {/* Main Content */}
-            <main className="sd-main">
-                <div className="sd-header-row">
-                    <div className="sd-title-section">
-                        <h1>
-                            <span className="sd-title-light">Perfil</span><br />
-                            <span className="sd-title-bold">academico</span>
-                        </h1>
-                        <div className="sd-title-underline"></div>
-                    </div>
-
-                    <div className="sd-latest-updates">
-                        <h2>Latest<br />Updates</h2>
-                        <div className="sd-avatars-row">
-                            <div className="sd-avatar-circle" style={{ backgroundColor: '#9d50bb' }}>
-                                <img src={defaultAvatar} alt="user1" />
-                            </div>
-                            <div className="sd-avatar-circle" style={{ backgroundColor: '#ff9f43' }}>
-                                <img src={defaultAvatar} alt="user2" />
-                            </div>
-                            <div className="sd-avatar-circle" style={{ backgroundColor: '#4a90e2' }}>
-                                <img src={defaultAvatar} alt="user3" />
-                            </div>
-                        </div>
+                    
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1e293b', margin: 0 }}>{studentData.name}</h2>
+                    <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>{studentData.email}</p>
+                    
+                    <div style={{ background: '#eff6ff', color: '#2563eb', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '1.5rem', border: '1px solid #bfdbfe' }}>
+                        Rol: Alumno
                     </div>
                 </div>
 
-                <div className="sd-grid">
-                    {/* Left Column Cards */}
-                    <div className="sd-col-left">
-                        {/* Ultima Actividad Card */}
-                        <div className="sd-card sd-activity-card">
-                            <h3 className="sd-card-title">Última actividad</h3>
-                            <p className="sd-card-subtitle">Teacher at Lorem School <span className="sd-time">1 hour ago</span></p>
-
-                            <div className="sd-activity-header">
-                                <div className="sd-globe-icon">
-                                    <img src={planetUrl} alt="Globe" onError={(e) => e.currentTarget.style.display = 'none'} />
-                                </div>
-                                <div className="sd-activity-text">
-                                    <h4>Progreso<br />en clases</h4>
-                                </div>
+                {/* Right Column - Details & Activity */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    
+                    {/* Details Card */}
+                    <div style={{ background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                        <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '1.5rem' }}>ℹ️</span> Información Académica
+                        </h3>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Centros Educativos</div>
+                                <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.centers : 'Cargando...'}</div>
                             </div>
 
-                            <div className="sd-progress-bars">
-                                <div className="sd-progress-item">
-                                    <div className="sd-progress-track">
-                                        <div className="sd-progress-fill sd-color-purple" style={{ width: '30%' }}>
-                                            <span className="sd-progress-label">Startech</span>
-                                            <span className="sd-progress-value">30%</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="sd-progress-item">
-                                    <div className="sd-progress-track">
-                                        <div className="sd-progress-fill sd-color-orange" style={{ width: '50%' }}>
-                                            <span className="sd-progress-label">STEAM</span>
-                                            <span className="sd-progress-value">50%</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="sd-progress-item">
-                                    <div className="sd-progress-track">
-                                        <div className="sd-progress-fill sd-color-lime" style={{ width: '20%' }}>
-                                            <span className="sd-progress-label">Inglés</span>
-                                            <span className="sd-progress-value">20%</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Acerca del alumno Card */}
-                        <div className="sd-card sd-about-card">
-                            <h3 className="sd-card-title">Acerca del<br />alumno</h3>
-                            <p className="sd-card-subtitle">Teacher at Lorem School</p>
-
-                            <div className="sd-about-header">
-                                <div className="sd-globe-icon-small">
-                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                                    </svg>
-                                </div>
-                                <h4>Información</h4>
+                            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Grados</div>
+                                <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.grades : 'Cargando...'}</div>
                             </div>
 
-                            <ul className="sd-info-list">
-                                <li>
-                                    <div className="sd-info-label">
-                                        <span className="sd-dot sd-dot-orange"></span>
-                                        Centro Educativo
-                                    </div>
-                                    <span className="sd-chevron">›</span>
-                                </li>
-                                <li>
-                                    <div className="sd-info-label">
-                                        <span className="sd-dot sd-dot-purple"></span>
-                                        Grado
-                                    </div>
-                                    <span className="sd-chevron">›</span>
-                                </li>
-                                <li>
-                                    <div className="sd-info-label">
-                                        <span className="sd-dot sd-dot-lime"></span>
-                                        Sección
-                                    </div>
-                                    <span className="sd-chevron">›</span>
-                                </li>
-                                <li>
-                                    <div className="sd-info-label">
-                                        <span className="sd-dot sd-dot-blue"></span>
-                                        Materia
-                                    </div>
-                                    <span className="sd-chevron">›</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    {/* Right Column Card */}
-                    <div className="sd-col-right">
-                        <div className="sd-card sd-comments-card">
-                            <div className="sd-comments-header">
-                                <div>
-                                    <h3 className="sd-card-title">Más<br />comentarios</h3>
-                                    <p className="sd-card-subtitle sd-followers">5620 followers</p>
-                                </div>
-                                <button className="sd-follow-btn">Follow</button>
-                            </div>
-
-                            <div className="sd-comments-content">
-                                <div className="sd-comment-feed">
-                                    <div className="sd-comment-item">
-                                        <div className="sd-comment-avatar">
-                                            <img src={defaultAvatar} alt="Andy Brown" />
-                                        </div>
-                                        <div className="sd-comment-body">
-                                            <div className="sd-comment-author-row">
-                                                <div className="sd-author-info">
-                                                    <h4>Andy Brown</h4>
-                                                    <span className="sd-author-role">Teacher at Ipsum School</span>
-                                                    <span className="sd-comment-time">3 hours ago</span>
-                                                </div>
-                                                <div className="sd-info-icon">
-                                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <circle cx="12" cy="12" r="10"></circle>
-                                                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                            <p className="sd-comment-text">
-                                                Sonet putent cum ad, ei eam alia illum sententiae, ex utroque tractatos pro. Vim appareat similique.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="sd-comment-input-area">
-                                        <div className="sd-comment-avatar">
-                                            <img src={defaultAvatar} alt="Current User" />
-                                        </div>
-                                        <div className="sd-input-wrapper">
-                                            <input type="text" placeholder="Share lesson..." />
-                                            <div className="sd-attachment-icon">
-                                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-                                                </svg>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="sd-video-player">
-                                    <div className="sd-video-bg">
-                                        {/* Fallback to planet image if video bg not available */}
-                                        <img src={planetUrl} alt="Video Thumbnail" className="sd-video-thumbnail" onError={(e) => e.currentTarget.style.display = 'none'} />
-                                    </div>
-                                    <div className="sd-play-button">
-                                        <img src={playUrl} alt="Play" onError={(e) => e.currentTarget.style.display = 'none'} />
-                                    </div>
-                                </div>
+                            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9', gridColumn: '1 / -1' }}>
+                                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Materias Generales</div>
+                                <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.subjects : 'Cargando...'}</div>
                             </div>
                         </div>
                     </div>
+
+                    {/* Activity / Progress Card */}
+                    <div style={{ background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                        <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '1.5rem' }}>📊</span> Tu Progreso
+                        </h3>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            {!studentData || studentData.courses.length === 0 ? (
+                                <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>No comparten cursos activos actualmente.</p>
+                            ) : (
+                                studentData.courses.map(course => (
+                                    <div key={course.id}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                            <span style={{ fontWeight: 'bold', color: '#334155' }}>{course.name}</span>
+                                            <span style={{ color: '#2563eb', fontWeight: 'bold' }}>{course.progress}%</span>
+                                        </div>
+                                        <div style={{ width: '100%', height: '12px', background: '#f1f5f9', borderRadius: '6px', overflow: 'hidden' }}>
+                                            <div style={{ width: `${course.progress}%`, height: '100%', background: '#2563eb', borderRadius: '6px' }}></div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
                 </div>
-            </main>
+            </div>
         </div>
     )
 }
 
 export default StudentProgressScreen
+
 

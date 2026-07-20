@@ -5,12 +5,11 @@ import './AssignmentsScreen.css'
 import { getUserRole } from '../utils/getUserRole'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
-
-import image30 from '../assets/image30.png'
-import image36 from '../assets/image36.png'
-import image37 from '../assets/image37.png'
-import image38 from '../assets/image38.png'
-import image39 from '../assets/image39.png'
+import planetasolito1 from '../assets/planetasolito1.png'
+import planetasolito2 from '../assets/planetasolito2.png'
+import planetasolito3 from '../assets/planetasolito3.png'
+import planetasolito4 from '../assets/planetasolito4.png'
+import planetasolito5 from '../assets/planetasolito5.png'
 
 interface AssignmentsScreenProps {
   user: User
@@ -44,7 +43,7 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
         }
 
         // Define some planet images and positions
-        const images = [image30, image36, image37, image38, image39]
+        const images = [planetasolito1, planetasolito2, planetasolito3, planetasolito4, planetasolito5]
         
         const getPlanetPosition = (index: number) => {
           const predefined = [
@@ -90,16 +89,14 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
               let totalItems = 0
               let completedItems = 0
               
-              modules.forEach((module: any, mIdx: number) => {
-                const items = module.items || []
+              const readItems = JSON.parse(localStorage.getItem('readItems') || '{}')
+              
+              modules.forEach((module: any) => {
+                const items = (module.items || []).filter((item: any) => item.type === 'pdf')
                 totalItems += items.length
                 
-                // Temporary mock logic for testing: 
-                // We assume the first module is completed, and half of the second module.
-                // In the future, this should use item.is_completed from the backend.
-                items.forEach((item: any, iIdx: number) => {
-                  const isMockCompleted = (mIdx === 0) || (mIdx === 1 && iIdx === 0)
-                  if (item.is_completed || isMockCompleted) {
+                items.forEach((item: any) => {
+                  if (item.is_completed || readItems[item.id]) {
                     completedItems++
                   }
                 })
@@ -107,7 +104,13 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
               
               if (totalItems > 0) {
                 const progress = completedItems / totalItems
-                stars = Math.round(progress * 3) // 0 to 3 stars
+                if (progress === 1) {
+                  stars = 3
+                } else if (progress >= 0.5) {
+                  stars = 2
+                } else if (progress > 0) {
+                  stars = 1
+                }
                 completed = stars === 3
               }
             }
@@ -226,11 +229,6 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
               {/* Título debajo del planeta */}
               <div className="course-planet-title">
                 {planet.title}
-              </div>
-
-              {/* Número del planeta */}
-              <div className="planet-number">
-                {planet.number}
               </div>
 
               {/* Estrellas */}

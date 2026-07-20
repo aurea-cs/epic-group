@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
 import { getCourseModules, CourseModule, ModuleItem } from '../lib/adminApi'
-import './DashboardScreen.css'
+import group2Img from '../assets/Group_2.png'
+import contenidoMateriaImg from '../assets/contenidomateria.png'
+import pdfImg from '../assets/1pdf.png'
+import entrarVrImg from '../assets/entrarasalavr.png'
 
 interface ModuleDraftScreenProps {
   user: User
@@ -26,11 +29,11 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
       setLoading(true)
       const modules = await getCourseModules(courseId!)
       const targetModule = modules.find(m => m.id === moduleId)
-      
+
       if (!targetModule) {
         throw new Error('Módulo no encontrado')
       }
-      
+
       setModuleData(targetModule)
     } catch (err: any) {
       setError(err.message || 'Error al cargar los ítems del módulo')
@@ -39,122 +42,128 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
     }
   }
 
-  const getIconForType = (type: string) => {
-    switch (type) {
-      case 'pdf': return '📄'
-      case 'video': return '🎥'
-      case 'link': return '🔗'
-      case 'assignment': return '📝'
-      default: return '📦'
-    }
-  }
-
   if (loading) {
     return (
-      <div className="dashboard-screen" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#1e1e2e' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#1e1e2e' }}>
         <p style={{ color: 'white', fontSize: '1.2rem' }}>Cargando contenido...</p>
       </div>
     )
   }
 
-  if (error || !moduleData) {
-    return (
-      <div className="dashboard-screen" style={{ padding: '2rem', textAlign: 'center', background: '#1e1e2e', minHeight: '100vh' }}>
-        <h2 style={{ color: 'white' }}>❌ Error</h2>
-        <p style={{ color: 'rgba(255,255,255,0.7)' }}>{error || 'No se pudo cargar el contenido'}</p>
-        <button 
-          onClick={() => navigate(-1)}
-          style={{ background: '#6c5ce7', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', marginTop: '1rem' }}
-        >
-          Volver
-        </button>
-      </div>
-    )
-  }
-
   return (
-    <div className="dashboard-screen" style={{ background: '#1a1a2e', minHeight: '100vh', padding: '2rem' }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-        <button 
+    <div style={{ display: 'flex', width: '100%', height: '100vh', overflow: 'hidden' }}>
+      {/* Lado Izquierdo */}
+      <div
+        style={{
+          flex: 1,
+          backgroundImage: `url(${group2Img})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      />
+
+      {/* Lado Derecho */}
+      <div
+        style={{
+          flex: 1,
+          backgroundColor: '#7334EF',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '4rem 2rem',
+          position: 'relative'
+        }}
+      >
+        <button
           onClick={() => navigate(-1)}
-          style={{ background: 'transparent', color: '#a29bfe', border: '1px solid #a29bfe', padding: '8px 16px', borderRadius: '20px', cursor: 'pointer', marginBottom: '2rem' }}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            background: 'rgba(255,255,255,0.2)',
+            color: 'white',
+            border: 'none',
+            padding: '8px 16px',
+            borderRadius: '20px',
+            cursor: 'pointer',
+            zIndex: 10,
+            transition: 'background 0.3s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+          onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
         >
           ← Regresar
         </button>
 
-        <h1 style={{ color: 'white', fontSize: '2.5rem', marginBottom: '0.5rem' }}>
-          {moduleData.title}
-        </h1>
-        <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '3rem' }}>
-          Pantalla de borrador (Vista de contenido del tema)
-        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3rem', marginTop: '4rem' }}>
+          <img
+            src={contenidoMateriaImg}
+            alt="Contenido Materia"
+            style={{ width: '250px', maxWidth: '100%', objectFit: 'contain' }}
+          />
 
-        {moduleData.items && moduleData.items.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {moduleData.items.map((item: ModuleItem) => (
-              <div key={item.id} style={{
-                background: '#2d2d44',
-                borderRadius: '16px',
-                padding: '1.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1.5rem',
-                border: '1px solid rgba(255,255,255,0.05)',
-                transition: 'transform 0.2s ease',
-                cursor: 'pointer'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-              onClick={() => {
-                if (item.content_url) {
-                  window.open(item.content_url, '_blank')
-                } else {
-                  alert('Este contenido no tiene una URL configurada aún.')
-                }
-              }}
-              >
-                <div style={{ 
-                  fontSize: '2rem',
-                  background: 'rgba(108, 92, 231, 0.2)',
-                  width: '60px',
-                  height: '60px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '12px'
-                }}>
-                  {getIconForType(item.type)}
-                </div>
-                
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ color: 'white', margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>{item.title}</h3>
-                  {item.description && (
-                    <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0, fontSize: '0.9rem' }}>
-                      {item.description}
-                    </p>
-                  )}
-                </div>
-                
-                <div style={{ color: '#a29bfe', fontSize: '1.5rem' }}>
-                  →
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{
-            background: 'rgba(255,255,255,0.03)',
-            borderRadius: '16px',
-            padding: '3rem',
-            textAlign: 'center',
-            border: '1px dashed rgba(255,255,255,0.1)'
-          }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
-            <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0, fontSize: '1.1rem' }}>
-              Este tema aún no tiene contenido asignado.
+          {moduleData?.items && moduleData.items.filter(item => item.type === 'pdf').length > 0 ? (
+            <div style={{
+              display: 'grid',
+              gridTemplateRows: 'repeat(3, auto)',
+              gridAutoFlow: 'column',
+              gap: '2rem',
+              alignItems: 'center',
+              justifyItems: 'center'
+            }}>
+              {moduleData.items.filter(item => item.type === 'pdf').map((pdfItem) => (
+                <img
+                  key={pdfItem.id}
+                  src={pdfImg}
+                  alt={pdfItem.title || "Contenido PDF"}
+                  onClick={() => {
+                    if (pdfItem.content_url) {
+                      const readItems = JSON.parse(localStorage.getItem('readItems') || '{}');
+                      readItems[pdfItem.id] = true;
+                      localStorage.setItem('readItems', JSON.stringify(readItems));
+                      
+                      window.open(pdfItem.content_url, '_blank');
+                    } else {
+                      alert('Este PDF no tiene una URL configurada aún.');
+                    }
+                  }}
+                  style={{
+                    width: '200px',
+                    maxWidth: '100%',
+                    objectFit: 'contain',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s ease'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  title={pdfItem.title}
+                />
+              ))}
+            </div>
+          ) : (
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', textAlign: 'center' }}>
+              No hay PDFs asignados.
             </p>
-          </div>
-        )}
+          )}
+        </div>
+
+        <div style={{ marginBottom: '2rem' }}>
+          <img
+            src={entrarVrImg}
+            alt="Entrar a sala VR"
+            style={{
+              width: '350px',
+              maxWidth: '100%',
+              objectFit: 'contain',
+              cursor: 'pointer',
+              transition: 'transform 0.2s ease'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          />
+        </div>
       </div>
     </div>
   )
