@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
+import { getCourseModules, CourseModule } from '../lib/adminApi'
 import { getCourseModules, CourseModule, ModuleItem } from '../lib/adminApi'
 import { Book, Gamepad2, FileText, ArrowRight } from 'lucide-react'
 import group2Img from '../assets/Group_2.png'
@@ -24,16 +25,16 @@ const ContentCard = ({ item, index }: { item: ModuleItem, index: number }) => {
       border: '1px solid rgba(255,255,255,0.05)'
     }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <img 
-          src={`https://picsum.photos/seed/${item.id || index}/200`} 
-          alt={item.title} 
-          style={{ 
-            width: '180px', 
-            height: '180px', 
-            borderRadius: '50%', 
-            objectFit: 'cover', 
-            border: '6px solid #432E7E' 
-          }} 
+        <img
+          src={`https://picsum.photos/seed/${item.id || index}/200`}
+          alt={item.title}
+          style={{
+            width: '180px',
+            height: '180px',
+            borderRadius: '50%',
+            objectFit: 'cover',
+            border: '6px solid #432E7E'
+          }}
         />
       </div>
       <div>
@@ -45,7 +46,7 @@ const ContentCard = ({ item, index }: { item: ModuleItem, index: number }) => {
         </p>
       </div>
       <div style={{ marginTop: 'auto' }}>
-        <button 
+        <button
           onClick={() => {
             if (item.content_url) {
               const readItems = JSON.parse(localStorage.getItem('readItems') || '{}');
@@ -95,10 +96,10 @@ const VrCard = ({ num }: { num: number }) => {
       boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
       border: '1px solid rgba(255,255,255,0.05)'
     }}>
-      <img 
-        src={`https://picsum.photos/seed/vr${num}/400/250`} 
-        alt="VR Room" 
-        style={{ width: '100%', height: '200px', objectFit: 'cover' }} 
+      <img
+        src={`https://picsum.photos/seed/vr${num}/400/250`}
+        alt="VR Room"
+        style={{ width: '100%', height: '200px', objectFit: 'cover' }}
       />
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
         <div>
@@ -107,7 +108,7 @@ const VrCard = ({ num }: { num: number }) => {
             Explora un mundo inmersivo donde la realidad virtual te transporta a nuevas dimensiones. Disfruta de experiencias interactivas que estimulan tus sentidos y amplían tu imaginación.
           </p>
         </div>
-        
+
         <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
           <button style={{
             flex: 1,
@@ -125,8 +126,8 @@ const VrCard = ({ num }: { num: number }) => {
             cursor: 'pointer',
             transition: 'background 0.2s'
           }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
           >
             Ficha Guia <FileText size={16} />
           </button>
@@ -146,14 +147,14 @@ const VrCard = ({ num }: { num: number }) => {
             cursor: 'pointer',
             transition: 'background 0.2s, color 0.2s'
           }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.backgroundColor = 'white';
-            e.currentTarget.style.color = '#25164E';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = 'white';
-          }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.color = '#25164E';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'white';
+            }}
           >
             Ingresar <ArrowRight size={16} />
           </button>
@@ -168,7 +169,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
   const navigate = useNavigate()
   const [moduleData, setModuleData] = useState<CourseModule | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (courseId && moduleId) {
@@ -216,90 +217,90 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
       />
 
       {/* Lado Derecho */}
-      <div style={{ 
+      <div style={{
         flex: 1,
-        backgroundColor: '#7334EF', 
-        padding: '4rem', 
+        backgroundColor: '#7334EF',
+        padding: '4rem',
         boxSizing: 'border-box',
         position: 'relative',
         overflowY: 'auto'
       }}>
         <button
-        onClick={() => navigate(-1)}
-        style={{
-          position: 'absolute',
-          top: '20px',
-          right: '40px',
-          background: 'rgba(255,255,255,0.2)',
-          color: 'white',
-          border: 'none',
-          padding: '8px 16px',
-          borderRadius: '20px',
-          cursor: 'pointer',
-          zIndex: 10,
-          transition: 'background 0.3s'
-        }}
-        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
-        onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-      >
-        ← Regresar
-      </button>
+          onClick={() => navigate(-1)}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            right: '40px',
+            background: 'rgba(255,255,255,0.2)',
+            color: 'white',
+            border: 'none',
+            padding: '8px 16px',
+            borderRadius: '20px',
+            cursor: 'pointer',
+            zIndex: 10,
+            transition: 'background 0.3s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+          onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+        >
+          ← Regresar
+        </button>
 
-      <h1 style={{ color: 'white', fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', marginTop: '1rem' }}>
-        {moduleData?.title ? `Modulo - ${moduleData.title}` : 'Modulo 1 - Nombre del Modulo'}
-      </h1>
-      
-      <p style={{ color: 'white', fontSize: '1rem', lineHeight: '1.6', opacity: 0.9, marginBottom: '3rem', maxWidth: '1000px' }}>
-        Este módulo de aprendizaje está diseñado para sumergirte en un entorno interactivo, donde 
-        podrás explorar conceptos clave a través de actividades prácticas y recursos multimedia. A 
-        medida que avances, experimentarás un enfoque dinámico que fomenta la colaboración y el 
-        pensamiento crítico, asegurando que cada lección sea memorable y efectiva.
-      </p>
+        <h1 style={{ color: 'white', fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', marginTop: '1rem' }}>
+          {moduleData?.title ? `Modulo - ${moduleData.title}` : 'Modulo 1 - Nombre del Modulo'}
+        </h1>
 
-      {/* Contenidos Section */}
-      <div style={{ marginBottom: '4rem' }}>
-        <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
-          <Book size={24} color="#FCEE50" /> CONTENIDOS
-        </h2>
-        <div style={{ 
-          display: 'flex', 
-          gap: '24px', 
-          overflowX: 'auto', 
-          paddingBottom: '2rem',
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(255,255,255,0.3) transparent'
-        }}>
-          {moduleData?.items && moduleData.items.length > 0 ? (
-            moduleData.items.map((item, idx) => (
-              <ContentCard key={item.id} item={item} index={idx} />
-            ))
-          ) : (
-             <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
-               No hay contenidos en este módulo.
-             </p>
-          )}
+        <p style={{ color: 'white', fontSize: '1rem', lineHeight: '1.6', opacity: 0.9, marginBottom: '3rem', maxWidth: '1000px' }}>
+          Este módulo de aprendizaje está diseñado para sumergirte en un entorno interactivo, donde
+          podrás explorar conceptos clave a través de actividades prácticas y recursos multimedia. A
+          medida que avances, experimentarás un enfoque dinámico que fomenta la colaboración y el
+          pensamiento crítico, asegurando que cada lección sea memorable y efectiva.
+        </p>
+
+        {/* Contenidos Section */}
+        <div style={{ marginBottom: '4rem' }}>
+          <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
+            <Book size={24} color="#FCEE50" /> CONTENIDOS
+          </h2>
+          <div style={{
+            display: 'flex',
+            gap: '24px',
+            overflowX: 'auto',
+            paddingBottom: '2rem',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255,255,255,0.3) transparent'
+          }}>
+            {moduleData?.items && moduleData.items.length > 0 ? (
+              moduleData.items.map((item, idx) => (
+                <ContentCard key={item.id} item={item} index={idx} />
+              ))
+            ) : (
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
+                No hay contenidos en este módulo.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Salas VR Section */}
+        <div>
+          <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
+            <Gamepad2 size={24} color="#FCEE50" /> SALAS VR
+          </h2>
+          <div style={{
+            display: 'flex',
+            gap: '24px',
+            overflowX: 'auto',
+            paddingBottom: '2rem',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255,255,255,0.3) transparent'
+          }}>
+            {[1, 2, 3, 4].map(num => (
+              <VrCard key={num} num={num} />
+            ))}
+          </div>
         </div>
       </div>
-
-      {/* Salas VR Section */}
-      <div>
-        <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
-          <Gamepad2 size={24} color="#FCEE50" /> SALAS VR
-        </h2>
-        <div style={{ 
-          display: 'flex', 
-          gap: '24px', 
-          overflowX: 'auto', 
-          paddingBottom: '2rem',
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(255,255,255,0.3) transparent'
-        }}>
-          {[1, 2, 3, 4].map(num => (
-            <VrCard key={num} num={num} />
-          ))}
-        </div>
-      </div>
-    </div>
     </div>
   )
 }

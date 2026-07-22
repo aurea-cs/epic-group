@@ -36,6 +36,9 @@ export interface Subject {
     visibility?: 'active' | 'hidden' | 'archived'
     max_students: number
     is_active: boolean
+    schedule_days?: string[]
+    schedule_start_time?: string
+    schedule_end_time?: string
     created_at: string
     updated_at: string
 }
@@ -630,6 +633,21 @@ export const deleteModuleItem = async (id: string): Promise<void> => {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
     } catch (error) {
         console.error('Error deleting item:', error)
+        throw error
+    }
+}
+
+// ============================================
+// AGENDA
+// ============================================
+
+export const getUserAgenda = async (userId: string, role: string): Promise<Subject[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/agenda/${userId}?role=${role}`)
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching user agenda:', error)
         throw error
     }
 }

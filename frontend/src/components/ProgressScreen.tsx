@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { auth } from '../lib/supabase'
 import { getUserRole } from '../utils/getUserRole'
-import TopNavigation from './TopNavigation'
 import './ProgressScreen.css'
 import image30 from '../assets/image30.png'
 import image36 from '../assets/image36.png'
@@ -70,7 +68,6 @@ interface ProgressScreenProps {
 const ProgressScreen: React.FC<ProgressScreenProps> = ({ user }) => {
   const navigate = useNavigate()
   const location = useLocation()
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
   const [activeTab, setActiveTab] = useState<'map' | 'students'>('map')
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
@@ -94,22 +91,6 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ user }) => {
       navigate('/dashboard')
     }
   }, [user, userRole, location.state, navigate])
-
-  const handleNavigation = (path: string) => {
-    navigate(path)
-  }
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true)
-    try {
-      await auth.signOut()
-      navigate('/login')
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error)
-    } finally {
-      setIsLoggingOut(false)
-    }
-  }
 
   const handleOpenCourse = (course: Course) => {
     setSelectedCourse(course)

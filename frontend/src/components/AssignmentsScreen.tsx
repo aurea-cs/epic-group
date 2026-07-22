@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import './AssignmentsScreen.css'
 import { getUserRole } from '../utils/getUserRole'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 import planetasolito1 from '../assets/planetasolito1.png'
 import planetasolito2 from '../assets/planetasolito2.png'
 import planetasolito3 from '../assets/planetasolito3.png'

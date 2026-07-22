@@ -26,7 +26,8 @@ interface TopNavigationProps {
 // Admin navigation items
 const ADMIN_NAV_ITEMS: NavItem[] = [
   { key: 'admin-home', label: 'Inicio', path: '/dashboard' },
-  { key: 'schools', label: 'Panel administrativo', path: '/admin' },
+  { key: 'schools', label: 'Centros', path: '/admin' },
+  { key: 'students', label: 'Alumnos', path: '/students' },
   { key: 'agenda', label: 'Agenda', path: '/quotes' },
 ]
 
