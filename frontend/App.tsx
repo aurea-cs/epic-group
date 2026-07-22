@@ -23,6 +23,8 @@ import PlanetDetailScreen from './src/components/PlanetDetailScreen'
 import MainLayout from './src/components/MainLayout'
 import ModuleDraftScreen from './src/components/ModuleDraftScreen'
 import StudentsAdminScreen from './src/components/StudentsAdminScreen'
+import ProfessorAssignmentCoursesScreen from './src/components/ProfessorAssignmentCoursesScreen'
+import ProfessorAssignmentContentScreen from './src/components/ProfessorAssignmentContentScreen'
 // import LandingPage from './src/components/LandingPage'
 import './App.css'
 
@@ -128,6 +130,8 @@ useEffect(() => {
                     <Route path="/admin/school/:centerId/grade/:gradeId/course/:courseId/content" element={<CourseContentScreen user={user} />} />
                     <Route path="/upload-content" element={user.user_metadata?.role === 'admin' ? <UploadContentScreen user={user} /> : <Navigate to="/dashboard" replace />} />
                     <Route path="/assignments" element={<AssignmentsScreen user={user} />} />
+                    <Route path="/professor/assignments/courses" element={<ProfessorAssignmentCoursesScreen user={user} />} />
+                    <Route path="/professor/assignments/courses/:courseId/content" element={<ProfessorAssignmentContentScreen user={user} />} />
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   </Routes>
                 </MainLayout>

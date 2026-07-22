@@ -227,115 +227,7 @@ app.get('/api/students/:studentId/courses', async (req, res) => {
 
 // Get student progress by student ID
 app.get('/api/students/:studentId/progress', async (req, res) => {
-    try {
-        const { studentId } = req.params;
-        const professorId = req.query.professorId as string;
 
-        // Get student basic info
-        const { data: student, error: studentError } = await supabase
-            .from('users')
-            .select('id, email, full_name, firstname, lastname, avatar_url')
-            .eq('id', studentId)
-            .single();
-
-        if (studentError) throw studentError;
-
-        const { data: enrollments, error: enrollmentsError } = await supabase
-            .from('enrollments')
-            .select('subject_id')
-            .eq('student_id', studentId);
-
-        if (enrollmentsError) throw enrollmentsError;
-        
-        let subjectIds = enrollments?.map(e => e.subject_id) || [];
-        
-        if (professorId && subjectIds.length > 0) {
-            const { data: profSubjects, error: profSubjError } = await supabase
-                .from('professor_subjects')
-                .select('subject_id')
-                .eq('professor_id', professorId)
-                .in('subject_id', subjectIds);
-                
-            if (profSubjError) throw profSubjError;
-            subjectIds = profSubjects?.map(ps => ps.subject_id) || [];
-        }
-        
-        // Get subjects for those subjects
-        const { data: subjects, error: subjectsError } = await supabase
-            .from('subjects')
-            .select('id, name')
-            .in('id', subjectIds);
-
-        // Get student progress for courses
-        const { data: progressData } = await supabase
-            .from('user_progress')
-            .select('*')
-            .eq('user_id', studentId);
-
-        // Get completed tasks with grades
-        const { data: completions, error: completionsError } = await supabase
-            .from('user_task_completions')
-            .select(`
-                id,
-                score,
-                teacher_feedback,
-                graded_at,
-                course_tasks!inner(title, course_id)
-            `)
-            .eq('user_id', studentId)
-            .order('graded_at', { ascending: false });
-
-        if (completionsError) throw completionsError;
-
-        // Get comments
-        const { data: comments, error: commentsError } = await supabase
-            .from('student_comments')
-            .select('id, text, author_name, created_at, updated_at')
-            .eq('student_id', studentId)
-            .order('created_at', { ascending: false });
-
-        if (commentsError) throw commentsError;
-
-        // Format response
-        const studentData = {
-            id: student.id,
-            name: student.full_name || `${student.firstname || ''} ${student.lastname || ''}`.trim() || 'Alumno',
-            email: student.email,
-            avatar: student.avatar_url,
-            courses: subjects?.map(sub => {
-                const p = progressData?.find(p => p.course_id === sub.id);
-                return {
-                    id: sub.id,
-                    name: sub.name,
-                    progress: p?.progress_percentage || 0,
-                    color: 'purple'
-                };
-            }) || [],
-            grades: completions?.filter(c => c.score !== null).map((c: any) => ({
-                id: c.id,
-                courseName: subjects?.find(s => s.id === c.course_tasks.course_id)?.name || 'Materia',
-                grade: c.score,
-                maxGrade: 100,
-                assignmentName: c.course_tasks.title,
-                gradedAt: c.graded_at
-            })) || [],
-            comments: comments?.map(c => ({
-                id: c.id,
-                text: c.text,
-                author: c.author_name,
-                date: new Date(c.created_at).toLocaleDateString('es-ES', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                })
-            })) || []
-        };
-
-        res.json(studentData);
-    } catch (error: any) {
-        console.error('Error fetching student progress:', error);
-        res.status(500).json({ error: error.message });
-    }
 });
 
 
@@ -644,202 +536,11 @@ app.get('/api/professors/:professorId/grades-summary', async (req, res) => {
 
         if (studentsError) throw studentsError;
 
-        // 4. Get Task Completions for these students
-        const { data: completions, error: completionsError } = await supabase
-            .from('user_task_completions')
-            .select('user_id, score')
-            .in('user_id', studentIds)
-            .not('score', 'is', null);
-
-        if (completionsError) throw completionsError;
-
-        // 5. Calculate Averages
-        const summary = students!.map((student, index) => {
-            const studentCompletions = completions?.filter(c => c.user_id === student.id) || [];
-
-            let average = 0;
-            if (studentCompletions.length > 0) {
-                const sum = studentCompletions.reduce((acc, c) => acc + (c.score || 0), 0);
-                average = sum / studentCompletions.length;
-            }
-
-            return {
-                id: index + 1,
-                userId: student.id,
-                name: student.full_name || `${student.firstname || ''} ${student.lastname || ''}`.trim() || 'Alumno',
-                email: student.email,
-                avatar: student.avatar_url,
-                average: Math.round(average),
-                color: ['purple', 'orange', 'salmon', 'blue'][index % 4]
-            };
-        });
-
-        res.json(summary);
+       // implementation
+        res.json(students);
 
     } catch (error: any) {
         console.error('Error fetching grades summary:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Update grade
-app.put('/api/grades/:gradeId', async (req, res) => {
-    try {
-        const { gradeId } = req.params;
-        const { grade } = req.body;
-
-        if (grade === undefined) {
-            return res.status(400).json({ error: 'Grade is required' });
-        }
-
-        const { data, error } = await supabase
-            .from('user_task_completions')
-            .update({ score: grade, graded_at: new Date().toISOString() })
-            .eq('id', gradeId)
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        res.json(data);
-    } catch (error: any) {
-        console.error('Error updating grade:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get unique assignments (derived from course_tasks and completions)
-app.get('/api/professors/:professorId/assignments', async (req, res) => {
-    try {
-        const { professorId } = req.params;
-
-        // Get subjects for professor
-        const { data: profSubjects, error: profSubjError } = await supabase
-            .from('professor_subjects')
-            .select('subject_id, subjects(name)')
-            .eq('professor_id', professorId);
-
-        if (profSubjError) throw profSubjError;
-
-        if (!profSubjects || profSubjects.length === 0) return res.json([]);
-
-        const subjectIds = profSubjects.map(ps => ps.subject_id);
-
-        // Get tasks for those subjects
-        const { data: tasks, error: tasksError } = await supabase
-            .from('course_tasks')
-            .select('id, course_id, title')
-            .in('course_id', subjectIds);
-
-        if (tasksError) throw tasksError;
-
-        if (!tasks || tasks.length === 0) return res.json([]);
-
-        const taskIds = tasks.map(t => t.id);
-
-        // Get completions
-        const { data: completions, error: completionsError } = await supabase
-            .from('user_task_completions')
-            .select('task_id, score')
-            .in('task_id', taskIds);
-
-        if (completionsError) throw completionsError;
-
-        // Aggregate
-        const assignmentsMap = new Map();
-
-        tasks.forEach(task => {
-            const subjectName = (profSubjects.find(ps => ps.subject_id === task.course_id)?.subjects as any)?.name || 'Materia';
-            const key = `${task.course_id}-${task.id}`;
-            
-            assignmentsMap.set(key, {
-                id: key,
-                title: task.title,
-                courseName: subjectName,
-                total: 0,
-                graded: 0
-            });
-        });
-        
-        completions?.forEach(c => {
-            const task = tasks.find(t => t.id === c.task_id);
-            if (!task) return;
-            const key = `${task.course_id}-${task.id}`;
-            const assignment = assignmentsMap.get(key);
-            if (assignment) {
-                assignment.total++;
-                if (c.score !== null) {
-                    assignment.graded++;
-                }
-            }
-        });
-
-        res.json(Array.from(assignmentsMap.values()));
-
-    } catch (error: any) {
-        console.error('Error fetching assignments:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get submissions for an assignment
-app.get('/api/assignments/submissions', async (req, res) => {
-    try {
-        const { assignment, course } = req.query;
-
-        if (!assignment || !course) {
-            return res.status(400).json({ error: 'Assignment and Course are required' });
-        }
-        
-        // Find subject by name
-        const { data: subjects, error: subjError } = await supabase
-            .from('subjects')
-            .select('id')
-            .eq('name', course)
-            .limit(1);
-            
-        if (subjError || !subjects || subjects.length === 0) throw new Error('Subject not found');
-        const subjectId = subjects[0].id;
-        
-        // Find task by title and subject
-        const { data: tasks, error: taskError } = await supabase
-            .from('course_tasks')
-            .select('id')
-            .eq('title', assignment)
-            .eq('course_id', subjectId)
-            .limit(1);
-            
-        if (taskError || !tasks || tasks.length === 0) throw new Error('Task not found');
-        const taskId = tasks[0].id;
-
-        const { data: completions, error } = await supabase
-            .from('user_task_completions')
-            .select(`
-                id,
-                score,
-                graded_at,
-                user_id,
-                users!inner(full_name)
-             `)
-            .eq('task_id', taskId);
-
-        if (error) throw error;
-
-        const result = completions?.map(c => {
-            return {
-                gradeId: c.id,
-                studentId: c.user_id,
-                studentName: (c.users as any)?.full_name || 'Estudiante',
-                grade: c.score,
-                maxGrade: 100,
-                status: (c.score !== null) ? 'Calificado' : 'Pendiente'
-            };
-        });
-
-        res.json(result || []);
-
-    } catch (error: any) {
-        console.error('Error fetching submissions:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -2646,8 +2347,93 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Start Server
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-})
+// ============================================
+// ASSIGNMENTS (PROFESSOR)
+// ============================================
 
+const assignmentUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB
+        files: 5
+    }
+});
+
+app.post('/api/professors/:professorId/courses/:courseId/assignments', assignmentUpload.single('attachment'), async (req, res) => {
+    try {
+        const { professorId, courseId } = req.params;
+        const {
+            title,
+            instructions_md,
+            max_score,
+            due_at,
+            available_from,
+            allow_resubmission,
+            module_id
+        } = req.body;
+
+        if (!title) {
+            return res.status(400).json({ error: 'Title is required' });
+        }
+
+        // Insert assignment
+        const { data: assignment, error: assignmentError } = await supabase
+            .from('assignments')
+            .insert({
+                title,
+                instructions_md,
+                max_score: max_score ? parseFloat(max_score) : null,
+                due_at: due_at || null,
+                available_from: available_from || null,
+                allow_resubmission: allow_resubmission === 'true',
+                subject_id: courseId,
+                professor_id: professorId,
+                module_id: module_id || null,
+                status: 'published'
+            })
+            .select()
+            .single();
+
+        if (assignmentError) throw assignmentError;
+
+        // Handle attachment if any
+        if (req.file) {
+            const file = req.file;
+            const fileExt = file.originalname.split('.').pop();
+            const fileName = `${assignment.id}_${Date.now()}.${fileExt}`;
+            const filePath = `assignments/${fileName}`;
+
+            // Upload to Supabase Storage
+            const { error: uploadError } = await supabase.storage
+                .from('grade-content') // Reusing existing bucket, or could create 'assignments' bucket
+                .upload(filePath, file.buffer, {
+                    contentType: file.mimetype,
+                    upsert: true
+                });
+
+            if (uploadError) throw uploadError;
+
+            // Insert attachment record
+            const { error: attachmentError } = await supabase
+                .from('assignment_attachments')
+                .insert({
+                    assignment_id: assignment.id,
+                    file_name: file.originalname,
+                    mime_type: file.mimetype,
+                    storage_path: filePath
+                });
+
+            if (attachmentError) throw attachmentError;
+        }
+
+        res.status(201).json(assignment);
+    } catch (error: any) {
+        console.error('Error creating assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Start the server
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+});
