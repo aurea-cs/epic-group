@@ -1,0 +1,73 @@
+/* Theming overrides for MDXEditor so it matches the app's dark UI.
+   Class names below (.mdxeditor, .mdxeditor-toolbar, [contenteditable]) are
+   MDXEditor's stable public hooks — safe to target directly. */
+
+.instructions-editor-wrapper {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.instructions-editor-wrapper:focus-within {
+    border-color: rgba(192, 132, 252, 0.5);
+}
+
+.instructions-editor-wrapper .mdxeditor {
+    background: transparent;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.instructions-editor-wrapper .mdxeditor-toolbar {
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 6px 8px;
+}
+
+.instructions-editor-wrapper .mdxeditor-toolbar button,
+.instructions-editor-wrapper .mdxeditor-toolbar [role='button'] {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.instructions-editor-wrapper .mdxeditor-toolbar button:hover,
+.instructions-editor-wrapper .mdxeditor-toolbar [role='button']:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.instructions-editor-wrapper [contenteditable='true'] {
+    min-height: 440px;
+    margin: 10px 0px;
+    padding-right:5px;
+    color: #fff;
+}
+
+.instructions-editor-wrapper [contenteditable='true'] a {
+    color: #c084fc;
+}
+
+.instructions-editor-wrapper [contenteditable='true'] img {
+    max-width: 100%;
+    border-radius: 6px;
+}
+
+.instructions-editor-wrapper [contenteditable='true']:empty:before {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.instructions-editor-content ul,
+.instructions-editor-content ol {
+    padding-left: 2rem;
+    margin-left: 0;
+}
+
+.instructions-editor-content li {
+    padding-left: 0.25rem;
+}
+
+.instructions-editor-content li[role="checkbox"],
+.instructions-editor-content li:has([role="checkbox"]) {
+    padding-left: 1.75rem ;
+}
