@@ -47,7 +47,7 @@ export interface Center {
   name: string
 }
 
-export type TabKey = 'content' | 'assignments' | 'reminders' | 'students' | 'pov-students'
+export type TabKey = 'content' | 'assignments' | 'reminders' | 'students' | 'pov-students' | 'submissions'
 
 // ============================================================================
 // Local module item interface (content tab)
@@ -60,6 +60,19 @@ export interface ModuleItem {
     type: 'pdf' | 'video' | 'assignment' | 'link' | string
     content_url?: string | null
     show_student?: boolean | null
+}
+
+export interface Submission {
+    id: string
+    title: string | null,
+    assignment_id: string
+    student_id: string
+    submitted_at: string
+    file_url: string
+    score: number | null
+    feedback: string | null
+    graded_at: string | null
+    graded_by: string | null
 }
 
 export type ModuleWithItems = CourseModule & { items?: ModuleItem[] }

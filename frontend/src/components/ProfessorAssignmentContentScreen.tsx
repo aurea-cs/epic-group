@@ -9,7 +9,7 @@ import {
 } from '../lib/adminApi'
 import './HierarchyConfig.css'
 
-import type { Assignment, CalendarEvent, Student, ModuleWithItems, Center, TabKey } from './ProfessorContentScreen/types'
+import type { Assignment, CalendarEvent, Student, ModuleWithItems, Center, Submission, TabKey } from './ProfessorContentScreen/types'
 
 import { ActionButton, TabButton } from './general/SharedUI'
 import ContentTab from './ProfessorContentScreen/ContentTab'
@@ -20,6 +20,7 @@ import EventFormModal from './ProfessorContentScreen/EventFormModal'
 import ConfirmModal from './general/ConfirmModal'
 import StudentsTab from './ProfessorContentScreen/StudentsTab'
 import StudentFormModal from './ProfessorContentScreen/StudentFormModal'
+import SubmissionsTab from './ProfessorContentScreen/SubmissionsTab'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -166,6 +167,30 @@ async function deleteStudentRequest(id: string): Promise<void> {
     }
 }
 
+// ---- submissions -------------------------------------------------------
+
+async function fetchSubmissions(subjectId: string): Promise<Submission[]> {
+    const res = await fetch(`${API_URL}/api/subjects/${subjectId}/submissions`)
+    if (!res.ok) throw new Error(`Error al cargar entregas: ${res.status}`)
+    return res.json()
+}
+
+async function gradeStudentSubmission(
+    id: string,
+    payload: Partial<Omit<Submission, 'id' | 'created_at'>>
+): Promise<Submission> {
+    const res = await fetch(`${API_URL}/api/submissions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Error al calificar: ${res.status}`)
+    }
+    return res.json()
+}
+
 const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScreenProps> = ({ user }) => {
     const { courseId } = useParams<{ courseId: string }>()
 
@@ -191,8 +216,12 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
     const [showStudentModal, setShowStudentModal] = useState(false)
     const [editingStudent, setEditingStudent] = useState<Student | null>(null)
     const [allCenters, setAllCenters] = useState<Center[]>([])
-    
 
+    const [submissions, setSubmissions] = useState<Submission[]>([])
+    const [submissionsLoading, setSubmissionsLoading] = useState(false)
+    const [showSubmissionModal, setShowSubmissionModal] = useState(false)
+    const [gradingStudent, setGradingStudent] = useState<Submission | null>(null)
+    
     const [error, setError] = useState<string | null>(null)
     const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState<string | null>(null)
     const [confirmDeleteEventId, setConfirmDeleteEventId] = useState<string | null>(null)
@@ -267,11 +296,22 @@ const loadStudents = useCallback(async () => {
     }
 }, [courseId, fetchCenters])
 
+    const loadSubmissions = useCallback(() => {
+        if (!courseId) return
+        setSubmissionsLoading(true)
+        setError(null)
+        fetchSubmissions(courseId)
+            .then(setSubmissions)
+            .catch(e => setError(e.message))
+            .finally(() => setSubmissionsLoading(false))
+    }, [courseId])
+
 
     useEffect(() => {
         if (activeTab === 'assignments') loadAssignments()
         if (activeTab === 'reminders') loadEvents()
         if (activeTab === 'students') loadStudents()
+        if (activeTab === 'submissions') loadSubmissions()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab])
 
@@ -409,7 +449,8 @@ const loadStudents = useCallback(async () => {
             {/* Tab bar */}
             <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 <TabButton label="📒 Contenido" active={activeTab === 'content'} onClick={() => setActiveTab('content')} />
-                <TabButton label="📝 Tareas" active={activeTab === 'assignments'} onClick={() => setActiveTab('assignments')} />
+                <TabButton label="📂 Tareas" active={activeTab === 'assignments'} onClick={() => setActiveTab('assignments')} />
+                <TabButton label="📝 Entregas" active={activeTab === 'submissions'} onClick={() => setActiveTab('submissions')} />
                 <TabButton label="📅 Eventos" active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} />
                 <TabButton label="👥 Alumnos inscritos" active={activeTab === 'students'} onClick={() => setActiveTab('students')} />
                 <TabButton label="👁️ Vista Alumnos" active={false} onClick={() => navigate('/assignments')} />
@@ -477,6 +518,14 @@ const loadStudents = useCallback(async () => {
                     onEdit={student => { setEditingStudent(student); setShowStudentModal(true) }}
                     onDelete={id => setConfirmDeleteStudentId(id)}
                     allCenters={allCenters}
+                />
+            )}
+
+             {activeTab === 'submissions' && (
+                <SubmissionsTab
+                    loading={submissionsLoading}
+                    submissions={submissions}
+                    onGrade={submission => gradeStudentSubmission}
                 />
             )}
 
