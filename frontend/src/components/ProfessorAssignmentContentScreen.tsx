@@ -17,6 +17,8 @@ import AssignmentsTab from './ProfessorContentScreen/AssignmentsTab'
 import RemindersTab from './ProfessorContentScreen/RemindersTab'
 import AssignmentFormModal from './ProfessorContentScreen/AssignmentFormModal'
 import EventFormModal from './ProfessorContentScreen/EventFormModal'
+import ConfirmModal from './general/ConfirmModal'
+import { set } from 'date-fns'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -138,6 +140,8 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
 
     const [error, setError] = useState<string | null>(null)
+    const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState<string | null>(null)    
+    const [confirmDeleteEventId, setConfirmDeleteEventId] = useState<string | null>(null)
 
     // ---- initial load: subject + modules ----
     useEffect(() => {
@@ -216,7 +220,6 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
     }
 
     const handleDeleteAssignment = async (id: string) => {
-        if (!window.confirm('¿Eliminar esta tarea? Esta acción no se puede deshacer.')) return
         await deleteAssignmentRequest(id)
         setAssignments(prev => prev.filter(a => a.id !== id))
     }
@@ -235,7 +238,6 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
     }
 
     const handleDeleteEvent = async (id: string) => {
-        if (!window.confirm('¿Eliminar este evento del calendario?')) return
         await deleteCalendarEventRequest(id)
         setEvents(prev => prev.filter(e => e.id !== id))
     }
@@ -262,6 +264,32 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
                 </div>
             )}
 
+            {confirmDeleteAssignmentId && (
+                <ConfirmModal
+                    message="¿Seguro que quieres eliminar esta tarea?"
+                    confirmLabel="Sí, eliminar"
+                    cancelLabel="Cancelar"
+                    danger
+                    onConfirm={() => {
+                        handleDeleteAssignment(confirmDeleteAssignmentId)
+                        setConfirmDeleteAssignmentId(null)
+                    }}
+                    onCancel={() => setConfirmDeleteAssignmentId(null)}
+                />
+            )}
+            {confirmDeleteEventId && (
+                <ConfirmModal
+                    message="¿Seguro que quieres eliminar este evento?"
+                    confirmLabel="Sí, eliminar"
+                    cancelLabel="Cancelar"
+                    danger
+                    onConfirm={() => {
+                        handleDeleteEvent(confirmDeleteEventId)
+                        setConfirmDeleteEventId(null)
+                    }}
+                    onCancel={() => setConfirmDeleteEventId(null)}
+                />
+            )}
             {/* Tab bar */}
             <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 <TabButton label="📒 Contenido" active={activeTab === 'content'} onClick={() => setActiveTab('content')} />
@@ -272,7 +300,7 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
 
                 {activeTab === 'assignments' && (
                     <ActionButton
-                        label="+ Nueva tarea"
+                        label="Nueva tarea ➕"
                         bg="rgba(192,132,252,0.18)" hoverBg="rgba(192,132,252,0.3)" textColor="#f3e8ff"
                         border="1px solid rgba(192,132,252,0.4)"
                         onClick={() => { setEditingAssignment(null); setShowAssignmentModal(true) }}
@@ -280,7 +308,7 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
                 )}
                 {activeTab === 'reminders' && (
                     <ActionButton
-                        label="+ Nuevo evento"
+                        label="Nuevo evento ➕"
                         bg="rgba(192,132,252,0.18)" hoverBg="rgba(192,132,252,0.3)" textColor="#f3e8ff"
                         border="1px solid rgba(192,132,252,0.4)"
                         onClick={() => { setEditingEvent(null); setShowEventModal(true) }}
@@ -303,7 +331,7 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
                     assignments={assignments}
                     modules={modules}
                     onEdit={a => { setEditingAssignment(a); setShowAssignmentModal(true) }}
-                    onDelete={handleDeleteAssignment}
+                    onDelete={id => setConfirmDeleteAssignmentId(id)}
                 />
             )}
 
@@ -312,7 +340,7 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
                     loading={eventsLoading}
                     events={events}
                     onEdit={ev => { setEditingEvent(ev); setShowEventModal(true) }}
-                    onDelete={handleDeleteEvent}
+                    onDelete={id => setConfirmDeleteEventId(id)}
                 />
             )}
 

@@ -98,3 +98,27 @@
 .modal-select option:hover{
     background-color: #c084fc !important;
 }
+
+/* CustomNumberPicker.css */
+
+.rw-widget-container {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 9px !important;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.custom-number-picker .rw-widget-input {
+    background:  #221F2D !important;
+    color: #ffffff !important;
+    font-size: 0.9rem;
+}
+
+.custom-number-picker .rw-picker-btn {
+    background:  #221F2D !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.custom-number-picker .rw-picker-btn:hover {
+    color: #fff !important;
+}

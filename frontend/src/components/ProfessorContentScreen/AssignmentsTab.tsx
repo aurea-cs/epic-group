@@ -1,7 +1,6 @@
 import React from 'react'
 import type { Assignment, ModuleWithItems } from './types'
 import { ActionButton, StatusPill, tdStyle, thStyle } from '../general/SharedUI'
-
 interface AssignmentsTabProps {
     loading: boolean
     assignments: Assignment[]

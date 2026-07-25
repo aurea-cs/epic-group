@@ -25,8 +25,10 @@ import {type Assignment } from './types'
 import ConfirmModal from '../general/ConfirmModal'
 import { ActionButton, Modal, Toggle, fieldLabelStyle, inputStyle } from '../general/SharedUI'
 import CustomSelect from '../general/CustomSelect'
-import CustomNumberPicker from '../general/CustomNumberPicker'
+import NumberPicker from "react-widgets/NumberPicker";
+import 'react-widgets/styles.css'
 import CustomDatePicker from '../general/CustomDatePicker'
+import CustomMultiSelect from '../general/CustomMultiSelect'
 
 
 const NO_MODULE = '__none__'
@@ -174,37 +176,77 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
                 </div>
                 <div style={{ flex: 1 }}>
                     <label style={fieldLabelStyle}>Fecha de entrega</label>
-                    <input style={inputStyle} type="datetime-local" value={dueAt} onChange={e => setDueAt(e.target.value)} />
+                    <CustomDatePicker
+                        value={dueAt}
+                        onChange={setDueAt}
+                        includeTime
+                        placeholder="Seleccionar fecha y hora"
+                    />
                 </div>
             </div>
 
             <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                    <label style={fieldLabelStyle}>Puntaje máximo</label>
-                    <input style={inputStyle} type="number" value={maxScore} onChange={e => setMaxScore(Number(e.target.value))} />
+                <div style={{ flex: 2 }}>
+                    <label style={fieldLabelStyle}>Tipos de archivo permitidos</label>
+                    <CustomMultiSelect
+                        value={allowedFileTypes}
+                        onChange={setAllowedFileTypes}
+                        placeholder="pdf, docx, png"
+                        options={[
+                            { value: 'pdf', label: 'PDF' },
+                            { value: 'docx', label: 'DOCX' },
+                            { value: 'png', label: 'PNG' },
+                            { value: 'jpg', label: 'JPG' },
+                            { value: 'xlsx', label: 'XLSX' },
+                        ]}
+                    />
                 </div>
                 <div style={{ flex: 1 }}>
                     <label style={fieldLabelStyle}>Tamaño máximo (MB)</label>
-                    <input style={inputStyle} type="number" value={maxFileSizeMb} onChange={e => setMaxFileSizeMb(Number(e.target.value))} />
+                    <NumberPicker 
+                        value={maxFileSizeMb}
+                        containerClassName="custom-number-picker"
+                        onChange={(value: number | null) => setMaxFileSizeMb(value ?? maxFileSizeMb)}
+                        min={0}
+                        step={1}
+                    />
                 </div>
-                <div style={{ flex: 1 }}>
-                     <label style={fieldLabelStyle}>Tipos de archivo permitidos</label>
-            <input style={inputStyle} value={allowedFileTypes} onChange={e => setAllowedFileTypes(e.target.value)} placeholder="pdf, docx, png" />
-                </div>
-                <div style={{ flex: 1 }}>
-                    <label style={fieldLabelStyle}>Estado</label>
-                    <select style={inputStyle} value={status} onChange={e => setStatus(e.target.value)}>
-                        <option value="draft">Borrador</option>
-                        <option value="published">Publicada</option>
-                        <option value="closed">Cerrada</option>
-                    </select>
-                </div>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem', paddingTop: '1.6rem' }}>
-                    <Toggle checked={allowResubmission} onChange={() => setAllowResubmission(v => !v)} />
-                    <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>Permitir reenvío</span>
+                                <div style={{ flex: 1 }}>
+                    <label style={fieldLabelStyle}>Puntaje máximo</label>
+                    <NumberPicker 
+                        value={maxScore}
+                        containerClassName="custom-number-picker"
+                        onChange={(value: number | null) => setMaxScore(value ?? maxScore)}
+                        min={0}
+                        step={2}
+                    />
                 </div>
             </div>
 
+            <div style={{ display: 'flex', gap: '1rem' }}>
+
+                
+                <div style={{ flex: 1 }}>
+                    <label style={fieldLabelStyle}>Estado</label>
+
+                    <CustomSelect
+                        value={status}
+                        onChange={setStatus}
+                        options={[
+                            { value: 'draft', label: 'Borrador' },
+                            { value: 'published', label: 'Publicada' },
+                            { value: 'closed', label: 'Cerrada' },
+                        ]}
+                    />
+                </div>
+
+                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+                    <Toggle checked={allowResubmission} onChange={() => setAllowResubmission(v => !v)} />
+                    <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>Permitir reenvío</span>
+                </div>
+                
+                
+            </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
                 <ActionButton label="Cancelar" bg="rgba(255,255,255,0.06)" hoverBg="rgba(255,255,255,0.12)" textColor="#e5e7eb" border="1px solid rgba(255,255,255,0.12)" onClick={handleAttemptClose} />

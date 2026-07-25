@@ -218,3 +218,7 @@
     margin-left: -16px;
     pointer-events: none;
 }
+
+.cdp-caption-label {
+    display: none;
+}

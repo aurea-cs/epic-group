@@ -24,6 +24,7 @@ import '@mdxeditor/editor/style.css'
 import ConfirmModal from '../general/ConfirmModal'
 import './AssignmentFormModal.css'
 import CustomSelect from '../general/CustomSelect'
+import CustomDatePicker from '../general/CustomDatePicker'
 
 interface EventFormModalProps {
     initial: CalendarEvent | null
@@ -137,7 +138,12 @@ const EventFormModal: React.FC<EventFormModalProps> = ({ initial, onClose, onSub
                 </div>
                 <div style={{ flex: 1 }}>
                     <label style={fieldLabelStyle}>Fecha</label>
-                    <input style={inputStyle} type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} />
+                    <CustomDatePicker
+                        value={eventDate}
+                        onChange={setEventDate}
+                        includeTime
+                        placeholder="Seleccionar fecha"
+                    />
                 </div>
             </div>
 
