@@ -483,7 +483,7 @@ app.get('/api/professors/:professorId/courses', async (req, res) => {
             return {
                 id: subject.id,
                 title: subject.name,
-                description: `${grade.name || 'Sin grado'} • ${subject.name}`,
+                description: `${grade.name || 'Sin grado'}`,
                 completedSteps: Math.floor(Math.random() * 100), // Mock progress
                 totalSteps: 100,
                 gradeId: grade.id,

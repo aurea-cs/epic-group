@@ -33,10 +33,10 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
 
 // Professor navigation items (current default)
 const PROFESSOR_NAV_ITEMS: NavItem[] = [
-  { key: 'my-courses', label: 'Inicio', path: '/dashboard' },
-  { key: 'tracking', label: 'Mis cursos', path: '/assignments' },
+  { key: 'home', label: 'Inicio', path: '/dashboard' },
+  { key: 'my-courses', label: 'Mis cursos', path: '/professor/assignments/courses' },
   { key: 'agenda', label: 'Mi agenda', path: '/quotes' },
-  { key: 'homework', label: 'Tareas', path: '/professor/assignments/courses' },
+
 ]
 
 const TopNavigation: React.FC<TopNavigationProps> = ({

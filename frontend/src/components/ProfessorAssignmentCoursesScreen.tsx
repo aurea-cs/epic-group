@@ -45,8 +45,8 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
   return (
     <main className="dashboard-content" style={{ padding: '2rem' }}>
       <div style={{ margin: '0 auto', width: '100%' }}>
-        <h1 className="welcome-text" style={{ marginBottom: '2rem' }}>Gestionar Tareas por Materia</h1>
-        
+        <h1 className="welcome-text" style={{ marginBottom: '2rem' }}>Tus materias</h1>
+
         {courses.length === 0 ? (
           <div style={{ textAlign: 'center', color: '#1f295a', marginTop: '2rem', background: '#fff', padding: '3rem', borderRadius: '12px' }}>
             <p>No tienes materias asignadas.</p>
@@ -81,7 +81,7 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
                     <h3 className="course-card__title" style={{ color: '#1f295a', margin: '0 0 0.5rem 0', fontSize: '1.25rem' }}>{course.title}</h3>
                     <p className="course-card__subtitle" style={{ color: '#6c5ce7', margin: '0 0 1rem 0', fontWeight: '500' }}>{course.description}</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(31, 41, 90, 0.6)', fontSize: '0.875rem' }}>
-                      <span>🏫</span>
+                      <span>📍</span>
                       <span>{course.centerName}</span>
                     </div>
                   </div>

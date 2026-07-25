@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
 import {
     getSubjectById,
@@ -18,6 +18,7 @@ import RemindersTab from './ProfessorContentScreen/RemindersTab'
 import AssignmentFormModal from './ProfessorContentScreen/AssignmentFormModal'
 import EventFormModal from './ProfessorContentScreen/EventFormModal'
 import ConfirmModal from './general/ConfirmModal'
+
 import { set } from 'date-fns'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
@@ -142,6 +143,7 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
     const [error, setError] = useState<string | null>(null)
     const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState<string | null>(null)    
     const [confirmDeleteEventId, setConfirmDeleteEventId] = useState<string | null>(null)
+    const navigate = useNavigate()
 
     // ---- initial load: subject + modules ----
     useEffect(() => {
@@ -295,6 +297,7 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
                 <TabButton label="📒 Contenido" active={activeTab === 'content'} onClick={() => setActiveTab('content')} />
                 <TabButton label="📝 Tareas" active={activeTab === 'assignments'} onClick={() => setActiveTab('assignments')} />
                 <TabButton label="📅 Eventos" active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} />
+                <TabButton label="👁️ Vista Alumnos" active={activeTab === 'students'} onClick={() => navigate('/assignments')} />
 
                 <div style={{ flex: 1 }} />
 

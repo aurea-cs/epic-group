@@ -33,7 +33,7 @@ export interface CalendarEvent {
     created_at: string
 }
 
-export type TabKey = 'content' | 'assignments' | 'reminders'
+export type TabKey = 'content' | 'assignments' | 'reminders' | 'students'
 
 // ============================================================================
 // Local module item interface (content tab)
