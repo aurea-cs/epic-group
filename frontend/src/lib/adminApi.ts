@@ -488,6 +488,7 @@ export interface ModuleItem {
     content_url?: string
     order_index: number
     is_visible: boolean
+    show_student?: boolean
     created_at: string
     updated_at: string
 }
@@ -633,6 +634,20 @@ export const deleteModuleItem = async (id: string): Promise<void> => {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
     } catch (error) {
         console.error('Error deleting item:', error)
+        throw error
+    }
+}
+
+export const toggleItemVisibility = async (itemId: string, show_student: boolean): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/module-items/${itemId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ show_student }),
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    } catch (error) {
+        console.error('Error toggling item visibility:', error)
         throw error
     }
 }

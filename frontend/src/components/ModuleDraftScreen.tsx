@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
-import { getCourseModules, CourseModule } from '../lib/adminApi'
 import { getCourseModules, CourseModule, ModuleItem } from '../lib/adminApi'
 import { Book, Gamepad2, FileText, ArrowRight } from 'lucide-react'
 import group2Img from '../assets/Group_2.png'

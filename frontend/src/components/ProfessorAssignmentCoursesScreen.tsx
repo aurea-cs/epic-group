@@ -44,7 +44,7 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
 
   return (
     <main className="dashboard-content" style={{ padding: '2rem' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+      <div style={{ margin: '0 auto', width: '100%' }}>
         <h1 className="welcome-text" style={{ marginBottom: '2rem' }}>Gestionar Tareas por Materia</h1>
         
         {courses.length === 0 ? (

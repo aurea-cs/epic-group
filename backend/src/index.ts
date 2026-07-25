@@ -1836,6 +1836,32 @@ app.delete('/api/admin/items/:id', async (req, res) => {
     }
 });
 
+// Toggle item visibility for students
+app.patch('/api/module-items/:itemId', async (req, res) => {
+    try {
+        const { itemId } = req.params;
+        const { show_student } = req.body;
+
+        if (typeof show_student !== 'boolean') {
+            return res.status(400).json({ error: 'show_student must be a boolean' });
+        }
+
+        const { data, error } = await supabase
+            .from('module_items')
+            .update({ show_student })
+            .eq('id', itemId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error: any) {
+        console.error('Error toggling item visibility:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 // ========== HIERARCHY VIEW ==========
 
 // Get complete hierarchy for a center // TODO: see if it broke
@@ -2429,6 +2455,245 @@ app.post('/api/professors/:professorId/courses/:courseId/assignments', assignmen
         res.status(201).json(assignment);
     } catch (error: any) {
         console.error('Error creating assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// ASSIGNMENTS CRUD (professor, scoped to subject)
+// ============================================
+
+// GET all assignments for a subject
+app.get('/api/subjects/:subjectId/assignments', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+
+        const { data, error } = await supabase
+            .from('assignments')
+            .select('*')
+            .eq('subject_id', subjectId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (error: any) {
+        console.error('Error fetching assignments:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST create assignment for a subject
+app.post('/api/subjects/:subjectId/assignments', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+        const {
+            professor_id,
+            module_id,
+            title,
+            instructions_md,
+            due_at,
+            available_from,
+            max_score,
+            allowed_file_types,
+            max_file_size_mb,
+            allow_resubmission,
+            status,
+        } = req.body;
+
+        if (!title || !professor_id) {
+            return res.status(400).json({ error: 'title and professor_id are required' });
+        }
+
+        const { data, error } = await supabase
+            .from('assignments')
+            .insert({
+                subject_id: subjectId,
+                professor_id,
+                module_id: module_id || null,
+                title,
+                instructions_md: instructions_md || null,
+                due_at: due_at || null,
+                available_from: available_from || null,
+                max_score: max_score != null ? Number(max_score) : null,
+                allowed_file_types: allowed_file_types || null,
+                max_file_size_mb: max_file_size_mb != null ? Number(max_file_size_mb) : null,
+                allow_resubmission: allow_resubmission ?? null,
+                status: status || 'draft',
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.status(201).json(data);
+    } catch (error: any) {
+        console.error('Error creating assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PATCH update assignment
+app.patch('/api/assignments/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            module_id,
+            title,
+            instructions_md,
+            due_at,
+            available_from,
+            max_score,
+            allowed_file_types,
+            max_file_size_mb,
+            allow_resubmission,
+            status,
+        } = req.body;
+
+        const updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (title !== undefined) updatePayload.title = title;
+        if (instructions_md !== undefined) updatePayload.instructions_md = instructions_md;
+        if (module_id !== undefined) updatePayload.module_id = module_id || null;
+        if (due_at !== undefined) updatePayload.due_at = due_at || null;
+        if (available_from !== undefined) updatePayload.available_from = available_from || null;
+        if (max_score !== undefined) updatePayload.max_score = max_score != null ? Number(max_score) : null;
+        if (allowed_file_types !== undefined) updatePayload.allowed_file_types = allowed_file_types;
+        if (max_file_size_mb !== undefined) updatePayload.max_file_size_mb = max_file_size_mb != null ? Number(max_file_size_mb) : null;
+        if (allow_resubmission !== undefined) updatePayload.allow_resubmission = allow_resubmission;
+        if (status !== undefined) updatePayload.status = status;
+
+        const { data, error } = await supabase
+            .from('assignments')
+            .update(updatePayload)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error: any) {
+        console.error('Error updating assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE assignment
+app.delete('/api/assignments/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { error } = await supabase
+            .from('assignments')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        res.json({ message: 'Assignment deleted successfully' });
+    } catch (error: any) {
+        console.error('Error deleting assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// CALENDAR EVENTS CRUD (professor, scoped to subject)
+// ============================================
+
+// GET all calendar events for a subject
+app.get('/api/subjects/:subjectId/calendar-events', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+
+        const { data, error } = await supabase
+            .from('calendar_events')
+            .select('*')
+            .eq('subject_id', subjectId)
+            .order('event_date', { ascending: true });
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (error: any) {
+        console.error('Error fetching calendar events:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST create calendar event
+app.post('/api/calendar-events', async (req, res) => {
+    try {
+        const {
+            subject_id,
+            professor_id,
+            title,
+            description_md,
+            type,
+            event_date,
+        } = req.body;
+
+        if (!title || !subject_id || !professor_id) {
+            return res.status(400).json({ error: 'title, subject_id and professor_id are required' });
+        }
+
+        const { data, error } = await supabase
+            .from('calendar_events')
+            .insert({
+                subject_id,
+                professor_id,
+                title,
+                description_md: description_md || null,
+                type: type || null,
+                event_date: event_date || null,
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.status(201).json(data);
+    } catch (error: any) {
+        console.error('Error creating calendar event:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PATCH update calendar event
+app.patch('/api/calendar-events/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description_md, type, event_date } = req.body;
+
+        const updatePayload: Record<string, any> = {};
+        if (title !== undefined) updatePayload.title = title;
+        if (description_md !== undefined) updatePayload.description_md = description_md;
+        if (type !== undefined) updatePayload.type = type;
+        if (event_date !== undefined) updatePayload.event_date = event_date;
+
+        const { data, error } = await supabase
+            .from('calendar_events')
+            .update(updatePayload)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error: any) {
+        console.error('Error updating calendar event:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE calendar event
+app.delete('/api/calendar-events/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { error } = await supabase
+            .from('calendar_events')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        res.json({ message: 'Event deleted successfully' });
+    } catch (error: any) {
+        console.error('Error deleting calendar event:', error);
         res.status(500).json({ error: error.message });
     }
 });
