@@ -9,7 +9,7 @@ import {
 } from '../lib/adminApi'
 import './HierarchyConfig.css'
 
-import type { Assignment, CalendarEvent, ModuleWithItems, TabKey } from './ProfessorContentScreen/types'
+import type { Assignment, CalendarEvent, Student, ModuleWithItems, Center, TabKey } from './ProfessorContentScreen/types'
 
 import { ActionButton, TabButton } from './general/SharedUI'
 import ContentTab from './ProfessorContentScreen/ContentTab'
@@ -18,8 +18,8 @@ import RemindersTab from './ProfessorContentScreen/RemindersTab'
 import AssignmentFormModal from './ProfessorContentScreen/AssignmentFormModal'
 import EventFormModal from './ProfessorContentScreen/EventFormModal'
 import ConfirmModal from './general/ConfirmModal'
-
-import { set } from 'date-fns'
+import StudentsTab from './ProfessorContentScreen/StudentsTab'
+import StudentFormModal from './ProfessorContentScreen/StudentFormModal'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -119,6 +119,52 @@ async function deleteCalendarEventRequest(id: string): Promise<void> {
     }
 }
 
+// ---- students -------------------------------------------------------
+
+  async function fetchStudents(subjectId: string): Promise<Student[]> {
+    const res = await fetch(`${API_URL}/api/subjects/${subjectId}/students`)
+    if (!res.ok) throw new Error(`Error al cargar estudiantes: ${res.status}`)
+    return res.json()
+}
+
+async function createStudentRequest(
+    payload: Omit<Student, 'id' | 'created_at'>
+): Promise<Student> {
+    const res = await fetch(`${API_URL}/api/students`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Error al crear estudiante: ${res.status}`)
+    }
+    return res.json()
+}
+
+async function updateStudentRequest(
+    id: string,
+    payload: Partial<Omit<Student, 'id' | 'created_at'>>
+): Promise<Student> {
+    const res = await fetch(`${API_URL}/api/students/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Error al actualizar estudiante: ${res.status}`)
+    }
+    return res.json()
+}
+
+async function deleteStudentRequest(id: string): Promise<void> {
+    const res = await fetch(`${API_URL}/api/students/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Error al eliminar estudiante: ${res.status}`)
+    }
+}
 
 const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScreenProps> = ({ user }) => {
     const { courseId } = useParams<{ courseId: string }>()
@@ -140,9 +186,17 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
     const [showEventModal, setShowEventModal] = useState(false)
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
 
+    const [students, setStudents] = useState<Student[]>([])
+    const [studentsLoading, setStudentsLoading] = useState(false)
+    const [showStudentModal, setShowStudentModal] = useState(false)
+    const [editingStudent, setEditingStudent] = useState<Student | null>(null)
+    const [allCenters, setAllCenters] = useState<Center[]>([])
+    
+
     const [error, setError] = useState<string | null>(null)
-    const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState<string | null>(null)    
+    const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState<string | null>(null)
     const [confirmDeleteEventId, setConfirmDeleteEventId] = useState<string | null>(null)
+    const [confirmDeleteStudentId, setConfirmDeleteStudentId] = useState<string | null>(null)
     const navigate = useNavigate()
 
     // ---- initial load: subject + modules ----
@@ -186,9 +240,38 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
             .finally(() => setEventsLoading(false))
     }, [courseId])
 
+        const fetchCenters = useCallback(async () => {
+        try {
+        const res = await fetch(`${API_URL}/api/admin/centers`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+        setAllCenters(Array.isArray(data) ? data : [])
+        } catch (err) { console.error('Error fetching centers:', err) }
+    }, [])
+
+const loadStudents = useCallback(async () => {
+    if (!courseId) return
+
+    setStudentsLoading(true)
+    setError(null)
+
+    try {
+        await fetchCenters()
+
+        const students = await fetchStudents(courseId)
+        setStudents(students)
+    } catch (e) {
+        setError(e instanceof Error ? e.message : String(e))
+    } finally {
+        setStudentsLoading(false)
+    }
+}, [courseId, fetchCenters])
+
+
     useEffect(() => {
         if (activeTab === 'assignments') loadAssignments()
         if (activeTab === 'reminders') loadEvents()
+        if (activeTab === 'students') loadStudents()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab])
 
@@ -244,6 +327,23 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
         setEvents(prev => prev.filter(e => e.id !== id))
     }
 
+    const handleSaveStudent = async (payload: Omit<Student, 'id' | 'created_at'>) => {
+        if (editingStudent) {
+            const updated = await updateStudentRequest(editingStudent.id, payload)
+            setStudents(prev => prev.map(s => (s.id === updated.id ? updated : s)))
+        } else {
+            const created = await createStudentRequest(payload)
+            setStudents(prev => [created, ...prev])
+        }
+        setShowStudentModal(false)
+        setEditingStudent(null)
+    }
+
+    const handleDeleteStudent = async (id: string) => {
+        await deleteStudentRequest(id)
+        setStudents(prev => prev.filter(s => s.id !== id))
+    }
+
     return (
         <div style={{ padding: '2rem 4rem', height: 'calc(100vh - 90px)', overflowY: 'auto', boxSizing: 'border-box', fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif", color: '#fff' }}>
 
@@ -254,7 +354,7 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
                         {subject?.name}
                     </h1>
                     <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.45)', fontSize: '0.92rem' }}>
-                        Mis cursos {'> ' + (subject?.name || '') + ' >'} configuración
+                        Mis cursos {'> ' + (subject?.name || '') + ' >'} Configuración
                     </p>
                 </div>
             </div>
@@ -292,12 +392,27 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
                     onCancel={() => setConfirmDeleteEventId(null)}
                 />
             )}
+            {confirmDeleteStudentId && (
+                <ConfirmModal
+                    message="¿Seguro que quieres eliminar a este alumno del curso?"
+                    confirmLabel="Sí, eliminar"
+                    cancelLabel="Cancelar"
+                    danger
+                    onConfirm={() => {
+                        handleDeleteStudent(confirmDeleteStudentId)
+                        setConfirmDeleteStudentId(null)
+                    }}
+                    onCancel={() => setConfirmDeleteStudentId(null)}
+                />
+            )}
+
             {/* Tab bar */}
             <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 <TabButton label="📒 Contenido" active={activeTab === 'content'} onClick={() => setActiveTab('content')} />
                 <TabButton label="📝 Tareas" active={activeTab === 'assignments'} onClick={() => setActiveTab('assignments')} />
                 <TabButton label="📅 Eventos" active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} />
-                <TabButton label="👁️ Vista Alumnos" active={activeTab === 'students'} onClick={() => navigate('/assignments')} />
+                <TabButton label="👥 Alumnos inscritos" active={activeTab === 'students'} onClick={() => setActiveTab('students')} />
+                <TabButton label="👁️ Vista Alumnos" active={false} onClick={() => navigate('/assignments')} />
 
                 <div style={{ flex: 1 }} />
 
@@ -315,6 +430,14 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
                         bg="rgba(192,132,252,0.18)" hoverBg="rgba(192,132,252,0.3)" textColor="#f3e8ff"
                         border="1px solid rgba(192,132,252,0.4)"
                         onClick={() => { setEditingEvent(null); setShowEventModal(true) }}
+                    />
+                )}
+                {activeTab === 'students' && (
+                    <ActionButton
+                        label="Nuevo alumno ➕"
+                        bg="rgba(192,132,252,0.18)" hoverBg="rgba(192,132,252,0.3)" textColor="#f3e8ff"
+                        border="1px solid rgba(192,132,252,0.4)"
+                        onClick={() => { setEditingStudent(null); setShowStudentModal(true) }}
                     />
                 )}
             </div>
@@ -347,6 +470,16 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
                 />
             )}
 
+            {activeTab === 'students' && (
+                <StudentsTab
+                    loading={studentsLoading}
+                    students={students}
+                    onEdit={student => { setEditingStudent(student); setShowStudentModal(true) }}
+                    onDelete={id => setConfirmDeleteStudentId(id)}
+                    allCenters={allCenters}
+                />
+            )}
+
             {showAssignmentModal && (
                 <AssignmentFormModal
                     modules={modules}
@@ -361,6 +494,15 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
                     initial={editingEvent}
                     onClose={() => { setShowEventModal(false); setEditingEvent(null) }}
                     onSubmit={handleSaveEvent}
+                />
+            )}
+
+            {showStudentModal && (
+                <StudentFormModal
+                    initial={editingStudent}
+                    onClose={() => { setShowStudentModal(false); setEditingStudent(null) }}
+                    onSubmit={handleSaveStudent}
+                    allCenters={allCenters}
                 />
             )}
 

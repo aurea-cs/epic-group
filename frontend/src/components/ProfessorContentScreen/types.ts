@@ -33,7 +33,21 @@ export interface CalendarEvent {
     created_at: string
 }
 
-export type TabKey = 'content' | 'assignments' | 'reminders' | 'students'
+export interface Student {
+  id: string
+  name: string
+  email: string
+  avatar_url?: string
+  created_at?: string
+  centers: Center[]
+}
+
+export interface Center {
+  id: string
+  name: string
+}
+
+export type TabKey = 'content' | 'assignments' | 'reminders' | 'students' | 'pov-students'
 
 // ============================================================================
 // Local module item interface (content tab)

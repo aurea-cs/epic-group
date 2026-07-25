@@ -1568,6 +1568,81 @@ app.delete('/api/admin/subjects/:subjectId/professors/:userId', async (req, res)
     }
 });
 
+app.get('/api/subjects/:subjectId/students', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+
+        // 1. Get enrollments for this subject to find student IDs
+        const { data: subjectEnrollments, error: subjErr } = await supabase
+            .from('enrollments')
+            .select('student_id')
+            .eq('subject_id', subjectId);
+
+        if (subjErr) throw subjErr;
+        
+        if (!subjectEnrollments || subjectEnrollments.length === 0) return res.json([]);
+
+        const studentIds = [...new Set(subjectEnrollments.map((e: any) => e.student_id))];
+
+        // 2. Fetch user details for these students
+        const { data: students, error: studentsError } = await supabase
+            .from('users')
+            .select('id, full_name, email, firstname, lastname, avatar_url, created_at')
+            .in('id', studentIds)
+            .order('full_name', { ascending: true });
+
+        if (studentsError) throw studentsError;
+
+        // 3. Fetch all enrollments for these students to get their centers
+        const { data: allEnrollments, error: enrollmentsError } = await supabase
+            .from('enrollments')
+            .select('student_id, center_id')
+            .in('student_id', studentIds);
+
+        if (enrollmentsError) throw enrollmentsError;
+
+        // 4. Get distinct center IDs
+        const centerIds = [...new Set((allEnrollments || []).map((e: any) => e.center_id).filter(Boolean))];
+        let centersMap: Record<string, string> = {};
+
+        if (centerIds.length > 0) {
+            const { data: centers, error: centersError } = await supabase
+                .from('educational_centers')
+                .select('id, name')
+                .in('id', centerIds);
+
+            if (centersError) throw centersError;
+            (centers || []).forEach((c: any) => { centersMap[c.id] = c.name; });
+        }
+
+        // 5. Build student-to-centers map
+        const studentCentersMap: Record<string, { id: string; name: string }[]> = {};
+        (allEnrollments || []).forEach((e: any) => {
+            if (!e.center_id) return;
+            if (!studentCentersMap[e.student_id]) studentCentersMap[e.student_id] = [];
+            const centerName = centersMap[e.center_id];
+            if (centerName && !studentCentersMap[e.student_id].find(c => c.id === e.center_id)) {
+                studentCentersMap[e.student_id].push({ id: e.center_id, name: centerName });
+            }
+        });
+
+        // 6. Combine
+        const result = (students || []).map((s: any) => ({
+            id: s.id,
+            name: s.full_name || `${s.firstname || ''} ${s.lastname || ''}`.trim(),
+            email: s.email,
+            avatar_url: s.avatar_url,
+            created_at: s.created_at,
+            centers: studentCentersMap[s.id] || []
+        }));
+
+        res.json(result);
+    } catch (error: any) {
+        console.error('Error fetching subject students:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ========== COURSE CONTENT (MODULES & ITEMS) ==========
 
 // Get modules for a subject

@@ -15,6 +15,7 @@ export const inputStyle: React.CSSProperties = {
     fontFamily: 'inherit',
 }
 
+
 // ============================================================================
 // Small shared UI pieces
 // ============================================================================
@@ -174,3 +175,9 @@ export const Modal: React.FC<{ title: string; onClose: () => void; children: Rea
         </div>
     </div>
 )
+
+export const inputStyleAlt: React.CSSProperties = {
+  width: '100%', padding: '10px 14px', boxSizing: 'border-box',
+  background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
+  borderRadius: '10px', color: '#fff', fontSize: '0.92rem', outline: 'none'
+}
