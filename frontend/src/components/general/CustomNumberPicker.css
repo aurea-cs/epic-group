@@ -1,0 +1,196 @@
+/* Trigger — mirrors .custom-select-trigger */
+.custom-date-trigger {
+    all: unset;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #fff;
+    font-size: 0.9rem;
+    font-family: inherit;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    transition: border-color 0.15s, 
+    background 0.15s;
+}
+
+.custom-date-trigger:hover {
+    border-color: rgba(192, 132, 252, 0.4);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.custom-date-trigger:focus {
+    border-color: rgba(192, 132, 252, 0.6);
+    outline: none;
+}
+
+.custom-date-trigger[data-placeholder] {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.custom-date-icon {
+    color: rgba(255, 255, 255, 0.5);
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+/* Popover panel — mirrors .custom-select-content */
+.custom-date-content {
+    background: #1e1b2e;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    padding: 12px;
+    z-index: 1100;
+}
+
+/* --- react-day-picker overrides --- */
+.cdp-months {
+    margin: 0;
+}
+
+.cdp-caption {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding-bottom: 8px;
+}
+
+.cdp-caption-label {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+.cdp-nav {
+    display: flex;
+}
+
+.cdp-nav-button {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    position: absolute;
+    top: 0;
+}
+
+.cdp-nav-button:hover {
+    background: #53347b72;
+    color: #fff;
+}
+
+.cdp-nav-button-prev {
+    left: 0;
+}
+
+.cdp-nav-button-next {
+    right: 0;
+}
+
+.cdp-table {
+    border-collapse: collapse;
+}
+
+.cdp-head-cell {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 0;
+    text-transform: uppercase;
+}
+
+.cdp-cell {
+    padding: 1px;
+    text-align: center;
+}
+
+.cdp-day {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.cdp-day:hover {
+    background: #53347b72;
+}
+
+.cdp-cell.cdp-day-selected .cdp-day {
+    background: #8b51c5;
+    color: #fff;
+    font-weight: 700;
+}
+
+.cdp-cell.cdp-day-today:not(.cdp-day-selected) .cdp-day {
+    border: 1px solid rgba(192, 132, 252, 0.5);
+}
+
+.cdp-cell.cdp-day-outside .cdp-day {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.cdp-cell.cdp-day-disabled .cdp-day {
+    color: rgba(255, 255, 255, 0.15);
+    cursor: not-allowed;
+}
+
+/* Time row */
+.cdp-time-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cdp-time-label {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.cdp-caption-label {
+    display: none;
+}
+
+.cdp-time-input {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.85rem;
+    font-family: inherit;
+    padding: 6px 8px;
+    color-scheme: dark;
+}
+
+.cdp-time-input:hover {
+    border-color: rgba(192, 132, 252, 0.4);
+}
+
+.cdp-time-input:focus {
+    border-color: rgba(192, 132, 252, 0.6);
+    outline: none;
+}

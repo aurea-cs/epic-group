@@ -21,10 +21,15 @@ import {
 import '@mdxeditor/editor/style.css'
 import './AssignmentFormModal.css'
 import type { CourseModule } from '../../lib/adminApi'
-import type { Assignment } from './types'
+import {type Assignment } from './types'
 import ConfirmModal from '../general/ConfirmModal'
 import { ActionButton, Modal, Toggle, fieldLabelStyle, inputStyle } from '../general/SharedUI'
+import CustomSelect from '../general/CustomSelect'
+import CustomNumberPicker from '../general/CustomNumberPicker'
+import CustomDatePicker from '../general/CustomDatePicker'
 
+
+const NO_MODULE = '__none__'
 interface AssignmentFormModalProps {
     modules: CourseModule[]
     initial: Assignment | null
@@ -148,15 +153,24 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
             </div>
 
             <label style={fieldLabelStyle}>Módulo</label>
-            <select style={inputStyle} value={moduleId} onChange={e => setModuleId(e.target.value)}>
-                <option value="">Sin módulo</option>
-                {modules.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
-            </select>
+             <CustomSelect
+                value={moduleId || NO_MODULE}
+                onChange={v => setModuleId(v === NO_MODULE ? '' : v)}
+                options={[
+                    { value: NO_MODULE, label: 'Sin módulo' },
+                    ...modules.map(m => ({ value: m.id, label: m.title })),
+                ]}
+            />
 
             <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
                     <label style={fieldLabelStyle}>Disponible desde</label>
-                    <input style={inputStyle} type="datetime-local" value={availableFrom} onChange={e => setAvailableFrom(e.target.value)} />
+                    <CustomDatePicker
+                        value={availableFrom}
+                        onChange={setAvailableFrom}
+                        includeTime
+                        placeholder="Seleccionar fecha y hora"
+                    />
                 </div>
                 <div style={{ flex: 1 }}>
                     <label style={fieldLabelStyle}>Fecha de entrega</label>
@@ -173,12 +187,10 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
                     <label style={fieldLabelStyle}>Tamaño máximo (MB)</label>
                     <input style={inputStyle} type="number" value={maxFileSizeMb} onChange={e => setMaxFileSizeMb(Number(e.target.value))} />
                 </div>
-            </div>
-
-            <label style={fieldLabelStyle}>Tipos de archivo permitidos (separados por coma)</label>
+                <div style={{ flex: 1 }}>
+                     <label style={fieldLabelStyle}>Tipos de archivo permitidos</label>
             <input style={inputStyle} value={allowedFileTypes} onChange={e => setAllowedFileTypes(e.target.value)} placeholder="pdf, docx, png" />
-
-            <div style={{ display: 'flex', gap: '1rem' }}>
+                </div>
                 <div style={{ flex: 1 }}>
                     <label style={fieldLabelStyle}>Estado</label>
                     <select style={inputStyle} value={status} onChange={e => setStatus(e.target.value)}>
@@ -192,6 +204,7 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
                     <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>Permitir reenvío</span>
                 </div>
             </div>
+
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
                 <ActionButton label="Cancelar" bg="rgba(255,255,255,0.06)" hoverBg="rgba(255,255,255,0.12)" textColor="#e5e7eb" border="1px solid rgba(255,255,255,0.12)" onClick={handleAttemptClose} />

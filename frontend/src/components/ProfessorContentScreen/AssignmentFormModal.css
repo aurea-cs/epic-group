@@ -30,6 +30,7 @@
 .instructions-editor-wrapper .mdxeditor-toolbar button,
 .instructions-editor-wrapper .mdxeditor-toolbar [role='button'] {
     color: rgba(255, 255, 255, 0.75);
+    background: transparent;
 }
 
 .instructions-editor-wrapper .mdxeditor-toolbar button:hover,
@@ -70,4 +71,30 @@
 .instructions-editor-content li[role="checkbox"],
 .instructions-editor-content li:has([role="checkbox"]) {
     padding-left: 1.75rem ;
+}
+
+.modal-select-option {
+    background-color: #1f2937;
+}
+
+.modal-select:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(192, 132, 252, 0.5);
+}
+
+/* Disabled option / placeholder */
+.modal-select option {
+    background: #1e1b2e;
+    color: white;
+    padding: 0.5rem;
+}
+
+/* Selected option (works for the displayed value in many browsers) */
+.modal-select option:checked {
+    background: #513970;
+    color: white;
+}
+
+.modal-select option:hover{
+    background-color: #c084fc !important;
 }

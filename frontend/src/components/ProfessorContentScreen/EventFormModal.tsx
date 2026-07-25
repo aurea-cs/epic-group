@@ -23,7 +23,7 @@ import {
 import '@mdxeditor/editor/style.css'
 import ConfirmModal from '../general/ConfirmModal'
 import './AssignmentFormModal.css'
-
+import CustomSelect from '../general/CustomSelect'
 
 interface EventFormModalProps {
     initial: CalendarEvent | null
@@ -128,9 +128,12 @@ const EventFormModal: React.FC<EventFormModalProps> = ({ initial, onClose, onSub
             <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
                     <label style={fieldLabelStyle}>Tipo</label>
-                    <select style={inputStyle} value={type} onChange={e => setType(e.target.value)}>
-                        {EVENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                    </select>
+
+                    <CustomSelect
+                        value={type}
+                        onChange={e => setType(e)}
+                        options={EVENT_TYPES}
+                    />
                 </div>
                 <div style={{ flex: 1 }}>
                     <label style={fieldLabelStyle}>Fecha</label>
