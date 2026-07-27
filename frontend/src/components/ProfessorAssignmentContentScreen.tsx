@@ -219,8 +219,8 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
 
     const [submissions, setSubmissions] = useState<Submission[]>([])
     const [submissionsLoading, setSubmissionsLoading] = useState(false)
-    const [showSubmissionModal, setShowSubmissionModal] = useState(false)
-    const [gradingStudent, setGradingStudent] = useState<Submission | null>(null)
+    // const [showSubmissionModal, setShowSubmissionModal] = useState(false)
+    // const [gradingStudent, setGradingStudent] = useState<Submission | null>(null)
     
     const [error, setError] = useState<string | null>(null)
     const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState<string | null>(null)
@@ -525,7 +525,7 @@ const loadStudents = useCallback(async () => {
                 <SubmissionsTab
                     loading={submissionsLoading}
                     submissions={submissions}
-                    onGrade={submission => gradeStudentSubmission}
+                    onGrade={() => gradeStudentSubmission}
                 />
             )}
 
