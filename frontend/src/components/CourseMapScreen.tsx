@@ -226,3 +226,4 @@ const CourseMapScreen: React.FC<CourseMapScreenProps> = () => {
 }
 
 export default CourseMapScreen
+

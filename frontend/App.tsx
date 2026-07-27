@@ -6,7 +6,7 @@ import LoginScreen from './src/components/LoginScreen'
 import DashboardScreen from './src/components/DashboardScreen'
 import CourseDetailScreen from './src/components/CourseDetailScreen'
 import ProgressScreen from './src/components/ProgressScreen'
-import QuotesScreen from './src/components/QuotesScreen'
+import ScheduleScreen from './src/components/ScheduleScreen'
 import StudentsScreen from './src/components/StudentsScreen'
 import StudentProgressScreen from './src/components/StudentProgressScreen'
 import GradesScreen from './src/components/GradesScreen'
@@ -23,6 +23,8 @@ import PlanetDetailScreen from './src/components/PlanetDetailScreen'
 import MainLayout from './src/components/MainLayout'
 import ModuleDraftScreen from './src/components/ModuleDraftScreen'
 import StudentsAdminScreen from './src/components/StudentsAdminScreen'
+import ProfessorAssignmentCoursesScreen from './src/components/ProfessorAssignmentCoursesScreen'
+import ProfessorAssignmentContentScreen from './src/components/ProfessorAssignmentContentScreen'
 // import LandingPage from './src/components/LandingPage'
 import './App.css'
 
@@ -115,7 +117,7 @@ useEffect(() => {
                     <Route path="/course/:courseId" element={<CourseDetailScreen user={user} />} />
                     <Route path="/progress" element={<ProgressScreen user={user} />} />
                     <Route path="/students" element={<StudentsAdminScreen user={user} />} />
-                    <Route path="/quotes" element={<QuotesScreen user={user} />} />
+                    <Route path="/schedule" element={<ScheduleScreen user={user} />} />
                     <Route path="/alumnos" element={<StudentsScreen user={user} />} />
                     <Route path="/alumnos/:studentId" element={<StudentProgressScreen user={user} />} />
                     <Route path="/calificaciones" element={<GradesScreen user={user} />} />
@@ -128,6 +130,8 @@ useEffect(() => {
                     <Route path="/admin/school/:centerId/grade/:gradeId/course/:courseId/content" element={<CourseContentScreen user={user} />} />
                     <Route path="/upload-content" element={user.user_metadata?.role === 'admin' ? <UploadContentScreen user={user} /> : <Navigate to="/dashboard" replace />} />
                     <Route path="/assignments" element={<AssignmentsScreen user={user} />} />
+                    <Route path="/professor/assignments/courses" element={<ProfessorAssignmentCoursesScreen user={user} />} />
+                    <Route path="/professor/assignments/courses/:courseId/content" element={<ProfessorAssignmentContentScreen user={user} />} />
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   </Routes>
                 </MainLayout>

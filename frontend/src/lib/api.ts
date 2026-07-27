@@ -298,3 +298,22 @@ export const getAssignmentSubmissions = async (assignment: string, course: strin
         throw error
     }
 }
+
+export const createAssignment = async (professorId: string, courseId: string, formData: FormData): Promise<any> => {
+    try {
+        const response = await fetch(`${API_URL}/api/professors/${professorId}/courses/${courseId}/assignments`, {
+            method: 'POST',
+            body: formData, // fetch will automatically set the correct Content-Type with boundary for FormData
+        })
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}))
+            throw new Error(err.error || `HTTP error! status: ${response.status}`)
+        }
+
+        return await response.json()
+    } catch (error) {
+        console.error('Error creating assignment:', error)
+        throw error
+    }
+}

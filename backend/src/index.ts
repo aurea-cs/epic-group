@@ -227,115 +227,7 @@ app.get('/api/students/:studentId/courses', async (req, res) => {
 
 // Get student progress by student ID
 app.get('/api/students/:studentId/progress', async (req, res) => {
-    try {
-        const { studentId } = req.params;
-        const professorId = req.query.professorId as string;
 
-        // Get student basic info
-        const { data: student, error: studentError } = await supabase
-            .from('users')
-            .select('id, email, full_name, firstname, lastname, avatar_url')
-            .eq('id', studentId)
-            .single();
-
-        if (studentError) throw studentError;
-
-        const { data: enrollments, error: enrollmentsError } = await supabase
-            .from('enrollments')
-            .select('subject_id')
-            .eq('student_id', studentId);
-
-        if (enrollmentsError) throw enrollmentsError;
-        
-        let subjectIds = enrollments?.map(e => e.subject_id) || [];
-        
-        if (professorId && subjectIds.length > 0) {
-            const { data: profSubjects, error: profSubjError } = await supabase
-                .from('professor_subjects')
-                .select('subject_id')
-                .eq('professor_id', professorId)
-                .in('subject_id', subjectIds);
-                
-            if (profSubjError) throw profSubjError;
-            subjectIds = profSubjects?.map(ps => ps.subject_id) || [];
-        }
-        
-        // Get subjects for those subjects
-        const { data: subjects, error: subjectsError } = await supabase
-            .from('subjects')
-            .select('id, name')
-            .in('id', subjectIds);
-
-        // Get student progress for courses
-        const { data: progressData } = await supabase
-            .from('user_progress')
-            .select('*')
-            .eq('user_id', studentId);
-
-        // Get completed tasks with grades
-        const { data: completions, error: completionsError } = await supabase
-            .from('user_task_completions')
-            .select(`
-                id,
-                score,
-                teacher_feedback,
-                graded_at,
-                course_tasks!inner(title, course_id)
-            `)
-            .eq('user_id', studentId)
-            .order('graded_at', { ascending: false });
-
-        if (completionsError) throw completionsError;
-
-        // Get comments
-        const { data: comments, error: commentsError } = await supabase
-            .from('student_comments')
-            .select('id, text, author_name, created_at, updated_at')
-            .eq('student_id', studentId)
-            .order('created_at', { ascending: false });
-
-        if (commentsError) throw commentsError;
-
-        // Format response
-        const studentData = {
-            id: student.id,
-            name: student.full_name || `${student.firstname || ''} ${student.lastname || ''}`.trim() || 'Alumno',
-            email: student.email,
-            avatar: student.avatar_url,
-            courses: subjects?.map(sub => {
-                const p = progressData?.find(p => p.course_id === sub.id);
-                return {
-                    id: sub.id,
-                    name: sub.name,
-                    progress: p?.progress_percentage || 0,
-                    color: 'purple'
-                };
-            }) || [],
-            grades: completions?.filter(c => c.score !== null).map((c: any) => ({
-                id: c.id,
-                courseName: subjects?.find(s => s.id === c.course_tasks.course_id)?.name || 'Materia',
-                grade: c.score,
-                maxGrade: 100,
-                assignmentName: c.course_tasks.title,
-                gradedAt: c.graded_at
-            })) || [],
-            comments: comments?.map(c => ({
-                id: c.id,
-                text: c.text,
-                author: c.author_name,
-                date: new Date(c.created_at).toLocaleDateString('es-ES', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                })
-            })) || []
-        };
-
-        res.json(studentData);
-    } catch (error: any) {
-        console.error('Error fetching student progress:', error);
-        res.status(500).json({ error: error.message });
-    }
 });
 
 
@@ -591,7 +483,7 @@ app.get('/api/professors/:professorId/courses', async (req, res) => {
             return {
                 id: subject.id,
                 title: subject.name,
-                description: `${grade.name || 'Sin grado'} • ${subject.name}`,
+                description: `${grade.name || 'Sin grado'}`,
                 completedSteps: Math.floor(Math.random() * 100), // Mock progress
                 totalSteps: 100,
                 gradeId: grade.id,
@@ -644,202 +536,11 @@ app.get('/api/professors/:professorId/grades-summary', async (req, res) => {
 
         if (studentsError) throw studentsError;
 
-        // 4. Get Task Completions for these students
-        const { data: completions, error: completionsError } = await supabase
-            .from('user_task_completions')
-            .select('user_id, score')
-            .in('user_id', studentIds)
-            .not('score', 'is', null);
-
-        if (completionsError) throw completionsError;
-
-        // 5. Calculate Averages
-        const summary = students!.map((student, index) => {
-            const studentCompletions = completions?.filter(c => c.user_id === student.id) || [];
-
-            let average = 0;
-            if (studentCompletions.length > 0) {
-                const sum = studentCompletions.reduce((acc, c) => acc + (c.score || 0), 0);
-                average = sum / studentCompletions.length;
-            }
-
-            return {
-                id: index + 1,
-                userId: student.id,
-                name: student.full_name || `${student.firstname || ''} ${student.lastname || ''}`.trim() || 'Alumno',
-                email: student.email,
-                avatar: student.avatar_url,
-                average: Math.round(average),
-                color: ['purple', 'orange', 'salmon', 'blue'][index % 4]
-            };
-        });
-
-        res.json(summary);
+       // implementation
+        res.json(students);
 
     } catch (error: any) {
         console.error('Error fetching grades summary:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Update grade
-app.put('/api/grades/:gradeId', async (req, res) => {
-    try {
-        const { gradeId } = req.params;
-        const { grade } = req.body;
-
-        if (grade === undefined) {
-            return res.status(400).json({ error: 'Grade is required' });
-        }
-
-        const { data, error } = await supabase
-            .from('user_task_completions')
-            .update({ score: grade, graded_at: new Date().toISOString() })
-            .eq('id', gradeId)
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        res.json(data);
-    } catch (error: any) {
-        console.error('Error updating grade:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get unique assignments (derived from course_tasks and completions)
-app.get('/api/professors/:professorId/assignments', async (req, res) => {
-    try {
-        const { professorId } = req.params;
-
-        // Get subjects for professor
-        const { data: profSubjects, error: profSubjError } = await supabase
-            .from('professor_subjects')
-            .select('subject_id, subjects(name)')
-            .eq('professor_id', professorId);
-
-        if (profSubjError) throw profSubjError;
-
-        if (!profSubjects || profSubjects.length === 0) return res.json([]);
-
-        const subjectIds = profSubjects.map(ps => ps.subject_id);
-
-        // Get tasks for those subjects
-        const { data: tasks, error: tasksError } = await supabase
-            .from('course_tasks')
-            .select('id, course_id, title')
-            .in('course_id', subjectIds);
-
-        if (tasksError) throw tasksError;
-
-        if (!tasks || tasks.length === 0) return res.json([]);
-
-        const taskIds = tasks.map(t => t.id);
-
-        // Get completions
-        const { data: completions, error: completionsError } = await supabase
-            .from('user_task_completions')
-            .select('task_id, score')
-            .in('task_id', taskIds);
-
-        if (completionsError) throw completionsError;
-
-        // Aggregate
-        const assignmentsMap = new Map();
-
-        tasks.forEach(task => {
-            const subjectName = (profSubjects.find(ps => ps.subject_id === task.course_id)?.subjects as any)?.name || 'Materia';
-            const key = `${task.course_id}-${task.id}`;
-            
-            assignmentsMap.set(key, {
-                id: key,
-                title: task.title,
-                courseName: subjectName,
-                total: 0,
-                graded: 0
-            });
-        });
-        
-        completions?.forEach(c => {
-            const task = tasks.find(t => t.id === c.task_id);
-            if (!task) return;
-            const key = `${task.course_id}-${task.id}`;
-            const assignment = assignmentsMap.get(key);
-            if (assignment) {
-                assignment.total++;
-                if (c.score !== null) {
-                    assignment.graded++;
-                }
-            }
-        });
-
-        res.json(Array.from(assignmentsMap.values()));
-
-    } catch (error: any) {
-        console.error('Error fetching assignments:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get submissions for an assignment
-app.get('/api/assignments/submissions', async (req, res) => {
-    try {
-        const { assignment, course } = req.query;
-
-        if (!assignment || !course) {
-            return res.status(400).json({ error: 'Assignment and Course are required' });
-        }
-        
-        // Find subject by name
-        const { data: subjects, error: subjError } = await supabase
-            .from('subjects')
-            .select('id')
-            .eq('name', course)
-            .limit(1);
-            
-        if (subjError || !subjects || subjects.length === 0) throw new Error('Subject not found');
-        const subjectId = subjects[0].id;
-        
-        // Find task by title and subject
-        const { data: tasks, error: taskError } = await supabase
-            .from('course_tasks')
-            .select('id')
-            .eq('title', assignment)
-            .eq('course_id', subjectId)
-            .limit(1);
-            
-        if (taskError || !tasks || tasks.length === 0) throw new Error('Task not found');
-        const taskId = tasks[0].id;
-
-        const { data: completions, error } = await supabase
-            .from('user_task_completions')
-            .select(`
-                id,
-                score,
-                graded_at,
-                user_id,
-                users!inner(full_name)
-             `)
-            .eq('task_id', taskId);
-
-        if (error) throw error;
-
-        const result = completions?.map(c => {
-            return {
-                gradeId: c.id,
-                studentId: c.user_id,
-                studentName: (c.users as any)?.full_name || 'Estudiante',
-                grade: c.score,
-                maxGrade: 100,
-                status: (c.score !== null) ? 'Calificado' : 'Pendiente'
-            };
-        });
-
-        res.json(result || []);
-
-    } catch (error: any) {
-        console.error('Error fetching submissions:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -1634,7 +1335,6 @@ app.delete('/api/admin/grades/:id', async (req, res) => {
 // ========== SUBJECTS ==========
 
 // Create subject
-// Create subject
 app.post('/api/admin/subjects', async (req, res) => {
     try {
         const {
@@ -1776,6 +1476,80 @@ app.get('/api/admin/subjects/:id', async (req, res) => {
     }
 });
 
+// ========== ASSIGNMENTS =================
+
+// GET submissions for a subject (joins through assignments, includes all files)
+app.get('/api/subjects/:subjectId/submissions', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+
+        const { data, error } = await supabase
+            .from('submissions')
+            .select(`
+                id,
+                submitted_at,
+                graded_at,
+                graded_by,
+                feedback_md,
+                grade,
+                status,
+                student_id,
+                assignment_id,
+                assignments!inner(subject_id),
+                submission_files(id, file_name, storage_path, external_url, mime_type, file_size_bytes, uploaded_at)
+            `)
+            .eq('assignments.subject_id', subjectId)
+            .order('submitted_at', { ascending: false });
+
+        if (error) throw error;
+
+        const submissions = data.map(({ assignments, submission_files, ...s }) => ({
+            ...s,
+            files: submission_files || []
+        }));
+
+        res.json(submissions);
+    } catch (error: any) {
+        console.error('Error fetching submissions:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PATCH grade a submission
+app.patch('/api/submissions/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { grade, feedback_md, graded_by, status } = req.body;
+
+        const updatePayload = {
+            ...(grade !== undefined && { grade }),
+            ...(feedback_md !== undefined && { feedback_md }),
+            ...(graded_by !== undefined && { graded_by }),
+            ...(status !== undefined && { status: status || 'graded' }),
+            graded_at: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
+            .from('submissions')
+            .update(updatePayload)
+            .eq('id', id)
+            .select(`
+                id, submitted_at, graded_at, graded_by, feedback_md, grade, status,
+                student_id, assignment_id,
+                submission_files(id, file_name, storage_path, external_url, mime_type, file_size_bytes, uploaded_at)
+            `)
+            .single();
+
+        if (error) throw error;
+
+        const { submission_files, ...s } = data;
+        res.json({ ...s, files: submission_files || [] });
+    } catch (error: any) {
+        console.error('Error grading submission:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ========== SUBJECT PROFESSORS ==========
 
 // Get professors for a subject
@@ -1863,6 +1637,81 @@ app.delete('/api/admin/subjects/:subjectId/professors/:userId', async (req, res)
         res.json({ message: 'Professor unassigned from subject successfully' });
     } catch (error: any) {
         console.error('Error unassigning professor from subject:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/subjects/:subjectId/students', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+
+        // 1. Get enrollments for this subject to find student IDs
+        const { data: subjectEnrollments, error: subjErr } = await supabase
+            .from('enrollments')
+            .select('student_id')
+            .eq('subject_id', subjectId);
+
+        if (subjErr) throw subjErr;
+        
+        if (!subjectEnrollments || subjectEnrollments.length === 0) return res.json([]);
+
+        const studentIds = [...new Set(subjectEnrollments.map((e: any) => e.student_id))];
+
+        // 2. Fetch user details for these students
+        const { data: students, error: studentsError } = await supabase
+            .from('users')
+            .select('id, full_name, email, firstname, lastname, avatar_url, created_at')
+            .in('id', studentIds)
+            .order('full_name', { ascending: true });
+
+        if (studentsError) throw studentsError;
+
+        // 3. Fetch all enrollments for these students to get their centers
+        const { data: allEnrollments, error: enrollmentsError } = await supabase
+            .from('enrollments')
+            .select('student_id, center_id')
+            .in('student_id', studentIds);
+
+        if (enrollmentsError) throw enrollmentsError;
+
+        // 4. Get distinct center IDs
+        const centerIds = [...new Set((allEnrollments || []).map((e: any) => e.center_id).filter(Boolean))];
+        let centersMap: Record<string, string> = {};
+
+        if (centerIds.length > 0) {
+            const { data: centers, error: centersError } = await supabase
+                .from('educational_centers')
+                .select('id, name')
+                .in('id', centerIds);
+
+            if (centersError) throw centersError;
+            (centers || []).forEach((c: any) => { centersMap[c.id] = c.name; });
+        }
+
+        // 5. Build student-to-centers map
+        const studentCentersMap: Record<string, { id: string; name: string }[]> = {};
+        (allEnrollments || []).forEach((e: any) => {
+            if (!e.center_id) return;
+            if (!studentCentersMap[e.student_id]) studentCentersMap[e.student_id] = [];
+            const centerName = centersMap[e.center_id];
+            if (centerName && !studentCentersMap[e.student_id].find(c => c.id === e.center_id)) {
+                studentCentersMap[e.student_id].push({ id: e.center_id, name: centerName });
+            }
+        });
+
+        // 6. Combine
+        const result = (students || []).map((s: any) => ({
+            id: s.id,
+            name: s.full_name || `${s.firstname || ''} ${s.lastname || ''}`.trim(),
+            email: s.email,
+            avatar_url: s.avatar_url,
+            created_at: s.created_at,
+            centers: studentCentersMap[s.id] || []
+        }));
+
+        res.json(result);
+    } catch (error: any) {
+        console.error('Error fetching subject students:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -2134,6 +1983,32 @@ app.delete('/api/admin/items/:id', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// Toggle item visibility for students
+app.patch('/api/module-items/:itemId', async (req, res) => {
+    try {
+        const { itemId } = req.params;
+        const { show_student } = req.body;
+
+        if (typeof show_student !== 'boolean') {
+            return res.status(400).json({ error: 'show_student must be a boolean' });
+        }
+
+        const { data, error } = await supabase
+            .from('module_items')
+            .update({ show_student })
+            .eq('id', itemId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error: any) {
+        console.error('Error toggling item visibility:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 // ========== HIERARCHY VIEW ==========
 
@@ -2567,61 +2442,51 @@ app.get('/api/users/:userId/profile-details', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
-// Get user agenda (schedule of subjects)
-app.get('/api/agenda/:userId', async (req, res) => {
+// GET weekly schedule for a user (professor or student)
+app.get('/api/schedule/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { role } = req.query; // 'student', 'professor', 'tutor', 'admin'
+        const { role } = req.query;
 
-        if (role === 'admin') {
-            return res.json([]);
-        }
-
-        let subjectsList: any[] = [];
+        let subjects: any[] = [];
 
         if (role === 'professor') {
             const { data, error } = await supabase
                 .from('professor_subjects')
                 .select(`
-                    subjects (
-                        id, name, short_name, schedule_days, schedule_start_time, schedule_end_time
+                    subjects(
+                        id, name, short_name, schedule_days,
+                        schedule_start_time, schedule_end_time,
+                        is_active, grade_id
                     )
                 `)
-                .eq('professor_id', userId);
+                .eq('professor_id', userId)
+                .eq('is_active', true);
+
             if (error) throw error;
-            subjectsList = (data || []).map(d => d.subjects).filter(Boolean);
-        } else if (role === 'student' || role === 'tutor') {
-            let targetStudentIds = [userId];
+            subjects = data.map(row => row.subjects).flat().filter(Boolean);
+        } else {
+            const { data, error } = await supabase
+                .from('enrollments')
+                .select(`
+                    subjects(
+                        id, name, short_name, schedule_days,
+                        schedule_start_time, schedule_end_time,
+                        is_active, grade_id
+                    )
+                `)
+                .eq('student_id', userId)
+                .eq('status', 'active');
 
-            if (role === 'tutor') {
-                const { data, error } = await supabase
-                    .from('student_tutors')
-                    .select('student_id')
-                    .eq('tutor_id', userId);
-                if (error) throw error;
-                targetStudentIds = (data || []).map(st => st.student_id);
-            }
-
-            if (targetStudentIds.length > 0) {
-                const { data, error } = await supabase
-                    .from('enrollments')
-                    .select(`
-                        subjects (
-                            id, name, short_name, schedule_days, schedule_start_time, schedule_end_time
-                        )
-                    `)
-                    .in('student_id', targetStudentIds);
-                if (error) throw error;
-                subjectsList = (data || []).map(d => d.subjects).filter(Boolean);
-            }
+            if (error) throw error;
+            subjects = data.map(row => row.subjects).flat().filter(Boolean);
         }
 
-        // Deduplicate subjects by ID in case a tutor has multiple students in the same class
-        const uniqueSubjects = Array.from(new Map(subjectsList.map(s => [s.id, s])).values());
-        res.json(uniqueSubjects);
+        subjects = subjects.filter((s: any) => s.is_active !== false);
+
+        res.json(subjects);
     } catch (error: any) {
-        console.error('Error fetching agenda:', error);
+        console.error('Error fetching schedule:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -2646,8 +2511,332 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Start Server
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-})
+// ============================================
+// ASSIGNMENTS (PROFESSOR)
+// ============================================
 
+const assignmentUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB
+        files: 5
+    }
+});
+
+app.post('/api/professors/:professorId/courses/:courseId/assignments', assignmentUpload.single('attachment'), async (req, res) => {
+    try {
+        const { professorId, courseId } = req.params;
+        const {
+            title,
+            instructions_md,
+            max_score,
+            due_at,
+            available_from,
+            allow_resubmission,
+            module_id
+        } = req.body;
+
+        if (!title) {
+            return res.status(400).json({ error: 'Title is required' });
+        }
+
+        // Insert assignment
+        const { data: assignment, error: assignmentError } = await supabase
+            .from('assignments')
+            .insert({
+                title,
+                instructions_md,
+                max_score: max_score ? parseFloat(max_score) : null,
+                due_at: due_at || null,
+                available_from: available_from || null,
+                allow_resubmission: allow_resubmission === 'true',
+                subject_id: courseId,
+                professor_id: professorId,
+                module_id: module_id || null,
+                status: 'published'
+            })
+            .select()
+            .single();
+
+        if (assignmentError) throw assignmentError;
+
+        // Handle attachment if any
+        if (req.file) {
+            const file = req.file;
+            const fileExt = file.originalname.split('.').pop();
+            const fileName = `${assignment.id}_${Date.now()}.${fileExt}`;
+            const filePath = `assignments/${fileName}`;
+
+            // Upload to Supabase Storage
+            const { error: uploadError } = await supabase.storage
+                .from('grade-content') // Reusing existing bucket, or could create 'assignments' bucket
+                .upload(filePath, file.buffer, {
+                    contentType: file.mimetype,
+                    upsert: true
+                });
+
+            if (uploadError) throw uploadError;
+
+            // Insert attachment record
+            const { error: attachmentError } = await supabase
+                .from('assignment_attachments')
+                .insert({
+                    assignment_id: assignment.id,
+                    file_name: file.originalname,
+                    mime_type: file.mimetype,
+                    storage_path: filePath
+                });
+
+            if (attachmentError) throw attachmentError;
+        }
+
+        res.status(201).json(assignment);
+    } catch (error: any) {
+        console.error('Error creating assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// ASSIGNMENTS CRUD (professor, scoped to subject)
+// ============================================
+
+// GET all assignments for a subject
+app.get('/api/subjects/:subjectId/assignments', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+
+        const { data, error } = await supabase
+            .from('assignments')
+            .select('*')
+            .eq('subject_id', subjectId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (error: any) {
+        console.error('Error fetching assignments:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST create assignment for a subject
+app.post('/api/subjects/:subjectId/assignments', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+        const {
+            professor_id,
+            module_id,
+            title,
+            instructions_md,
+            due_at,
+            available_from,
+            max_score,
+            allowed_file_types,
+            max_file_size_mb,
+            allow_resubmission,
+            status,
+        } = req.body;
+
+        if (!title || !professor_id) {
+            return res.status(400).json({ error: 'title and professor_id are required' });
+        }
+
+        const { data, error } = await supabase
+            .from('assignments')
+            .insert({
+                subject_id: subjectId,
+                professor_id,
+                module_id: module_id || null,
+                title,
+                instructions_md: instructions_md || null,
+                due_at: due_at || null,
+                available_from: available_from || null,
+                max_score: max_score != null ? Number(max_score) : null,
+                allowed_file_types: allowed_file_types || null,
+                max_file_size_mb: max_file_size_mb != null ? Number(max_file_size_mb) : null,
+                allow_resubmission: allow_resubmission ?? null,
+                status: status || 'draft',
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.status(201).json(data);
+    } catch (error: any) {
+        console.error('Error creating assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PATCH update assignment
+app.patch('/api/assignments/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            module_id,
+            title,
+            instructions_md,
+            due_at,
+            available_from,
+            max_score,
+            allowed_file_types,
+            max_file_size_mb,
+            allow_resubmission,
+            status,
+        } = req.body;
+
+        const updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (title !== undefined) updatePayload.title = title;
+        if (instructions_md !== undefined) updatePayload.instructions_md = instructions_md;
+        if (module_id !== undefined) updatePayload.module_id = module_id || null;
+        if (due_at !== undefined) updatePayload.due_at = due_at || null;
+        if (available_from !== undefined) updatePayload.available_from = available_from || null;
+        if (max_score !== undefined) updatePayload.max_score = max_score != null ? Number(max_score) : null;
+        if (allowed_file_types !== undefined) updatePayload.allowed_file_types = allowed_file_types;
+        if (max_file_size_mb !== undefined) updatePayload.max_file_size_mb = max_file_size_mb != null ? Number(max_file_size_mb) : null;
+        if (allow_resubmission !== undefined) updatePayload.allow_resubmission = allow_resubmission;
+        if (status !== undefined) updatePayload.status = status;
+
+        const { data, error } = await supabase
+            .from('assignments')
+            .update(updatePayload)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error: any) {
+        console.error('Error updating assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE assignment
+app.delete('/api/assignments/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { error } = await supabase
+            .from('assignments')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        res.json({ message: 'Assignment deleted successfully' });
+    } catch (error: any) {
+        console.error('Error deleting assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// CALENDAR EVENTS CRUD (professor, scoped to subject)
+// ============================================
+
+// GET all calendar events for a subject
+app.get('/api/subjects/:subjectId/calendar-events', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+
+        const { data, error } = await supabase
+            .from('calendar_events')
+            .select('*')
+            .eq('subject_id', subjectId)
+            .order('event_date', { ascending: true });
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (error: any) {
+        console.error('Error fetching calendar events:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST create calendar event
+app.post('/api/calendar-events', async (req, res) => {
+    try {
+        const {
+            subject_id,
+            professor_id,
+            title,
+            description_md,
+            type,
+            event_date,
+        } = req.body;
+
+        if (!title || !subject_id || !professor_id) {
+            return res.status(400).json({ error: 'title, subject_id and professor_id are required' });
+        }
+
+        const { data, error } = await supabase
+            .from('calendar_events')
+            .insert({
+                subject_id,
+                professor_id,
+                title,
+                description_md: description_md || null,
+                type: type || null,
+                event_date: event_date || null,
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.status(201).json(data);
+    } catch (error: any) {
+        console.error('Error creating calendar event:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PATCH update calendar event
+app.patch('/api/calendar-events/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description_md, type, event_date } = req.body;
+
+        const updatePayload: Record<string, any> = {};
+        if (title !== undefined) updatePayload.title = title;
+        if (description_md !== undefined) updatePayload.description_md = description_md;
+        if (type !== undefined) updatePayload.type = type;
+        if (event_date !== undefined) updatePayload.event_date = event_date;
+
+        const { data, error } = await supabase
+            .from('calendar_events')
+            .update(updatePayload)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error: any) {
+        console.error('Error updating calendar event:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE calendar event
+app.delete('/api/calendar-events/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { error } = await supabase
+            .from('calendar_events')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        res.json({ message: 'Event deleted successfully' });
+    } catch (error: any) {
+        console.error('Error deleting calendar event:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Start the server
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+});

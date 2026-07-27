@@ -172,7 +172,7 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
           onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
           onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
         >
-          ← Volver
+          ← Inicio
         </button>
 
         <div className="course-map-header">

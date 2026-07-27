@@ -28,14 +28,15 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
   { key: 'admin-home', label: 'Inicio', path: '/dashboard' },
   { key: 'schools', label: 'Centros', path: '/admin' },
   { key: 'students', label: 'Alumnos', path: '/students' },
-  { key: 'agenda', label: 'Agenda', path: '/quotes' },
+  { key: 'agenda', label: 'Agenda', path: '/schedule' },
 ]
 
 // Professor navigation items (current default)
 const PROFESSOR_NAV_ITEMS: NavItem[] = [
-  { key: 'my-courses', label: 'Inicio', path: '/dashboard' },
-  { key: 'tracking', label: 'Mis cursos', path: '/assignments' },
-  { key: 'agenda', label: 'Mi agenda', path: '/quotes' },
+  { key: 'home', label: 'Inicio', path: '/dashboard' },
+  { key: 'my-courses', label: 'Mis cursos', path: '/professor/assignments/courses' },
+  { key: 'agenda', label: 'Mis horarios', path: '/schedule' },
+
 ]
 
 const TopNavigation: React.FC<TopNavigationProps> = ({
