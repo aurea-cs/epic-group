@@ -2442,6 +2442,94 @@ app.get('/api/users/:userId/profile-details', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// GET calendar items (assignments + events) for a user, from now through end of year
+app.get('/api/calendar/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { role } = req.query;
+
+        // Resolve subject ids the user has access to
+        let subjectIds = [];
+        if (role === 'professor') {
+            const { data, error } = await supabase
+                .from('professor_subjects')
+                .select('subject_id')
+                .eq('professor_id', userId)
+                .eq('is_active', true);
+            if (error) throw error;
+            subjectIds = data.map(r => r.subject_id);
+        } else {
+            const { data, error } = await supabase
+                .from('enrollments')
+                .select('subject_id')
+                .eq('student_id', userId)
+                .eq('status', 'active');
+            if (error) throw error;
+            subjectIds = data.map(r => r.subject_id);
+        }
+
+        if (subjectIds.length === 0) {
+            return res.json([]);
+        }
+
+        const yearStart = `${new Date().getFullYear()}-01-01`;
+        const yearEnd = `${new Date().getFullYear()}-12-31`;
+
+        const [assignmentsRes, eventsRes] = await Promise.all([
+            supabase
+                .from('assignments')
+                .select('id, title, due_at, subject_id, subjects(name, short_name)')
+                .in('subject_id', subjectIds)
+                .gte('due_at', yearStart)
+                .lte('due_at', yearEnd),
+            supabase
+                .from('calendar_events')
+                .select('id, title, description_md, event_date, type, subject_id, subjects(name, short_name)')
+                .in('subject_id', subjectIds)
+                .gte('event_date', yearStart)
+                .lte('event_date', yearEnd)
+        ]);
+
+        if (assignmentsRes.error) throw assignmentsRes.error;
+        if (eventsRes.error) throw eventsRes.error;
+
+        const assignmentItems = (assignmentsRes.data || [])
+            .filter(a => a.due_at)
+            .map(a => {
+                const subj: any = Array.isArray(a.subjects) ? a.subjects[0] : a.subjects;
+                return {
+                    id: a.id,
+                    kind: 'assignment',
+                    title: a.title,
+                    date: a.due_at.split('T')[0],
+                    time: a.due_at.split('T')[1]?.substring(0, 5) || null,
+                    description: null,
+                    subjectName: subj?.short_name || subj?.name || null
+                };
+            });
+
+        const eventItems = (eventsRes.data || []).map(e => {
+            const subj: any = Array.isArray(e.subjects) ? e.subjects[0] : e.subjects;
+            return {
+                id: e.id,
+                kind: 'event',
+                title: e.title,
+                date: e.event_date,
+                time: null,
+                description: e.description_md,
+                eventType: e.type,
+                subjectName: subj?.short_name || subj?.name || null
+            };
+        });
+
+        res.json([...assignmentItems, ...eventItems]);
+    } catch (error: any) {
+        console.error('Error fetching calendar:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // GET weekly schedule for a user (professor or student)
 app.get('/api/schedule/:userId', async (req, res) => {
     try {
