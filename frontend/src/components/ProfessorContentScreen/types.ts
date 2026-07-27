@@ -62,15 +62,25 @@ export interface ModuleItem {
     show_student?: boolean | null
 }
 
+export interface SubmissionFile {
+    id: string
+    file_name: string | null
+    storage_path: string | null
+    external_url: string | null
+    mime_type: string | null
+    file_size_bytes: number | null
+    uploaded_at: string | null
+}
+
 export interface Submission {
     id: string
-    title: string | null,
     assignment_id: string
     student_id: string
     submitted_at: string
-    file_url: string
-    score: number | null
-    feedback: string | null
+    status: string | null
+    files: SubmissionFile[]
+    grade: number | null
+    feedback_md: string | null
     graded_at: string | null
     graded_by: string | null
 }

@@ -177,7 +177,7 @@ async function fetchSubmissions(subjectId: string): Promise<Submission[]> {
 
 async function gradeStudentSubmission(
     id: string,
-    payload: Partial<Omit<Submission, 'id' | 'created_at'>>
+    payload: Partial<Pick<Submission, 'grade' | 'feedback_md' | 'graded_by' | 'status'>>
 ): Promise<Submission> {
     const res = await fetch(`${API_URL}/api/submissions/${id}`, {
         method: 'PATCH',

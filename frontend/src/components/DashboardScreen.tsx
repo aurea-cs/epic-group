@@ -41,7 +41,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
                   </>
                 )}
               </p>
-              <button className="level-up-btn" onClick={() => navigate(isAdmin ? '/quotes' : '/alumnos')}>
+              <button className="level-up-btn" onClick={() => navigate(isAdmin ? '/schedule' : '/alumnos')}>
                 {isAdmin ? 'Ver mi agenda' : 'Ver mis alumnos'}
               </button>
             </div>

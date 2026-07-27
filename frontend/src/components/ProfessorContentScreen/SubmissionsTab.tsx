@@ -15,9 +15,9 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ loading, submissions, o
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ background: 'rgba(192,132,252,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                            <th style={thStyle}>Título</th>
-                            <th style={thStyle}>Tipo</th>
+                            <th style={thStyle}>Archivos</th>
                             <th style={thStyle}>Fecha</th>
+                            <th style={thStyle}>Calificación</th>
                             <th style={{ ...thStyle, textAlign: 'right' }}>Acciones</th>
                         </tr>
                     </thead>
@@ -29,9 +29,30 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ loading, submissions, o
                         ) : (
                             submissions.map(submission => (
                                 <tr key={submission.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <td style={tdStyle}>{submission.title || 'Sin título'}</td>
-                                    <td style={tdStyle}>{submission.file_url || '—'}</td>
+                                    <td style={tdStyle}>
+                                        {submission.files.length === 0 ? (
+                                            '—'
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                {submission.files.map(file => {
+                                                    const href = file.external_url || file.storage_path || undefined
+                                                    return (
+                                                        <a
+                                                            key={file.id}
+                                                            href={href}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            style={{ color: '#c084fc', textDecoration: 'none', fontSize: '0.85rem' }}
+                                                        >
+                                                            {file.file_name || 'Archivo sin nombre'}
+                                                        </a>
+                                                    )
+                                                })}
+                                            </div>
+                                        )}
+                                    </td>
                                     <td style={tdStyle}>{submission.submitted_at ? new Date(submission.submitted_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+                                    <td style={tdStyle}>{submission.grade?? 'Sin calificar'}</td>
                                     <td style={{ ...tdStyle, textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                                             <ActionButton
@@ -39,7 +60,6 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ loading, submissions, o
                                                 textColor="#e5e7eb" border="1px solid rgba(255,255,255,0.12)"
                                                 onClick={() => onGrade(submission)}
                                             />
-
                                         </div>
                                     </td>
                                 </tr>

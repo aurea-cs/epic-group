@@ -1335,7 +1335,6 @@ app.delete('/api/admin/grades/:id', async (req, res) => {
 // ========== SUBJECTS ==========
 
 // Create subject
-// Create subject
 app.post('/api/admin/subjects', async (req, res) => {
     try {
         const {
@@ -1473,6 +1472,80 @@ app.get('/api/admin/subjects/:id', async (req, res) => {
         res.json(data);
     } catch (error: any) {
         console.error('Error fetching subject:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ========== ASSIGNMENTS =================
+
+// GET submissions for a subject (joins through assignments, includes all files)
+app.get('/api/subjects/:subjectId/submissions', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+
+        const { data, error } = await supabase
+            .from('submissions')
+            .select(`
+                id,
+                submitted_at,
+                graded_at,
+                graded_by,
+                feedback_md,
+                grade,
+                status,
+                student_id,
+                assignment_id,
+                assignments!inner(subject_id),
+                submission_files(id, file_name, storage_path, external_url, mime_type, file_size_bytes, uploaded_at)
+            `)
+            .eq('assignments.subject_id', subjectId)
+            .order('submitted_at', { ascending: false });
+
+        if (error) throw error;
+
+        const submissions = data.map(({ assignments, submission_files, ...s }) => ({
+            ...s,
+            files: submission_files || []
+        }));
+
+        res.json(submissions);
+    } catch (error: any) {
+        console.error('Error fetching submissions:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PATCH grade a submission
+app.patch('/api/submissions/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { grade, feedback_md, graded_by, status } = req.body;
+
+        const updatePayload = {
+            ...(grade !== undefined && { grade }),
+            ...(feedback_md !== undefined && { feedback_md }),
+            ...(graded_by !== undefined && { graded_by }),
+            ...(status !== undefined && { status: status || 'graded' }),
+            graded_at: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
+            .from('submissions')
+            .update(updatePayload)
+            .eq('id', id)
+            .select(`
+                id, submitted_at, graded_at, graded_by, feedback_md, grade, status,
+                student_id, assignment_id,
+                submission_files(id, file_name, storage_path, external_url, mime_type, file_size_bytes, uploaded_at)
+            `)
+            .single();
+
+        if (error) throw error;
+
+        const { submission_files, ...s } = data;
+        res.json({ ...s, files: submission_files || [] });
+    } catch (error: any) {
+        console.error('Error grading submission:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -2369,61 +2442,51 @@ app.get('/api/users/:userId/profile-details', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
-// Get user agenda (schedule of subjects)
-app.get('/api/agenda/:userId', async (req, res) => {
+// GET weekly schedule for a user (professor or student)
+app.get('/api/schedule/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { role } = req.query; // 'student', 'professor', 'tutor', 'admin'
+        const { role } = req.query;
 
-        if (role === 'admin') {
-            return res.json([]);
-        }
-
-        let subjectsList: any[] = [];
+        let subjects: any[] = [];
 
         if (role === 'professor') {
             const { data, error } = await supabase
                 .from('professor_subjects')
                 .select(`
-                    subjects (
-                        id, name, short_name, schedule_days, schedule_start_time, schedule_end_time
+                    subjects(
+                        id, name, short_name, schedule_days,
+                        schedule_start_time, schedule_end_time,
+                        is_active, grade_id
                     )
                 `)
-                .eq('professor_id', userId);
+                .eq('professor_id', userId)
+                .eq('is_active', true);
+
             if (error) throw error;
-            subjectsList = (data || []).map(d => d.subjects).filter(Boolean);
-        } else if (role === 'student' || role === 'tutor') {
-            let targetStudentIds = [userId];
+            subjects = data.map(row => row.subjects).flat().filter(Boolean);
+        } else {
+            const { data, error } = await supabase
+                .from('enrollments')
+                .select(`
+                    subjects(
+                        id, name, short_name, schedule_days,
+                        schedule_start_time, schedule_end_time,
+                        is_active, grade_id
+                    )
+                `)
+                .eq('student_id', userId)
+                .eq('status', 'active');
 
-            if (role === 'tutor') {
-                const { data, error } = await supabase
-                    .from('student_tutors')
-                    .select('student_id')
-                    .eq('tutor_id', userId);
-                if (error) throw error;
-                targetStudentIds = (data || []).map(st => st.student_id);
-            }
-
-            if (targetStudentIds.length > 0) {
-                const { data, error } = await supabase
-                    .from('enrollments')
-                    .select(`
-                        subjects (
-                            id, name, short_name, schedule_days, schedule_start_time, schedule_end_time
-                        )
-                    `)
-                    .in('student_id', targetStudentIds);
-                if (error) throw error;
-                subjectsList = (data || []).map(d => d.subjects).filter(Boolean);
-            }
+            if (error) throw error;
+            subjects = data.map(row => row.subjects).flat().filter(Boolean);
         }
 
-        // Deduplicate subjects by ID in case a tutor has multiple students in the same class
-        const uniqueSubjects = Array.from(new Map(subjectsList.map(s => [s.id, s])).values());
-        res.json(uniqueSubjects);
+        subjects = subjects.filter((s: any) => s.is_active !== false);
+
+        res.json(subjects);
     } catch (error: any) {
-        console.error('Error fetching agenda:', error);
+        console.error('Error fetching schedule:', error);
         res.status(500).json({ error: error.message });
     }
 });

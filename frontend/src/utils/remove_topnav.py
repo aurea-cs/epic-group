@@ -12,7 +12,7 @@ files_to_fix = [
     "AssignmentsScreen.tsx",
     "GradesScreen.tsx",
     "ProgressScreen.tsx",
-    "QuotesScreen.tsx",
+    "ScheduleScreen.tsx",
     "StudentsScreen.tsx"
 ]
 
