@@ -29,6 +29,12 @@ interface ClassBlock {
   endLabel: string
 }
 
+function avatarColor(name: string): string {
+  const colors = ['#7c3aed, #4f46e5', '#0891b2, #0e7490', '#059669, #047857', '#d97706, #b45309', '#dc2626, #b91c1c', '#7c3aed, #a855f7', '#0284c7, #0369a1']
+  let h = 0; for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + h
+  return colors[Math.abs(h) % colors.length]
+}
+
 const DAYS_ORDER = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const DAY_INDEX_TO_NAME: Record<number, string> = {
   0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'
@@ -150,11 +156,15 @@ const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ user }) => {
 
   return (
     <div className="schedule-screen-container">
-      <div className="schedule-content">
+      <div className="schedule-content-sc">
         {/* Sidebar */}
         <aside className="schedule-sidebar">
           <div className="user-profile-header">
-            <div className="user-avatar-circle"></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', flexShrink: 0, background: `linear-gradient(135deg, ${avatarColor(user.user_metadata?.full_name || user.email || '-')})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.95rem', fontWeight: 700, color: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+                {(user.user_metadata?.full_name || user.email || '-').charAt(0).toUpperCase()}
+              </div>
+            </div>
             <div className="user-info">
               <h2>{user.user_metadata?.full_name || user.email || 'Usuario'}</h2>
               <p>{getUserRole(user) === 'professor' ? 'Profesor' : 'Estudiante'}</p>
