@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
 import './AssignmentDetailScreen.css'
-import type { AssignmentDetail, SubmissionFile, Submission } from './ProfessorContentScreen/types'
+import type { AssignmentDetail } from './ProfessorContentScreen/types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -172,7 +172,6 @@ const AssignmentDetailScreen: React.FC<AssignmentDetailScreenProps> = ({ user })
                   },
                   li: ({ children, className, ...props }) => {
                     // GFM adds "task-list-item" class to checklist <li>s — style those distinctly
-                    const isTask = className?.includes('task-list-item')
                     return (
                       <li className={className} {...props}>
                         {children}

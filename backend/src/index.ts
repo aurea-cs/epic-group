@@ -1745,6 +1745,30 @@ app.get('/api/subjects/:subjectId/students', async (req, res) => {
 
 // ========== COURSE CONTENT (MODULES & ITEMS) ==========
 
+// Get VR code for a module
+app.get('/api/modules/:moduleId/vr-code', async (req, res) => {
+    try {
+        const { moduleId } = req.params;
+
+        const { data, error } = await supabase
+            .from('module_vr_code')
+            .select('*')
+            .eq('module_id', moduleId)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (!data) {
+            return res.status(404).json({ error: 'No VR code found for this module' });
+        }
+
+        res.json(data);
+    } catch (error: any) {
+        console.error('Error fetching VR code:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get modules for a subject
 app.get('/api/admin/subjects/:subjectId/modules', async (req, res) => {
     try {
