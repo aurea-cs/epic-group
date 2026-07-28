@@ -155,6 +155,7 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
             </div>
 
             <label style={fieldLabelStyle}>Módulo</label>
+            <div style={{ marginBottom: '1rem' }}>
              <CustomSelect
                 value={moduleId || NO_MODULE}
                 onChange={v => setModuleId(v === NO_MODULE ? '' : v)}
@@ -163,10 +164,12 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
                     ...modules.map(m => ({ value: m.id, label: m.title })),
                 ]}
             />
+            </div>
 
             <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
                     <label style={fieldLabelStyle}>Disponible desde</label>
+                    
                     <CustomDatePicker
                         value={availableFrom}
                         onChange={setAvailableFrom}

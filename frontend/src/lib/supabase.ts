@@ -54,8 +54,19 @@ export const auth = {
   },
 
   signOut: async () => {
-    const { error } = await supabase.auth.signOut()
-    return { error }
+    // Attempt a graceful server-side signout, but ignore any error
+    // (e.g. 403 / "session_not_found" when the session is already gone).
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch (_) {
+      // swallow — we'll clear locally regardless
+    }
+    // Belt-and-suspenders: remove all Supabase keys from localStorage so a
+    // stale JWT never causes the app to boot in a zombie-logged-in state.
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('sb-'))
+      .forEach(k => localStorage.removeItem(k))
+    return { error: null }
   },
 
   resetPassword: async (email: string) => {

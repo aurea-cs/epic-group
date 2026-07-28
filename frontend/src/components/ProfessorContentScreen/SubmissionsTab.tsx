@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import type { Submission } from './types'
 import { ActionButton, tdStyle, thStyle, inputStyleAlt } from '../general/SharedUI'
+import CustomSelect from '../general/CustomSelect'
 
 interface SubmissionsTabProps {
     loading: boolean
@@ -40,16 +41,16 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ loading, submissions, o
                         style={{ ...inputStyleAlt, paddingLeft: '36px', width: '100%', background: 'rgba(255,255,255,0.06)' }}
                     />
                 </div>
-                <div style={{ flex: '1 1 220px' }}>
-                    <select
-                        value={statusFilter}
-                        onChange={e => setStatusFilter(e.target.value as StatusFilter)}
-                        style={{ ...inputStyleAlt, width: '100%', background: 'rgba(255,255,255,0.06)', appearance: 'none', cursor: 'pointer' }}
-                    >
-                        <option value="">Todas las entregas</option>
-                        <option value="ungraded">Por calificar</option>
-                        <option value="graded">Calificadas</option>
-                    </select>
+                <div style={{ flex: '1 1' }}>
+                    <CustomSelect
+                        value={statusFilter || 'default'}
+                        onChange={value => setStatusFilter(value === 'default' ? '' : value as StatusFilter)}
+                        options={[
+                            { value: 'default', label: 'Todas las entregas' },
+                            { value: 'ungraded', label: 'Por calificar' },
+                            { value: 'graded', label: 'Calificadas' },
+                        ]}
+                    />
                 </div>
                 {(searchQuery || statusFilter) && (
                     <button
