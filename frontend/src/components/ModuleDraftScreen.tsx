@@ -118,9 +118,133 @@ const VrRoomCard = ({ vrCode }: { vrCode: VrCodeEntry }) => {
   )
 }
 
+// ── PDF Viewer Modal (Secure/Non-downloadable) ─────────────────────────────────
+interface PdfViewerModalProps {
+  url: string
+  onClose: () => void
+}
+
+const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose }) => {
+  // Prevent keyboard shortcuts (Ctrl+S, Ctrl+P, Cmd+S, Cmd+P)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isCmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+      
+      if (isCmdOrCtrl && (e.key === 'p' || e.key === 'P' || e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('contextmenu', handleContextMenu, true);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('contextmenu', handleContextMenu, true);
+    };
+  }, []);
+
+  // Format URL to hide standard PDF viewer toolbars if possible
+  const viewerUrl = url.includes('#') ? `${url}&toolbar=0&navpanes=0` : `${url}#toolbar=0&navpanes=0`;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: 'rgba(0, 0, 0, 0.85)',
+      backdropFilter: 'blur(10px)',
+      display: 'flex',
+      flexDirection: 'column',
+      zIndex: 9999,
+      fontFamily: '"Inter", sans-serif'
+    }}>
+      {/* Header bar */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '16px 24px',
+        backgroundColor: '#1a0d3d',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+      }}>
+        <h3 style={{ margin: 0, color: 'white', fontSize: '1.1rem', fontWeight: 600 }}>
+          Contenido
+        </h3>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'rgba(255, 255, 255, 0.15)',
+            border: 'none',
+            borderRadius: '50%',
+            width: '36px',
+            height: '36px',
+            color: 'white',
+            fontSize: '1.2rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'background 0.2s'
+          }}
+          onMouseOver={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)'}
+          onMouseOut={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Frame Container */}
+      <div style={{
+        flex: 1,
+        position: 'relative',
+        backgroundColor: '#121212',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        <iframe
+          src={viewerUrl}
+          title="Document Viewer"
+          style={{
+            width: '100%',
+            height: '100%',
+            border: 'none'
+          }}
+        />
+        
+        {/* Security overlay notice */}
+        <div style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          padding: '8px 16px',
+          borderRadius: '20px',
+          color: 'rgba(255, 255, 255, 0.7)',
+          fontSize: '0.8rem',
+          pointerEvents: 'none',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+        }}>
+          🔒 Modo de solo lectura — Descargas y copias deshabilitadas
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Content Card ──────────────────────────────────────────────────────────────
 
-const ContentCard = ({ item, index }: { item: ModuleItem, index: number }) => {
+const ContentCard = ({ item, index, onViewPdf }: { item: ModuleItem, index: number, onViewPdf: (url: string) => void }) => {
   return (
     <div style={{
       backgroundColor: '#25164E',
@@ -162,7 +286,7 @@ const ContentCard = ({ item, index }: { item: ModuleItem, index: number }) => {
               const readItems = JSON.parse(localStorage.getItem('readItems') || '{}');
               readItems[item.id] = true;
               localStorage.setItem('readItems', JSON.stringify(readItems));
-              window.open(item.content_url, '_blank');
+              onViewPdf(item.content_url);
             } else {
               alert('Este contenido no tiene una URL configurada aún.');
             }
@@ -201,6 +325,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
   const [vrCode, setVrCode] = useState<VrCodeEntry | null>(null)
   const [loading, setLoading] = useState(true)
   const [, setError] = useState<string | null>(null)
+  const [activePdfUrl, setActivePdfUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (courseId && moduleId) {
@@ -312,7 +437,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
             {/* Module items filtered to show_student=true */}
             {visibleItems.length > 0 ? (
               visibleItems.map((item, idx) => (
-                <ContentCard key={item.id} item={item} index={idx} />
+                <ContentCard key={item.id} item={item} index={idx} onViewPdf={setActivePdfUrl} />
               ))
             ) : !vrCode ? (
               <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
@@ -322,6 +447,11 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
           </div>
         </div>
       </div>
+
+      {/* PDF View Overlay */}
+      {activePdfUrl && (
+        <PdfViewerModal url={activePdfUrl} onClose={() => setActivePdfUrl(null)} />
+      )}
     </div>
   )
 }

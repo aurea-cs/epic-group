@@ -23,7 +23,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB limit
+        fileSize: 60 * 1024 * 1024, // 10MB limit
         files: 10 // Maximum 10 files per upload
     },
     fileFilter: (req, file, cb) => {
@@ -2657,7 +2657,7 @@ app.get('/health', (req, res) => {
 const assignmentUpload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB
+        fileSize: 100 * 1024 * 1024, // 50MB
         files: 5
     }
 });
