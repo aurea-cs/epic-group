@@ -8,9 +8,8 @@ import sateliteImg from '../assets/satelite.png'
 import ciberImg from '../assets/ciber.png'
 import dentrodeescuelaImg from '../assets/dentrodeescuela.png'
 import dentrodespaceshipImg from '../assets/dentrodespaceship.png'
-import { getUserRole } from '../utils/getUserRole'
 import './ModuleDraftScreen.css'
-
+import PdfViewerModal from './general/PdfViewerModal'
 
 interface ModuleDraftScreenProps {
   user: User
@@ -92,70 +91,6 @@ const ContentCard = ({ item, index, onViewPdf }: { item: ModuleItem, index: numb
   )
 }
 
-// ── PDF Viewer Modal (protected, no download) ────────────────────────────────
-const PdfViewerModal: React.FC<{ url: string; onClose: () => void }> = ({ url, onClose }) => {
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isCmdOrCtrl = navigator.platform.toUpperCase().includes('MAC') ? e.metaKey : e.ctrlKey;
-      if (isCmdOrCtrl && ['p', 'P', 's', 'S'].includes(e.key)) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    const blockMenu = (e: MouseEvent) => e.preventDefault();
-    window.addEventListener('keydown', handleKeyDown, true);
-    window.addEventListener('contextmenu', blockMenu, true);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown, true);
-      window.removeEventListener('contextmenu', blockMenu, true);
-    };
-  }, []);
-
-  const viewerUrl = url.includes('#') ? `${url}&toolbar=0&navpanes=0` : `${url}#toolbar=0&navpanes=0`;
-
-  return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-      backgroundColor: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(10px)',
-      display: 'flex', flexDirection: 'column', zIndex: 9999,
-    }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '14px 24px', backgroundColor: '#1a0d3d',
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
-      }}>
-        <h3 style={{ margin: 0, color: 'white', fontSize: '1rem', fontWeight: 600 }}>Contenido</h3>
-        <button
-          onClick={onClose}
-          style={{
-            background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%',
-            width: '34px', height: '34px', color: 'white', fontSize: '1.1rem',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-          onMouseOver={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
-          onMouseOut={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
-        >✕</button>
-      </div>
-      {/* Viewer */}
-      <div style={{ flex: 1, position: 'relative', backgroundColor: '#111' }}>
-        <iframe
-          src={viewerUrl}
-          title="Document Viewer"
-          style={{ width: '100%', height: '100%', border: 'none' }}
-        />
-        <div style={{
-          position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
-          backgroundColor: 'rgba(0,0,0,0.7)', padding: '7px 16px', borderRadius: '20px',
-          color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', pointerEvents: 'none',
-          border: '1px solid rgba(255,255,255,0.1)',
-        }}>
-          🔒 Modo de solo lectura — Descargas y copias deshabilitadas
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const VrSchoolCard = () => {
   const url = "https://epicgrouplab.itch.io/campus-san-gabriel"
@@ -305,7 +240,7 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
   )
 }
 
-const ResourceCard = ({ item, index }: { item: ModuleItem, index: number }) => {
+const ResourceCard = ({ item }: { item: ModuleItem, index: number }) => {
   return (
     <div style={{
       backgroundColor: '#25164E',
@@ -395,7 +330,7 @@ const ResourceCard = ({ item, index }: { item: ModuleItem, index: number }) => {
   )
 }
 
-const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
+const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ }) => {
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
   const navigate = useNavigate()
   const [moduleData, setModuleData] = useState<CourseModule | null>(null)
@@ -404,8 +339,8 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   const [, setError] = useState<string | null>(null)
   const [activePdfUrl, setActivePdfUrl] = useState<string | null>(null)
 
-  const userRole = getUserRole(user)
-  const isProfessor = userRole === 'professor' || userRole === 'admin'
+  // const userRole = getUserRole(user)
+  // const isProfessor = userRole === 'professor' || userRole === 'admin'
 
   useEffect(() => {
     if (courseId && moduleId) {

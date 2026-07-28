@@ -159,8 +159,8 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
         </button>
 
         <div className="course-map-header">
-          <h1>Tus Cursos Asignados</h1>
-          <p>Selecciona un planeta para ver los módulos del curso.</p>
+          <h1>Campos Formativos</h1>
+          <p>Selecciona un planeta para ver el contenido.</p>
         </div>
 
         {/* Fondo espacial con estrellas */}

@@ -29,20 +29,19 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
               <h2 className="user-name">{user.user_metadata?.full_name || user.email || 'Usuario'}</h2>
               <div className="progress-info" onClick={() => navigate(isAdmin ? '/admin' : userRole === 'professor' ? '/professor/assignments/courses' : '/assignments')}>
                 <img src={medallaIcon} alt="Medalla" className="medal-icon-img" />
-                <span className="grades-text">{isAdmin ? 'Ver centros educativos >' : 'Ver mis cursos >'}</span>
+                <span className="grades-text">{isAdmin ? 'Ver centros educativos >' : 'Ver campos formativos >'}</span>
               </div>
               <p className="agenda-text">
                 {isAdmin ? (
-                  'Haz click para revisar tus centros educativos'
+                  'Haz click para revisar los campos formativos de tu grado'
                 ) : userRole === 'professor' ? (
                   <>
-                    Haz click para checar a tus alumnos<br />
-                    y cursos pendientes ¡Accede a tu agenda!
+                    Haz click para checar a tus materias,<br />asignar tareas, y ver entregas de los alumnos.
                   </>
                 ) : (
                   <>
-                    Haz click para checar tus cursos<br />
-                    pendientes ¡Accede a tu agenda!
+                    Haz click para ver tus horarios de clase<br />
+                     ¡Accede a tu agenda!
                   </>
                 )}
               </p>
