@@ -1,9 +1,10 @@
 .module-draft-container {
   display: flex;
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;
   font-family: "Inter", sans-serif;
   flex-direction: row;
+  overflow: hidden;
 }
 
 .module-draft-left-panel {
@@ -19,7 +20,7 @@
   padding: 4rem;
   box-sizing: border-box;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .module-draft-back-button {
@@ -65,6 +66,8 @@
 @media (max-width: 768px) {
   .module-draft-container {
     flex-direction: column;
+    height: auto;
+    overflow: auto;
   }
   
   .module-draft-left-panel {

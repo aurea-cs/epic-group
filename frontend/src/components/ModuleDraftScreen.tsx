@@ -4,7 +4,9 @@ import { User } from '@supabase/supabase-js'
 import { getCourseModules, getModuleVrCode, CourseModule, ModuleItem, VrCodeEntry } from '../lib/adminApi'
 import { Book, Gamepad2, FileText, ArrowRight, Folder, Download, Play } from 'lucide-react'
 import bannerImg from '../assets/banner.png'
+import { getUserRole } from '../utils/getUserRole'
 import './ModuleDraftScreen.css'
+
 
 interface ModuleDraftScreenProps {
   user: User
@@ -398,7 +400,8 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   const [, setError] = useState<string | null>(null)
   const [activePdfUrl, setActivePdfUrl] = useState<string | null>(null)
 
-  const isProfessor = user.user_metadata?.role === 'professor' || user.user_metadata?.role === 'admin'
+  const userRole = getUserRole(user)
+  const isProfessor = userRole === 'professor' || userRole === 'admin'
 
   useEffect(() => {
     if (courseId && moduleId) {
