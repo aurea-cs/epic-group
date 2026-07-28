@@ -10,7 +10,7 @@ interface ModuleDraftScreenProps {
   user: User
 }
 
-const ContentCard = ({ item, index }: { item: ModuleItem, index: number }) => {
+const ContentCard = ({ item, index, onViewPdf }: { item: ModuleItem, index: number, onViewPdf: (url: string) => void }) => {
   return (
     <div style={{
       backgroundColor: '#25164E',
@@ -48,13 +48,17 @@ const ContentCard = ({ item, index }: { item: ModuleItem, index: number }) => {
       <div style={{ marginTop: 'auto' }}>
         <button
           onClick={() => {
-            if (item.content_url) {
-              const readItems = JSON.parse(localStorage.getItem('readItems') || '{}');
-              readItems[item.id] = true;
-              localStorage.setItem('readItems', JSON.stringify(readItems));
-              window.open(item.content_url, '_blank');
-            } else {
+            if (!item.content_url) {
               alert('Este contenido no tiene una URL configurada aún.');
+              return;
+            }
+            const readItems = JSON.parse(localStorage.getItem('readItems') || '{}');
+            readItems[item.id] = true;
+            localStorage.setItem('readItems', JSON.stringify(readItems));
+            if (item.type === 'pdf') {
+              onViewPdf(item.content_url);
+            } else {
+              window.open(item.content_url, '_blank', 'noopener,noreferrer');
             }
           }}
           style={{
@@ -82,7 +86,74 @@ const ContentCard = ({ item, index }: { item: ModuleItem, index: number }) => {
   )
 }
 
+// ── PDF Viewer Modal (protected, no download) ────────────────────────────────
+const PdfViewerModal: React.FC<{ url: string; onClose: () => void }> = ({ url, onClose }) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCmdOrCtrl = navigator.platform.toUpperCase().includes('MAC') ? e.metaKey : e.ctrlKey;
+      if (isCmdOrCtrl && ['p', 'P', 's', 'S'].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    const blockMenu = (e: MouseEvent) => e.preventDefault();
+    window.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('contextmenu', blockMenu, true);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('contextmenu', blockMenu, true);
+    };
+  }, []);
+
+  const viewerUrl = url.includes('#') ? `${url}&toolbar=0&navpanes=0` : `${url}#toolbar=0&navpanes=0`;
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+      backgroundColor: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(10px)',
+      display: 'flex', flexDirection: 'column', zIndex: 9999,
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '14px 24px', backgroundColor: '#1a0d3d',
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+      }}>
+        <h3 style={{ margin: 0, color: 'white', fontSize: '1rem', fontWeight: 600 }}>Contenido</h3>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%',
+            width: '34px', height: '34px', color: 'white', fontSize: '1.1rem',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onMouseOver={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
+          onMouseOut={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+        >✕</button>
+      </div>
+      {/* Viewer */}
+      <div style={{ flex: 1, position: 'relative', backgroundColor: '#111' }}>
+        <iframe
+          src={viewerUrl}
+          title="Document Viewer"
+          style={{ width: '100%', height: '100%', border: 'none' }}
+        />
+        <div style={{
+          position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
+          backgroundColor: 'rgba(0,0,0,0.7)', padding: '7px 16px', borderRadius: '20px',
+          color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', pointerEvents: 'none',
+          border: '1px solid rgba(255,255,255,0.1)',
+        }}>
+          🔒 Modo de solo lectura — Descargas y copias deshabilitadas
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
+  const vrUrl = `https://build-launcher-code.vercel.app/?code=${vrEntry.code}&v=3`
+
   return (
     <div style={{
       backgroundColor: '#25164E',
@@ -128,7 +199,9 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
         </div>
 
         <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
-          <button style={{
+          <button
+            onClick={() => window.open(vrUrl, '_blank', 'noopener,noreferrer')}
+            style={{
             flex: 1,
             backgroundColor: 'transparent',
             color: 'white',
@@ -258,6 +331,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   const [vrEntry, setVrEntry] = useState<VrCodeEntry | null>(null)
   const [loading, setLoading] = useState(true)
   const [, setError] = useState<string | null>(null)
+  const [activePdfUrl, setActivePdfUrl] = useState<string | null>(null)
 
   const isProfessor = user.user_metadata?.role === 'professor' || user.user_metadata?.role === 'admin'
 
@@ -348,7 +422,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
           }}>
             {contenidos.length > 0 ? (
               contenidos.map((item, idx) => (
-                <ContentCard key={item.id} item={item} index={idx} />
+                <ContentCard key={item.id} item={item} index={idx} onViewPdf={setActivePdfUrl} />
               ))
             ) : (
               <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
@@ -408,6 +482,9 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
           </div>
         </div>
       </div>
+      {activePdfUrl && (
+        <PdfViewerModal url={activePdfUrl} onClose={() => setActivePdfUrl(null)} />
+      )}
     </div>
   )
 }
