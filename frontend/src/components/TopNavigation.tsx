@@ -35,7 +35,6 @@ const PROFESSOR_NAV_ITEMS: NavItem[] = [
   { key: 'home', label: 'Inicio', path: '/dashboard' },
   { key: 'my-courses', label: 'Mis cursos', path: '/professor/assignments/courses' },
   { key: 'schedule', label: 'Horario', path: '/schedule' },
-  { key: 'calendar', label: 'Calendario', path: '/calendar' },
 ]
 
 // Student navigation items
