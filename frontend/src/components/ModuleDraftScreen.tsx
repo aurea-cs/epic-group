@@ -151,6 +151,71 @@ const PdfViewerModal: React.FC<{ url: string; onClose: () => void }> = ({ url, o
   );
 }
 
+const VrSchoolCard = () => {
+  const url = "https://epicgrouplab.itch.io/campus-san-gabriel"
+
+  return (
+    <div style={{
+      backgroundColor: '#25164E',
+      borderRadius: '16px',
+      padding: '0',
+      width: '320px',
+      flexShrink: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+      border: '1px solid rgba(255,255,255,0.05)'
+    }}>
+      <img
+        src={`https://picsum.photos/seed/vrschool/400/250`}
+        alt="VR School"
+        style={{ width: '100%', height: '200px', objectFit: 'cover' }}
+      />
+      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
+        <div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
+            Colegio VR (VR School)
+          </h3>
+          <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
+            Explora el campus virtual en 3D y conoce las instalaciones del colegio en una experiencia interactiva completa.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
+          <button
+            onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
+            style={{
+              flex: 1,
+              backgroundColor: 'white',
+              color: '#25164E',
+              border: 'none',
+              padding: '10px',
+              borderRadius: '8px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: 'bold',
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              transition: 'background 0.2s, color 0.2s'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#f0f0f0';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = 'white';
+            }}
+          >
+            Ingresar a VR School <ArrowRight size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
   const vrUrl = `https://build-launcher-code.vercel.app/?code=${vrEntry.code}&v=3`
 
@@ -472,13 +537,8 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
             scrollbarWidth: 'thin',
             scrollbarColor: 'rgba(255,255,255,0.3) transparent'
           }}>
-            {vrEntry ? (
-              <VrCard vrEntry={vrEntry} />
-            ) : (
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
-                No hay salas VR configuradas para este módulo.
-              </p>
-            )}
+            <VrSchoolCard />
+            {vrEntry && <VrCard vrEntry={vrEntry} />}
           </div>
         </div>
       </div>
