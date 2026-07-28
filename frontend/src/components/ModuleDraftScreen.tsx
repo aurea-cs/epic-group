@@ -4,6 +4,10 @@ import { User } from '@supabase/supabase-js'
 import { getCourseModules, getModuleVrCode, CourseModule, ModuleItem, VrCodeEntry } from '../lib/adminApi'
 import { Book, Gamepad2, FileText, ArrowRight, Folder, Download, Play } from 'lucide-react'
 import bannerImg from '../assets/banner.png'
+import sateliteImg from '../assets/satelite.png'
+import ciberImg from '../assets/ciber.png'
+import dentrodeescuelaImg from '../assets/dentrodeescuela.png'
+import dentrodespaceshipImg from '../assets/dentrodespaceship.png'
 import { getUserRole } from '../utils/getUserRole'
 import './ModuleDraftScreen.css'
 
@@ -28,7 +32,7 @@ const ContentCard = ({ item, index, onViewPdf }: { item: ModuleItem, index: numb
     }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <img
-          src={`https://picsum.photos/seed/${item.id || index}/200`}
+          src={sateliteImg}
           alt={item.title}
           style={{
             width: '180px',
@@ -170,7 +174,7 @@ const VrSchoolCard = () => {
       border: '1px solid rgba(255,255,255,0.05)'
     }}>
       <img
-        src={`https://picsum.photos/seed/vrschool/400/250`}
+        src={dentrodeescuelaImg}
         alt="VR School"
         style={{ width: '100%', height: '200px', objectFit: 'cover' }}
       />
@@ -235,7 +239,7 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
       border: '1px solid rgba(255,255,255,0.05)'
     }}>
       <img
-        src={`https://picsum.photos/seed/vr${vrEntry.id}/400/250`}
+        src={dentrodespaceshipImg}
         alt="VR Room"
         style={{ width: '100%', height: '200px', objectFit: 'cover' }}
       />
@@ -317,7 +321,7 @@ const ResourceCard = ({ item, index }: { item: ModuleItem, index: number }) => {
     }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <img
-          src={`https://picsum.photos/seed/recursos${item.id || index}/200`}
+          src={ciberImg}
           alt={item.title}
           style={{
             width: '180px',
@@ -434,10 +438,8 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   // Filter contenidos: items with show_student === true
   const contenidos = (moduleData?.items || []).filter(item => item.show_student === true)
 
-  // Filter recursos: only for professors, items with show_teacher === true
-  const recursos = isProfessor
-    ? (moduleData?.items || []).filter(item => item.show_teacher === true)
-    : []
+  // Filter recursos: items with show_teacher === true
+  const recursos = (moduleData?.items || []).filter(item => item.show_teacher === true)
 
   if (loading) {
     return (
@@ -449,14 +451,15 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
 
   return (
     <div className="module-draft-container">
-      {/* Lado Izquierdo */}
-      <div
-        className="module-draft-left-panel"
-        style={{ backgroundImage: `url(${bannerImg})` }}
-      />
+      <div className="module-draft-inner">
+        {/* Lado Izquierdo */}
+        <div
+          className="module-draft-left-panel"
+          style={{ backgroundImage: `url(${bannerImg})` }}
+        />
 
-      {/* Lado Derecho */}
-      <div className="module-draft-right-panel">
+        {/* Lado Derecho */}
+        <div className="module-draft-right-panel">
         <button
           onClick={() => navigate(-1)}
           className="module-draft-back-button"
@@ -500,32 +503,30 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
           </div>
         </div>
 
-        {/* Recursos Section — only for professors */}
-        {isProfessor && (
-          <div style={{ marginBottom: '4rem' }}>
-            <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
-              <Folder size={24} color="#FCEE50" /> RECURSOS
-            </h2>
-            <div style={{
-              display: 'flex',
-              gap: '24px',
-              overflowX: 'auto',
-              paddingBottom: '2rem',
-              scrollbarWidth: 'thin',
-              scrollbarColor: 'rgba(255,255,255,0.3) transparent'
-            }}>
-              {recursos.length > 0 ? (
-                recursos.map((item, idx) => (
-                  <ResourceCard key={item.id} item={item} index={idx} />
-                ))
-              ) : (
-                <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
-                  No hay recursos disponibles para este módulo.
-                </p>
-              )}
-            </div>
+        {/* Recursos Section */}
+        <div style={{ marginBottom: '4rem' }}>
+          <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
+            <Folder size={24} color="#FCEE50" /> RECURSOS
+          </h2>
+          <div style={{
+            display: 'flex',
+            gap: '24px',
+            overflowX: 'auto',
+            paddingBottom: '2rem',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255,255,255,0.3) transparent'
+          }}>
+            {recursos.length > 0 ? (
+              recursos.map((item, idx) => (
+                <ResourceCard key={item.id} item={item} index={idx} />
+              ))
+            ) : (
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
+                No hay recursos disponibles para este módulo.
+              </p>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Salas VR Section */}
         <div>
@@ -544,6 +545,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
             {vrEntry && <VrCard vrEntry={vrEntry} />}
           </div>
         </div>
+      </div>
       </div>
       {activePdfUrl && (
         <PdfViewerModal url={activePdfUrl} onClose={() => setActivePdfUrl(null)} />

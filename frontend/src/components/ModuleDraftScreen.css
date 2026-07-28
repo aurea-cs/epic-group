@@ -1,10 +1,16 @@
 .module-draft-container {
-  display: flex;
   width: 100%;
   height: 100vh;
   font-family: "Inter", sans-serif;
+  overflow-y: auto;
+  background-color: #7334EF;
+}
+
+.module-draft-inner {
+  display: flex;
+  width: 100%;
+  min-height: 100%;
   flex-direction: row;
-  overflow: hidden;
 }
 
 .module-draft-left-panel {
@@ -20,7 +26,7 @@
   padding: 4rem;
   box-sizing: border-box;
   position: relative;
-  overflow-y: auto;
+  min-height: 100vh;
 }
 
 .module-draft-back-button {
@@ -65,9 +71,12 @@
 
 @media (max-width: 768px) {
   .module-draft-container {
-    flex-direction: column;
     height: auto;
     overflow: auto;
+  }
+  
+  .module-draft-inner {
+    flex-direction: column;
   }
   
   .module-draft-left-panel {
