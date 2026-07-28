@@ -485,6 +485,17 @@
     flex-direction: column;
     text-align: center;
   }
+
+  .welcome-text {
+    margin-left: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .progress-info {
+    justify-content: center;
+  }
   
   .welcome-title {
     font-size: 36px;
@@ -496,9 +507,28 @@
   
   .space-composition {
     width: 100%;
-    height: 300px;
+    height: 350px;
     position: relative;
     margin-top: 20px;
+  }
+
+  .space-image_mano_rosa {
+    height: 100%;
+    width: auto;
+    right: 0;
+    top: 0;
+  }
+
+  .astronaut-image_fl {
+    width: 250px;
+    left: 10%;
+    bottom: 10%;
+  }
+
+  .space-image_Element_E {
+    width: 100px;
+    right: 20%;
+    bottom: 5%;
   }
   
   .quotes-section,
@@ -542,7 +572,7 @@
   }
   
   .navbar-center {
-    display: none; /* Ocultar enlaces en móvil */
+    display: none;
   }
   
   .navbar-right {
@@ -550,7 +580,7 @@
   }
   
   .menu-toggle {
-    display: block; /* Mostrar menú hamburguesa en móvil */
+    display: block;
   }
   
   .logo-text {
@@ -572,8 +602,8 @@
   }
   
   .welcome-section {
-    padding: 30px 20px;
-    min-height: 300px;
+    padding: 80px 20px 30px;
+    min-height: auto;
   }
   
   .welcome-title {
@@ -585,27 +615,28 @@
   }
   
   .space-composition {
-    height: 200px;
+    height: 250px;
+    width: 100%;
+    margin-top: 20px;
   }
   
-  .space-image_green {
-    width: 280px;
-    height: 255px;
-    right: -20px;
+  .space-image_mano_rosa {
+    height: 100%;
+    right: -15%;
+    top: 0;
   }
   
   .astronaut-image_fl {
     width: 180px;
-    height: 194px;
-    right: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 5%;
   }
   
   .space-image_Element_E {
-    width: 117px;
-    height: 127px;
-    left: 50%;
-    top: 162px;
-    transform: translateX(-50%);
+    width: 80px;
+    left: 10%;
+    bottom: 15%;
   }
   
   .quotes-section,

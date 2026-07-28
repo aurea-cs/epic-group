@@ -1,0 +1,91 @@
+.module-draft-container {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  font-family: "Inter", sans-serif;
+  flex-direction: row;
+}
+
+.module-draft-left-panel {
+  flex: 0 0 400px;
+  background-size: cover;
+  background-position: top center;
+  background-repeat: no-repeat;
+}
+
+.module-draft-right-panel {
+  flex: 1;
+  background-color: #7334EF;
+  padding: 4rem;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+.module-draft-back-button {
+  position: absolute;
+  top: 20px;
+  right: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  z-index: 10;
+  transition: background 0.3s;
+}
+
+.module-draft-back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.module-draft-title {
+  color: white;
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .module-draft-left-panel {
+    flex: 0 0 300px;
+  }
+  
+  .module-draft-right-panel {
+    padding: 3rem;
+  }
+  
+  .module-draft-title {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .module-draft-container {
+    flex-direction: column;
+  }
+  
+  .module-draft-left-panel {
+    flex: 0 0 200px;
+    width: 100%;
+    background-position: center;
+  }
+  
+  .module-draft-right-panel {
+    padding: 1.5rem;
+    padding-top: 4.5rem; /* room for back button */
+  }
+
+  .module-draft-back-button {
+    top: 15px;
+    right: 15px;
+    padding: 6px 12px;
+    font-size: 0.875rem;
+  }
+  
+  .module-draft-title {
+    font-size: 1.5rem;
+  }
+}

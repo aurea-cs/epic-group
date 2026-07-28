@@ -46,12 +46,12 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, onNavigate }) => {
     const navigate = useNavigate()
     const location = useLocation()
 
-    const navItems = userRole === 'admin' 
-        ? ADMIN_NAV_ITEMS 
-        : userRole === 'student' 
-            ? STUDENT_NAV_ITEMS 
-            : userRole === 'tutor' 
-                ? TUTOR_NAV_ITEMS 
+    const navItems = userRole === 'admin'
+        ? ADMIN_NAV_ITEMS
+        : userRole === 'student'
+            ? STUDENT_NAV_ITEMS
+            : userRole === 'tutor'
+                ? TUTOR_NAV_ITEMS
                 : PROFESSOR_NAV_ITEMS
 
     const isActive = (path: string) => location.pathname.startsWith(path)

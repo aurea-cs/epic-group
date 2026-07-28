@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { User } from '@supabase/supabase-js'
+import './StudentsAdminScreen.css'
 
 interface StudentsAdminScreenProps {
   user: User
@@ -312,10 +313,10 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
       {editingStudent && <EditStudentModal student={editingStudent} allCenters={allCenters} onClose={() => setEditingStudent(null)} onSuccess={fetchStudents} />}
       {deletingStudent && <DeleteConfirmModal student={deletingStudent} onClose={() => setDeletingStudent(null)} onConfirm={handleDelete} deleting={isDeleting} />}
 
-      <div style={{ padding: '2rem 2.5rem', height: 'calc(100vh - 90px)', overflowY: 'auto', boxSizing: 'border-box', fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif", color: '#fff' }}>
+      <div className="students-admin-container">
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '2.5rem' }}>
+        <div className="students-admin-header">
           <div>
             <h1 style={{ margin: 0, fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-0.5px', background: 'linear-gradient(135deg, #c084fc 0%, #a855f7 40%, #7c3aed 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               Gestión de Alumnos
@@ -335,7 +336,7 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+        <div className="students-admin-stats">
           <StatCard icon="🎓" value={students.length} label="Total Alumnos" color="#a855f7" />
           <StatCard icon="🏫" value={allCenters.length} label="Centros" color="#06b6d4" />
           <StatCard icon="🔗" value={students.filter(s => s.centers.length > 0).length} label="Con inscripción" color="#10b981" />
@@ -343,7 +344,7 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
         </div>
 
         {/* Filters */}
-        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="students-admin-filters">
           <div style={{ position: 'relative', flex: '1 1 260px' }}>
             <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '1rem', pointerEvents: 'none' }}>🔍</span>
             <input type="text" placeholder="Buscar por nombre o correo..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ ...inputStyle, paddingLeft: '36px', width: '100%', background: 'rgba(255,255,255,0.06)' }} />
@@ -365,7 +366,7 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
         </div>
 
         {/* Table */}
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', overflow: 'hidden' }}>
+        <div className="students-admin-table-wrap">
           {loading ? (
             <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🎓</div>
@@ -381,8 +382,8 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
               )}
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="students-admin-table-scroll">
+              <table className="students-admin-table">
                 <thead>
                   <tr style={{ background: 'rgba(192,132,252,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                     <Th>Alumno</Th>

@@ -263,3 +263,91 @@
   font-size: 0.68rem;
   opacity: 0.9;
 }
+
+/* ─── Tablet ─── */
+@media (max-width: 1024px) {
+  .schedule-sidebar {
+    width: 240px;
+    padding: 1.25rem;
+    gap: 1.25rem;
+  }
+
+  .user-avatar-circle {
+    width: 45px;
+    height: 45px;
+  }
+
+  .user-info h2 {
+    font-size: 1.1rem;
+  }
+
+  .schedule-main {
+    padding: 1.25rem;
+  }
+}
+
+/* ─── Mobile ─── */
+@media (max-width: 768px) {
+  .schedule-content {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .schedule-sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 1rem;
+    gap: 1rem;
+    box-sizing: border-box;
+  }
+
+  .user-profile-header {
+    width: 100%;
+  }
+
+  .today-panel {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .week-summary {
+    flex: 0 0 auto;
+    min-width: 120px;
+  }
+
+  .schedule-main {
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  .week-grid-wrapper {
+    min-width: 600px;
+  }
+
+  .week-grid-header {
+    grid-template-columns: 55px repeat(6, 1fr);
+  }
+
+  .week-grid-body {
+    grid-template-columns: 55px repeat(6, 1fr);
+  }
+
+  .day-header {
+    font-size: 0.7rem;
+    padding: 0.6rem 0;
+  }
+
+  .time-gutter-slot {
+    font-size: 0.6rem;
+    padding-right: 4px;
+  }
+
+  .class-block-name {
+    font-size: 0.68rem;
+  }
+
+  .class-block-time {
+    font-size: 0.58rem;
+  }
+}

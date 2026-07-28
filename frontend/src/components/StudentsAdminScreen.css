@@ -1,0 +1,127 @@
+/* StudentsAdminScreen.css */
+
+.students-admin-container {
+  padding: 2rem 2.5rem;
+  height: calc(100vh - 90px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  color: #fff;
+}
+
+.students-admin-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.students-admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.students-admin-filters {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.students-admin-table-wrap {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.students-admin-table-scroll {
+  overflow-x: auto;
+}
+
+.students-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 1024px) {
+  .students-admin-container {
+    padding: 1.5rem;
+  }
+
+  .students-admin-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .students-admin-container {
+    padding: 1rem;
+    height: auto;
+  }
+
+  .students-admin-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .students-admin-header h1 {
+    font-size: 1.6rem !important;
+  }
+
+  .students-admin-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .students-admin-filters {
+    flex-direction: column;
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+
+  .students-admin-filters > div,
+  .students-admin-filters > button {
+    width: 100% !important;
+    flex: unset !important;
+  }
+
+  /* Card-style rows for mobile */
+  .students-admin-table thead {
+    display: none;
+  }
+
+  .students-admin-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    gap: 0.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  }
+
+  .students-admin-table tbody td {
+    padding: 0.25rem 0 !important;
+    text-align: left !important;
+  }
+
+  .students-admin-table tbody td:last-child > div {
+    justify-content: flex-start !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .students-admin-stats {
+    grid-template-columns: 1fr;
+  }
+}

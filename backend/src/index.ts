@@ -227,7 +227,80 @@ app.get('/api/students/:studentId/courses', async (req, res) => {
 
 // Get student progress by student ID
 app.get('/api/students/:studentId/progress', async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { professorId } = req.query;
 
+        // 1. Get user details
+        const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('id, full_name, email, avatar_url')
+            .eq('id', studentId)
+            .single();
+
+        if (userError) throw userError;
+
+        // 2. Get enrollments and subjects
+        const { data: enrollments } = await supabase
+            .from('enrollments')
+            .select('subject_id')
+            .eq('student_id', studentId);
+            
+        let courses: any[] = [];
+        if (enrollments && enrollments.length > 0) {
+            const subjectIds = enrollments.map(e => e.subject_id);
+            const { data: subjects } = await supabase
+                .from('subjects')
+                .select('id, name')
+                .in('id', subjectIds);
+                
+            if (subjects) {
+                courses = subjects.map((sub, idx) => ({
+                    id: sub.id,
+                    name: sub.name,
+                    progress: Math.floor(Math.random() * 100), // Mock progress
+                    color: ['#2563eb', '#16a34a', '#d97706', '#9333ea'][idx % 4]
+                }));
+            }
+        }
+
+        // 3. Get comments
+        let commentsQuery = supabase
+            .from('student_comments')
+            .select('id, text, author_name, created_at')
+            .eq('student_id', studentId);
+            
+        if (professorId) {
+            commentsQuery = commentsQuery.eq('professor_id', professorId);
+        }
+        
+        const { data: commentsData } = await commentsQuery.order('created_at', { ascending: false });
+        
+        const comments = (commentsData || []).map(c => ({
+            id: c.id,
+            text: c.text,
+            author: c.author_name,
+            date: new Date(c.created_at).toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            })
+        }));
+
+        // 4. Return the combined payload
+        res.json({
+            id: user.id,
+            name: user.full_name || user.email,
+            email: user.email,
+            avatar: user.avatar_url,
+            courses,
+            grades: [],
+            comments
+        });
+    } catch (error: any) {
+        console.error('Error fetching student progress:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 

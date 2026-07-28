@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
 import { getCourseModules, CourseModule, ModuleItem } from '../lib/adminApi'
-import { Book, Gamepad2, FileText, ArrowRight } from 'lucide-react'
-import group2Img from '../assets/Group_2.png'
+import { Book, Gamepad2, FileText, ArrowRight, Folder, Download, Play } from 'lucide-react'
+import bannerImg from '../assets/banner.png'
+import './ModuleDraftScreen.css'
 
 interface ModuleDraftScreenProps {
   user: User
@@ -163,6 +164,95 @@ const VrCard = ({ num }: { num: number }) => {
   )
 }
 
+const ResourceCard = ({ num }: { num: number }) => {
+  return (
+    <div style={{
+      backgroundColor: '#25164E',
+      borderRadius: '16px',
+      padding: '24px',
+      width: '320px',
+      flexShrink: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+      border: '1px solid rgba(255,255,255,0.05)'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <img
+          src={`https://picsum.photos/seed/recursos${num}/200`}
+          alt={`Recursos ${num}`}
+          style={{
+            width: '180px',
+            height: '180px',
+            borderRadius: '50%',
+            objectFit: 'cover',
+            border: '6px solid #1E40AF'
+          }}
+        />
+      </div>
+      <div>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
+          Tema {num} - Recursos
+        </h3>
+        <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
+          Aquí puedes acceder y descargar información adicional como PDFs, presentaciones y otros materiales que complementan tu aprendizaje y te ayudarán a profundizar en los temas.
+        </p>
+      </div>
+      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <button
+          style={{
+            width: '100%',
+            backgroundColor: 'white',
+            color: '#25164E',
+            border: 'none',
+            padding: '12px',
+            borderRadius: '8px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            transition: 'background 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+        >
+          Descargar Recursos <Download size={16} />
+        </button>
+        <button
+          style={{
+            width: '100%',
+            backgroundColor: 'transparent',
+            color: 'white',
+            border: '1px solid white',
+            padding: '12px',
+            borderRadius: '8px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            transition: 'background 0.2s, color 0.2s'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = 'white';
+            e.currentTarget.style.color = '#25164E';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'white';
+          }}
+        >
+          Ver Video <Play size={16} fill="currentColor" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
   const navigate = useNavigate()
@@ -203,49 +293,23 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
   }
 
   return (
-    <div style={{ display: 'flex', width: '100%', height: '100vh', overflow: 'hidden', fontFamily: '"Inter", sans-serif' }}>
+    <div className="module-draft-container">
       {/* Lado Izquierdo */}
       <div
-        style={{
-          flex: 1,
-          backgroundImage: `url(${group2Img})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
+        className="module-draft-left-panel"
+        style={{ backgroundImage: `url(${bannerImg})` }}
       />
 
       {/* Lado Derecho */}
-      <div style={{
-        flex: 1,
-        backgroundColor: '#7334EF',
-        padding: '4rem',
-        boxSizing: 'border-box',
-        position: 'relative',
-        overflowY: 'auto'
-      }}>
+      <div className="module-draft-right-panel">
         <button
           onClick={() => navigate(-1)}
-          style={{
-            position: 'absolute',
-            top: '20px',
-            right: '40px',
-            background: 'rgba(255,255,255,0.2)',
-            color: 'white',
-            border: 'none',
-            padding: '8px 16px',
-            borderRadius: '20px',
-            cursor: 'pointer',
-            zIndex: 10,
-            transition: 'background 0.3s'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
-          onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+          className="module-draft-back-button"
         >
           ← Regresar
         </button>
 
-        <h1 style={{ color: 'white', fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', marginTop: '1rem' }}>
+        <h1 className="module-draft-title">
           {moduleData?.title ? `Modulo - ${moduleData.title}` : 'Modulo 1 - Nombre del Modulo'}
         </h1>
 
@@ -278,6 +342,25 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
                 No hay contenidos en este módulo.
               </p>
             )}
+          </div>
+        </div>
+
+        {/* Recursos Section */}
+        <div style={{ marginBottom: '4rem' }}>
+          <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
+            <Folder size={24} color="#FCEE50" /> RECURSOS
+          </h2>
+          <div style={{
+            display: 'flex',
+            gap: '24px',
+            overflowX: 'auto',
+            paddingBottom: '2rem',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255,255,255,0.3) transparent'
+          }}>
+            {[1, 2, 3, 4].map(num => (
+              <ResourceCard key={num} num={num} />
+            ))}
           </div>
         </div>
 

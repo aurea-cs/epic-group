@@ -27,22 +27,27 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
             <div className="welcome-text">
               <h1 className="welcome-title">¡Bienvenid@!</h1>
               <h2 className="user-name">{user.user_metadata?.full_name || user.email || 'Usuario'}</h2>
-              <div className="progress-info" onClick={() => navigate(isAdmin ? '/admin' : '/assignments')}>
+              <div className="progress-info" onClick={() => navigate(isAdmin ? '/admin' : userRole === 'professor' ? '/professor/assignments/courses' : '/assignments')}>
                 <img src={medallaIcon} alt="Medalla" className="medal-icon-img" />
                 <span className="grades-text">{isAdmin ? 'Ver centros educativos >' : 'Ver mis cursos >'}</span>
               </div>
               <p className="agenda-text">
                 {isAdmin ? (
                   'Haz click para revisar tus centros educativos'
-                ) : (
+                ) : userRole === 'professor' ? (
                   <>
                     Haz click para checar a tus alumnos<br />
                     y cursos pendientes ¡Accede a tu agenda!
                   </>
+                ) : (
+                  <>
+                    Haz click para checar tus cursos<br />
+                    pendientes ¡Accede a tu agenda!
+                  </>
                 )}
               </p>
-              <button className="level-up-btn" onClick={() => navigate(isAdmin ? '/schedule' : '/alumnos')}>
-                {isAdmin ? 'Ver mi agenda' : 'Ver mis alumnos'}
+              <button className="level-up-btn" onClick={() => navigate(isAdmin ? '/schedule' : userRole === 'professor' ? '/students' : '/schedule')}>
+                {isAdmin ? 'Ver mi agenda' : userRole === 'professor' ? 'Ver mis alumnos' : 'Ver mi agenda'}
               </button>
             </div>
           </div>
