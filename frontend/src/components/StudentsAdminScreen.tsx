@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { User } from '@supabase/supabase-js'
+import CustomSelect from './general/CustomSelect'
 
 interface StudentsAdminScreenProps {
   user: User
@@ -258,7 +259,7 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
   const [allCenters, setAllCenters] = useState<Center[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterCenter, setFilterCenter] = useState('')
+  const [filterCenter, setFilterCenter] = useState('default')
 
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
@@ -302,7 +303,7 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
 
   const filtered = students.filter(s => {
     const matchesSearch = !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.email.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCenter = !filterCenter || s.centers.some(c => c.id === filterCenter)
+    const matchesCenter = !filterCenter || filterCenter === 'default' || s.centers.some(c => c.id === filterCenter)
     return matchesSearch && matchesCenter
   })
 
@@ -349,13 +350,17 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
             <input type="text" placeholder="Buscar por nombre o correo..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ ...inputStyle, paddingLeft: '36px', width: '100%', background: 'rgba(255,255,255,0.06)' }} />
           </div>
           <div style={{ flex: '1 1 220px' }}>
-            <select value={filterCenter} onChange={e => setFilterCenter(e.target.value)} style={{ ...inputStyle, width: '100%', background: 'rgba(255,255,255,0.06)', appearance: 'none', cursor: 'pointer' }}>
-              <option value="">Todos los centros</option>
-              {allCenters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <CustomSelect
+              value={filterCenter || 'default'}
+              onChange={setFilterCenter}
+              options={[
+                { value: 'default', label: 'Todos los centros' },
+                ...allCenters.map(c => ({ value: c.id, label: c.name }))
+              ]}
+            />
           </div>
-          {(searchQuery || filterCenter) && (
-            <button onClick={() => { setSearchQuery(''); setFilterCenter('') }} style={{ padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+          {(searchQuery || (filterCenter && filterCenter !== 'default')) && (
+            <button onClick={() => { setSearchQuery(''); setFilterCenter('default') }} style={{ padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
               ✕ Limpiar
             </button>
           )}

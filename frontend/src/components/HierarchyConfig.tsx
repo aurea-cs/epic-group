@@ -333,14 +333,6 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                         )}
                     </div>
 
-                    <div className="content-section" style={{ marginTop: '3rem' }}>
-                        <h2 className="section-title-modern" style={{ color: 'white' }}>Contenido</h2>
-                        <div className="notif-card" style={{ justifyContent: 'center', color: '#94a3b8', border: '1px dashed #cbd5e1', background: 'transparent', boxShadow: 'none', padding: '3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                            <div style={{ fontSize: '2.5rem', opacity: 0.5 }}>📄</div>
-                            <p style={{ margin: 0, textAlign: 'center', color: 'white' }}>Aún no hay PDFs o contenido cargado en la plataforma</p>
-                        </div>
-                    </div>
-
                 </div>
 
                 {/* Styled Type Form Modal */}

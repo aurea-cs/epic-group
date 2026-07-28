@@ -9,11 +9,9 @@ interface SubmissionsTabProps {
     onGrade: (submission: Submission) => void
 }
 
-type StatusFilter = '' | 'graded' | 'ungraded'
-
 const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ loading, submissions, onGrade }) => {
     const [searchQuery, setSearchQuery] = useState('')
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>('')
+    const [statusFilter, setStatusFilter] = useState<string>('default')
 
     const filtered = useMemo(() => {
         return submissions.filter(s => {
@@ -21,6 +19,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ loading, submissions, o
             const isGraded = s.grade != null || !!s.graded_at
             const matchesStatus =
                 !statusFilter ||
+                statusFilter === 'default' ||
                 (statusFilter === 'graded' && isGraded) ||
                 (statusFilter === 'ungraded' && !isGraded)
             return matchesSearch && matchesStatus
@@ -43,8 +42,8 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ loading, submissions, o
                 </div>
                 <div style={{ flex: '1 1' }}>
                     <CustomSelect
-                        value={statusFilter || 'default'}
-                        onChange={value => setStatusFilter(value === 'default' ? '' : value as StatusFilter)}
+                        value={statusFilter}
+                        onChange={setStatusFilter}
                         options={[
                             { value: 'default', label: 'Todas las entregas' },
                             { value: 'ungraded', label: 'Por calificar' },
@@ -52,9 +51,9 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ loading, submissions, o
                         ]}
                     />
                 </div>
-                {(searchQuery || statusFilter) && (
+                {(searchQuery || (statusFilter && statusFilter !== 'default')) && (
                     <button
-                        onClick={() => { setSearchQuery(''); setStatusFilter('') }}
+                        onClick={() => { setSearchQuery(''); setStatusFilter('default') }}
                         style={{ padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
                     >
                         ✕ Limpiar

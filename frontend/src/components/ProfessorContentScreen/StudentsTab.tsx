@@ -16,7 +16,7 @@ function avatarColor(name: string): string {
   return colors[Math.abs(h) % colors.length]
 }
 
-const StudentsTab: React.FC<StudentsTabProps> = ({ loading, students, onEdit, onDelete, allCenters }) => {
+const StudentsTab: React.FC<StudentsTabProps> = ({ loading, students, onEdit, onDelete }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCenter, setFilterCenter] = useState('')
 
