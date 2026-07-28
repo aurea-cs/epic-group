@@ -49,18 +49,18 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
             { top: '80%', left: '20%' },
             { top: '60%', left: '50%' },
             { top: '35%', left: '30%' },
-            { top: '20%', left: '70%' },
-            { top: '10%', left: '40%' },
+            { top: '40%', left: '70%' },
+            { top: '45%', left: '40%' },
             { top: '75%', left: '75%' },
             { top: '50%', left: '20%' },
-            { top: '45%', left: '80%' },
+            { top: '55%', left: '80%' },
             { top: '85%', left: '50%' },
-            { top: '25%', left: '15%' },
+            { top: '38%', left: '15%' },
             { top: '65%', left: '85%' },
-            { top: '15%', left: '85%' },
+            { top: '42%', left: '85%' },
             { top: '90%', left: '85%' },
-            { top: '40%', left: '55%' },
-            { top: '15%', left: '20%' }
+            { top: '70%', left: '55%' },
+            { top: '48%', left: '20%' }
           ];
           
           if (index < predefined.length) {
@@ -68,7 +68,7 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
           }
           
           return {
-            top: `${15 + (index * 13) % 70}%`,
+            top: `${35 + (index * 13) % 55}%`,
             left: `${15 + (index * 17) % 70}%`
           };
         }
@@ -153,24 +153,7 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
       <div className="map-container">
         <button 
           onClick={() => navigate('/dashboard')} 
-          style={{
-            position: 'absolute',
-            top: '20px',
-            left: '20px',
-            zIndex: 100,
-            background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(255,255,255,0.3)',
-            color: 'white',
-            padding: '10px 20px',
-            borderRadius: '20px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            backdropFilter: 'blur(5px)',
-            transition: 'all 0.3s'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-          onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+          className="assignments-back-button"
         >
           ← Inicio
         </button>

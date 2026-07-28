@@ -27,6 +27,19 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = () => {
   const title = state?.title || `Curso ${courseId}`;
   
   const [subPlanets, setSubPlanets] = useState<any[]>([]);
+  const [radius, setRadius] = useState(250);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 480) setRadius(120);
+      else if (window.innerWidth < 768) setRadius(150);
+      else if (window.innerWidth < 1024) setRadius(200);
+      else setRadius(250);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const fetchModules = async () => {
@@ -37,11 +50,8 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = () => {
         const data = await res.json();
         
         const numSubPlanets = data.length;
-        const radius = 250; 
         const items = data.map((module: any, i: number) => {
           const angle = (i / numSubPlanets) * (2 * Math.PI);
-          const x = Math.cos(angle) * radius;
-          const y = Math.sin(angle) * radius;
           const asset = PLANET_ASSETS[i % PLANET_ASSETS.length];
           
           const mItems = (module.items || []).filter((item: any) => item.type === 'pdf');
@@ -62,7 +72,7 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = () => {
             }
           }
           
-          return { id: module.id, moduleId: module.id, title: module.title, x, y, asset, stars };
+          return { id: module.id, moduleId: module.id, title: module.title, angle, asset, stars };
         });
         setSubPlanets(items);
       } catch (err) {
@@ -105,12 +115,15 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = () => {
         </div>
 
         {/* Planetas orbitando */}
-        {subPlanets.map((sp) => (
+        {subPlanets.map((sp) => {
+          const x = Math.cos(sp.angle) * radius;
+          const y = Math.sin(sp.angle) * radius;
+          return (
           <div
             key={sp.id}
             className="orbiting-planet"
             style={{
-              transform: `translate(calc(-50% + ${sp.x}px), calc(-50% + ${sp.y}px))`
+              transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`
             }}
             onClick={() => handleSubPlanetClick(sp)}
           >
@@ -125,10 +138,11 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = () => {
             <img src={sp.asset} alt={`Sub-planeta ${sp.id}`} />
             <div className="sub-title">{sp.title}</div>
           </div>
-        ))}
+          );
+        })}
 
         {/* Anillo orbital */}
-        <div className="orbit-ring"></div>
+        <div className="orbit-ring" style={{ width: radius * 2, height: radius * 2 }}></div>
       </div>
     </div>
   );

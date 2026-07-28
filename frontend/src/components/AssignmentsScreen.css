@@ -349,3 +349,87 @@
   0% { opacity: 0.7; transform: translateX(-50%) scale(1); }
   100% { opacity: 1; transform: translateX(-50%) scale(1.1); }
 }
+
+/* Responsiveness */
+.assignments-back-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  backdrop-filter: blur(5px);
+  transition: all 0.3s;
+}
+
+.assignments-back-button:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+@media (max-width: 1024px) {
+  .course-map-header h1 {
+    font-size: 26px;
+  }
+  .planet-frame {
+    width: 60px;
+    height: 60px;
+  }
+  .planet-image {
+    width: 50px;
+    height: 50px;
+  }
+  .rocket {
+    transform: scale(0.8) rotate(15deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .course-map-header {
+    padding-top: 60px;
+  }
+  .course-map-header h1 {
+    font-size: 22px;
+  }
+  .course-map-header p {
+    font-size: 13px;
+  }
+  .planet-frame {
+    width: 50px;
+    height: 50px;
+  }
+  .planet-image {
+    width: 40px;
+    height: 40px;
+  }
+  .course-planet-title {
+    font-size: 11px;
+    padding: 2px 6px;
+    bottom: -20px;
+  }
+  .rocket-container {
+    right: 5%;
+  }
+  .rocket {
+    transform: scale(0.6) rotate(15deg);
+  }
+  .start-button {
+    padding: 10px 25px;
+    font-size: 14px;
+  }
+  .start-button-container {
+    bottom: 10%;
+    right: 5%;
+  }
+  .assignments-back-button {
+    top: 15px;
+    left: 15px;
+    padding: 8px 15px;
+    font-size: 12px;
+  }
+}

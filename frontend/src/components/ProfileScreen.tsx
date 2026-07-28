@@ -113,17 +113,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
   }, [user, isProfessor, userRole])
 
   return (
-    <div style={{ padding: '2rem 4rem', backgroundColor: '#f8fafc', minHeight: '100vh', color: '#1e293b' }}>
+    <div className="profile-page-container">
       
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+      <div className="profile-page-header">
         <div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0, color: '#0f172a' }}>Configuración del Perfil</h1>
-          <p style={{ color: '#64748b', fontSize: '1.1rem', marginTop: '0.5rem' }}>Gestiona tu información y preferencias</p>
+          <h1 className="profile-page-title">Configuración del Perfil</h1>
+          <p className="profile-page-subtitle">Gestiona tu información y preferencias</p>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
+      <div className="profile-page-grid">
         
         {/* Left Column - User Info Card */}
         <div style={{ background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -148,7 +148,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
               <span style={{ fontSize: '1.5rem' }}>ℹ️</span> Información Académica
             </h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+            <div className="profile-info-grid">
               <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
                 <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Centros Educativos</div>
                 <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.centers : 'Cargando...'}</div>

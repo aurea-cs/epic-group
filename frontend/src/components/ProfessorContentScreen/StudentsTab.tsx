@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Student } from './types'
 import { ActionButton, tdStyle, thStyle, inputStyleAlt } from '../general/SharedUI'
 
@@ -17,6 +18,7 @@ function avatarColor(name: string): string {
 }
 
 const StudentsTab: React.FC<StudentsTabProps> = ({ loading, students, onEdit, onDelete }) => {
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCenter, setFilterCenter] = useState('')
 
@@ -73,9 +75,10 @@ const StudentsTab: React.FC<StudentsTabProps> = ({ loading, students, onEdit, on
                   {filtered.map((student, idx) => (
                     <tr
                       key={student.id}
-                      style={{ borderBottom: idx < filtered.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'background 0.15s', cursor: 'default' }}
+                      style={{ borderBottom: idx < filtered.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'background 0.15s', cursor: 'pointer' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(192,132,252,0.05)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      onClick={() => navigate(`/alumnos/${student.id}`)}
                     >
                       {/* Avatar + Name */}
                       <td style={tdStyle}>
@@ -112,7 +115,7 @@ const StudentsTab: React.FC<StudentsTabProps> = ({ loading, students, onEdit, on
                       </td>
 
                       {/* Actions */}
-                      <td style={{ ...tdStyle, textAlign: 'right' }}>
+                      <td style={{ ...tdStyle, textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                           <ActionButton label="✏️ Editar" bg="rgba(192,132,252,0.13)" hoverBg="rgba(192,132,252,0.25)" textColor="#e9d5ff" border="1px solid rgba(192,132,252,0.3)" onClick={() => onEdit(student)} />
                           <ActionButton label="🗑️" bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => onDelete(student.id)} />

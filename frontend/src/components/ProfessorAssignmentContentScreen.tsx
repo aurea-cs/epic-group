@@ -465,7 +465,7 @@ const loadStudents = useCallback(async () => {
                 <TabButton label="📝 Entregas" active={activeTab === 'submissions'} onClick={() => setActiveTab('submissions')} />
                 <TabButton label="📅 Eventos" active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} />
                 <TabButton label="👥 Alumnos inscritos" active={activeTab === 'students'} onClick={() => setActiveTab('students')} />
-                <TabButton label="👁️ Vista Alumnos" active={false} onClick={() => navigate('/assignments')} />
+                <TabButton label="🌕 Vista planetas" active={false} onClick={() => navigate('/assignments')} />
 
                 <div style={{ flex: 1 }} />
 

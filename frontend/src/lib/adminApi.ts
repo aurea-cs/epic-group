@@ -489,6 +489,7 @@ export interface ModuleItem {
     order_index: number
     is_visible: boolean
     show_student?: boolean
+    show_teacher?: boolean
     created_at: string
     updated_at: string
 }
