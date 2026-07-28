@@ -17,6 +17,7 @@ import HierarchyConfig from './src/components/HierarchyConfig'
 import SchoolDetailScreen from './src/components/SchoolDetailScreen'
 import CourseFormScreen from './src/components/CourseFormScreen'
 import CalendarScreen from './src/components/CalendarScreen'
+import AssignmentDetailScreen from './src/components/AssignmentDetailScreen'
 import CoursePdfViewerScreen from './src/components/CoursePdfViewerScreen'
 import UploadContentScreen from './src/components/UploadContentScreen'
 import CourseContentScreen from './src/components/CourseContentScreen'
@@ -135,7 +136,7 @@ useEffect(() => {
                     <Route path="/professor/assignments/courses" element={<ProfessorAssignmentCoursesScreen user={user} />} />
                     <Route path="/professor/assignments/courses/:courseId/content" element={<ProfessorAssignmentContentScreen user={user} />} />
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                  </Routes>
+                    <Route path="/assignments/:assignmentId" element={<AssignmentDetailScreen user={user} />} />                  </Routes>
                 </MainLayout>
               ) : (
                 <Navigate to="/login" replace />

@@ -1,5 +1,6 @@
 // CalendarScreen.tsx
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
 import './CalendarScreen.css'
 import { getUserRole } from '../utils/getUserRole'
@@ -12,7 +13,7 @@ interface CalendarItem {
   id: string
   kind: 'assignment' | 'event'
   title: string
-  date: string // YYYY-MM-DD
+  date: string
   time: string | null
   description: string | null
   eventType?: string | null
@@ -35,15 +36,21 @@ function todayKey(): string {
 }
 
 const CalendarScreen: React.FC<CalendarScreenProps> = ({ user }) => {
+  const navigate = useNavigate()
   const today = useMemo(() => new Date(), [])
   const currentYear = today.getFullYear()
-  const currentMonth = today.getMonth() // 0-indexed, browsing floor
+  const currentMonth = today.getMonth()
 
   const [viewMonth, setViewMonth] = useState(currentMonth)
   const [items, setItems] = useState<CalendarItem[]>([])
   const [eventsLoading, setEventsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string>(todayKey())
+
+  // Tooltip state: which item is hovered + where to place it
+  const [hoveredItem, setHoveredItem] = useState<CalendarItem | null>(null)
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const fetchCalendar = async () => {
@@ -80,7 +87,7 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({ user }) => {
 
   const weeks = useMemo(() => {
     const firstOfMonth = new Date(currentYear, viewMonth, 1)
-    const startOffset = firstOfMonth.getDay() // 0 = Sunday
+    const startOffset = firstOfMonth.getDay()
     const daysInMonth = new Date(currentYear, viewMonth + 1, 0).getDate()
 
     const cells: Array<{ day: number | null; dateKey: string | null }> = []
@@ -96,7 +103,26 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({ user }) => {
   }, [currentYear, viewMonth])
 
   const canGoBack = viewMonth > currentMonth
-  const canGoForward = viewMonth < 11 // December
+  const canGoForward = viewMonth < 11
+
+  const handlePillEnter = (item: CalendarItem, e: React.MouseEvent) => {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current)
+    const rect = (e.target as HTMLElement).getBoundingClientRect()
+    setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top })
+    hoverTimeout.current = setTimeout(() => setHoveredItem(item), 250)
+  }
+
+  const handlePillLeave = () => {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current)
+    setHoveredItem(null)
+  }
+
+  const handlePillClick = (item: CalendarItem, e: React.MouseEvent) => {
+    e.stopPropagation() // don't also trigger the day-cell selection
+    if (item.kind === 'assignment') {
+      navigate(`/assignments/${item.id}`)
+    }
+  }
 
   return (
     <div className="calendar-screen-container">
@@ -124,7 +150,6 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({ user }) => {
 
           {error && <div className="calendar-inline-error">{error}</div>}
 
-          {/* Grid renders immediately — it only depends on viewMonth/currentYear, not on fetched data */}
           <div className="month-grid-wrapper">
             <div className="weekday-row">
               {WEEKDAY_HEADERS.map((wd, i) => (
@@ -153,19 +178,26 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({ user }) => {
                       onClick={() => setSelectedDate(cell.dateKey!)}
                     >
                       <span className="day-number">{cell.day}</span>
-                        {eventsLoading ? (
+                      {eventsLoading ? (
                         <div className="day-pills">
-                            <span className="day-pill-skeleton" />
+                          <span className="day-pill-skeleton" />
                         </div>
-                        ) : (
+                      ) : (
                         <div className="day-pills">
-                            {dayItems.map(item => (
-                            <span key={`${item.kind}-${item.id}`} className={`day-pill day-pill--${item.kind}`}>
-                                {item.title}
+                          {dayItems.map(item => (
+                            <span
+                              key={`${item.kind}-${item.id}`}
+                              className={`day-pill day-pill--${item.kind}`}
+                              onMouseEnter={(e) => handlePillEnter(item, e)}
+                              onMouseLeave={handlePillLeave}
+                              onClick={(e) => handlePillClick(item, e)}
+                              style={item.kind === 'assignment' ? { cursor: 'pointer' } : undefined}
+                            >
+                              {item.title}
                             </span>
-                            ))}
+                          ))}
                         </div>
-                        )}
+                      )}
                     </button>
                   )
                 })}
@@ -174,6 +206,26 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({ user }) => {
           </div>
         </main>
       </div>
+
+      {hoveredItem && (
+        <div
+          className="calendar-tooltip"
+          style={{ left: tooltipPos.x, top: tooltipPos.y }}
+        >
+          <div className={`calendar-tooltip-badge calendar-tooltip-badge--${hoveredItem.kind}`}>
+            {hoveredItem.kind === 'assignment' ? 'Tarea' : (hoveredItem.eventType || 'Evento')}
+          </div>
+          <h4>{hoveredItem.title}</h4>
+          {hoveredItem.subjectName && <p className="calendar-tooltip-subject">{hoveredItem.subjectName}</p>}
+          {hoveredItem.time && <p className="calendar-tooltip-time">{hoveredItem.time}</p>}
+          <p className="calendar-tooltip-desc">
+            {hoveredItem.description || 'Sin descripción disponible.'}
+          </p>
+          {hoveredItem.kind === 'assignment' && (
+            <p className="calendar-tooltip-hint">Haz clic para ver y entregar</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }
