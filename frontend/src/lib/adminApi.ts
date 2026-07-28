@@ -489,6 +489,7 @@ export interface ModuleItem {
     order_index: number
     is_visible: boolean
     show_student?: boolean
+    show_teacher?: boolean
     created_at: string
     updated_at: string
 }
@@ -505,6 +506,25 @@ export interface CourseModule {
 }
 
 // MODULES
+
+export interface VrCodeEntry {
+    id: string
+    module_id: string
+    code: string
+    created_at: string
+}
+
+export const getModuleVrCode = async (moduleId: string): Promise<VrCodeEntry | null> => {
+    try {
+        const response = await fetch(`${API_URL}/api/modules/${moduleId}/vr-code`)
+        if (response.status === 404) return null
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching VR code:', error)
+        return null
+    }
+}
 
 export const getCourseModules = async (subjectId: string): Promise<CourseModule[]> => {
     try {

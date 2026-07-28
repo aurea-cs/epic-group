@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
-import { getCourseModules, CourseModule, ModuleItem } from '../lib/adminApi'
+import { getCourseModules, getModuleVrCode, CourseModule, ModuleItem, VrCodeEntry } from '../lib/adminApi'
 import { Book, Gamepad2, FileText, ArrowRight, Folder, Download, Play } from 'lucide-react'
 import bannerImg from '../assets/banner.png'
 import './ModuleDraftScreen.css'
@@ -82,7 +82,7 @@ const ContentCard = ({ item, index }: { item: ModuleItem, index: number }) => {
   )
 }
 
-const VrCard = ({ num }: { num: number }) => {
+const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
   return (
     <div style={{
       backgroundColor: '#25164E',
@@ -97,40 +97,37 @@ const VrCard = ({ num }: { num: number }) => {
       border: '1px solid rgba(255,255,255,0.05)'
     }}>
       <img
-        src={`https://picsum.photos/seed/vr${num}/400/250`}
+        src={`https://picsum.photos/seed/vr${vrEntry.id}/400/250`}
         alt="VR Room"
         style={{ width: '100%', height: '200px', objectFit: 'cover' }}
       />
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
         <div>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>Nombre de Sala</h3>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
+            Sala VR
+          </h3>
           <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
-            Explora un mundo inmersivo donde la realidad virtual te transporta a nuevas dimensiones. Disfruta de experiencias interactivas que estimulan tus sentidos y amplían tu imaginación.
+            Explora un mundo inmersivo donde la realidad virtual te transporta a nuevas dimensiones.
           </p>
+          <div style={{
+            marginTop: '10px',
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            borderRadius: '8px',
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Código de acceso
+            </span>
+            <span style={{ fontSize: '1rem', fontWeight: 'bold', color: '#FCEE50', letterSpacing: '0.15em' }}>
+              {vrEntry.code}
+            </span>
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
-          <button style={{
-            flex: 1,
-            backgroundColor: 'white',
-            color: '#25164E',
-            border: 'none',
-            padding: '10px',
-            borderRadius: '8px',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '6px',
-            fontWeight: 'bold',
-            fontSize: '0.875rem',
-            cursor: 'pointer',
-            transition: 'background 0.2s'
-          }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
-            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
-          >
-            Ficha Guia <FileText size={16} />
-          </button>
           <button style={{
             flex: 1,
             backgroundColor: 'transparent',
@@ -164,7 +161,7 @@ const VrCard = ({ num }: { num: number }) => {
   )
 }
 
-const ResourceCard = ({ num }: { num: number }) => {
+const ResourceCard = ({ item, index }: { item: ModuleItem, index: number }) => {
   return (
     <div style={{
       backgroundColor: '#25164E',
@@ -180,8 +177,8 @@ const ResourceCard = ({ num }: { num: number }) => {
     }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <img
-          src={`https://picsum.photos/seed/recursos${num}/200`}
-          alt={`Recursos ${num}`}
+          src={`https://picsum.photos/seed/recursos${item.id || index}/200`}
+          alt={item.title}
           style={{
             width: '180px',
             height: '180px',
@@ -193,96 +190,112 @@ const ResourceCard = ({ num }: { num: number }) => {
       </div>
       <div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
-          Tema {num} - Recursos
+          {item.title}
         </h3>
         <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
-          Aquí puedes acceder y descargar información adicional como PDFs, presentaciones y otros materiales que complementan tu aprendizaje y te ayudarán a profundizar en los temas.
+          {item.description || "Aquí puedes acceder y descargar información adicional como PDFs, presentaciones y otros materiales que complementan tu aprendizaje."}
         </p>
       </div>
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <button
-          style={{
-            width: '100%',
-            backgroundColor: 'white',
-            color: '#25164E',
-            border: 'none',
-            padding: '12px',
-            borderRadius: '8px',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '8px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: 'background 0.2s'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
-        >
-          Descargar Recursos <Download size={16} />
-        </button>
-        <button
-          style={{
-            width: '100%',
-            backgroundColor: 'transparent',
-            color: 'white',
-            border: '1px solid white',
-            padding: '12px',
-            borderRadius: '8px',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '8px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: 'background 0.2s, color 0.2s'
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.backgroundColor = 'white';
-            e.currentTarget.style.color = '#25164E';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = 'white';
-          }}
-        >
-          Ver Video <Play size={16} fill="currentColor" />
-        </button>
+        {item.content_url && (
+          <button
+            onClick={() => window.open(item.content_url!, '_blank')}
+            style={{
+              width: '100%',
+              backgroundColor: 'white',
+              color: '#25164E',
+              border: 'none',
+              padding: '12px',
+              borderRadius: '8px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'background 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+          >
+            {item.type === 'video' ? (
+              <>Ver Video <Play size={16} fill="currentColor" /></>
+            ) : (
+              <>Descargar Recursos <Download size={16} /></>
+            )}
+          </button>
+        )}
+        {!item.content_url && (
+          <button
+            disabled
+            style={{
+              width: '100%',
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              color: 'rgba(255,255,255,0.5)',
+              border: 'none',
+              padding: '12px',
+              borderRadius: '8px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: 'bold',
+              cursor: 'not-allowed',
+            }}
+          >
+            Sin URL configurada
+          </button>
+        )}
       </div>
     </div>
   )
 }
 
-const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
+const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
   const navigate = useNavigate()
   const [moduleData, setModuleData] = useState<CourseModule | null>(null)
+  const [vrEntry, setVrEntry] = useState<VrCodeEntry | null>(null)
   const [loading, setLoading] = useState(true)
   const [, setError] = useState<string | null>(null)
 
+  const isProfessor = user.user_metadata?.role === 'professor' || user.user_metadata?.role === 'admin'
+
   useEffect(() => {
     if (courseId && moduleId) {
-      loadModuleItems()
+      loadData()
     }
   }, [courseId, moduleId])
 
-  const loadModuleItems = async () => {
+  const loadData = async () => {
     try {
       setLoading(true)
-      const modules = await getCourseModules(courseId!)
-      const targetModule = modules.find(m => m.id === moduleId)
+      const [modules, vr] = await Promise.all([
+        getCourseModules(courseId!),
+        getModuleVrCode(moduleId!)
+      ])
 
+      const targetModule = modules.find(m => m.id === moduleId)
       if (!targetModule) {
         throw new Error('Módulo no encontrado')
       }
 
       setModuleData(targetModule)
+      setVrEntry(vr)
     } catch (err: any) {
       setError(err.message || 'Error al cargar los ítems del módulo')
     } finally {
       setLoading(false)
     }
   }
+
+  // Filter contenidos: items with show_student === true
+  const contenidos = (moduleData?.items || []).filter(item => item.show_student === true)
+
+  // Filter recursos: only for professors, items with show_teacher === true
+  const recursos = isProfessor
+    ? (moduleData?.items || []).filter(item => item.show_teacher === true)
+    : []
 
   if (loading) {
     return (
@@ -333,36 +346,44 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
             scrollbarWidth: 'thin',
             scrollbarColor: 'rgba(255,255,255,0.3) transparent'
           }}>
-            {moduleData?.items && moduleData.items.length > 0 ? (
-              moduleData.items.map((item, idx) => (
+            {contenidos.length > 0 ? (
+              contenidos.map((item, idx) => (
                 <ContentCard key={item.id} item={item} index={idx} />
               ))
             ) : (
               <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
-                No hay contenidos en este módulo.
+                No hay contenidos disponibles en este módulo.
               </p>
             )}
           </div>
         </div>
 
-        {/* Recursos Section */}
-        <div style={{ marginBottom: '4rem' }}>
-          <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
-            <Folder size={24} color="#FCEE50" /> RECURSOS
-          </h2>
-          <div style={{
-            display: 'flex',
-            gap: '24px',
-            overflowX: 'auto',
-            paddingBottom: '2rem',
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'rgba(255,255,255,0.3) transparent'
-          }}>
-            {[1, 2, 3, 4].map(num => (
-              <ResourceCard key={num} num={num} />
-            ))}
+        {/* Recursos Section — only for professors */}
+        {isProfessor && (
+          <div style={{ marginBottom: '4rem' }}>
+            <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
+              <Folder size={24} color="#FCEE50" /> RECURSOS
+            </h2>
+            <div style={{
+              display: 'flex',
+              gap: '24px',
+              overflowX: 'auto',
+              paddingBottom: '2rem',
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(255,255,255,0.3) transparent'
+            }}>
+              {recursos.length > 0 ? (
+                recursos.map((item, idx) => (
+                  <ResourceCard key={item.id} item={item} index={idx} />
+                ))
+              ) : (
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
+                  No hay recursos disponibles para este módulo.
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Salas VR Section */}
         <div>
@@ -377,9 +398,13 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = () => {
             scrollbarWidth: 'thin',
             scrollbarColor: 'rgba(255,255,255,0.3) transparent'
           }}>
-            {[1, 2, 3, 4].map(num => (
-              <VrCard key={num} num={num} />
-            ))}
+            {vrEntry ? (
+              <VrCard vrEntry={vrEntry} />
+            ) : (
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
+                No hay salas VR configuradas para este módulo.
+              </p>
+            )}
           </div>
         </div>
       </div>

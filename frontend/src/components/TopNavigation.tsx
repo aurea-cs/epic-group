@@ -28,21 +28,22 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
   { key: 'admin-home', label: 'Inicio', path: '/dashboard' },
   { key: 'schools', label: 'Centros', path: '/admin' },
   { key: 'students', label: 'Alumnos', path: '/students' },
-  { key: 'agenda', label: 'Agenda', path: '/schedule' },
 ]
 
 // Professor navigation items (current default)
 const PROFESSOR_NAV_ITEMS: NavItem[] = [
   { key: 'home', label: 'Inicio', path: '/dashboard' },
   { key: 'my-courses', label: 'Mis cursos', path: '/professor/assignments/courses' },
-  { key: 'agenda', label: 'Mis horarios', path: '/schedule' },
+  { key: 'schedule', label: 'Horario', path: '/schedule' },
+  { key: 'calendar', label: 'Calendario', path: '/calendar' },
 ]
 
 // Student navigation items
 const STUDENT_NAV_ITEMS: NavItem[] = [
   { key: 'home', label: 'Inicio', path: '/dashboard' },
   { key: 'my-courses', label: 'Mis cursos', path: '/assignments' },
-  { key: 'agenda', label: 'Mis horarios', path: '/schedule' },
+  { key: 'schedule', label: 'Horario', path: '/schedule' },
+  { key: 'calendar', label: 'Calendario', path: '/calendar' },
 ]
 
 const TopNavigation: React.FC<TopNavigationProps> = ({
@@ -58,11 +59,10 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
   backgroundColor,
 }) => {
   // Select navigation items based on role
-  const navItems = userRole === 'admin' 
-    ? ADMIN_NAV_ITEMS 
-    : userRole === 'professor' 
-      ? PROFESSOR_NAV_ITEMS 
-      : STUDENT_NAV_ITEMS
+  const navItems =
+    userRole === 'admin' ? ADMIN_NAV_ITEMS
+    : userRole === 'student' ? STUDENT_NAV_ITEMS
+    : PROFESSOR_NAV_ITEMS
   const handleLogoClick = () => {
     if (logoDestination) {
       onNavigate(logoDestination)

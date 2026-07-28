@@ -21,6 +21,7 @@ import ConfirmModal from './general/ConfirmModal'
 import StudentsTab from './ProfessorContentScreen/StudentsTab'
 import StudentFormModal from './ProfessorContentScreen/StudentFormModal'
 import SubmissionsTab from './ProfessorContentScreen/SubmissionsTab'
+import GradingModal from './ProfessorContentScreen/GradingModal'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -191,6 +192,7 @@ async function gradeStudentSubmission(
     return res.json()
 }
 
+
 const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScreenProps> = ({ user }) => {
     const { courseId } = useParams<{ courseId: string }>()
 
@@ -219,8 +221,7 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
 
     const [submissions, setSubmissions] = useState<Submission[]>([])
     const [submissionsLoading, setSubmissionsLoading] = useState(false)
-    // const [showSubmissionModal, setShowSubmissionModal] = useState(false)
-    // const [gradingStudent, setGradingStudent] = useState<Submission | null>(null)
+    const [gradingSubmission, setGradingSubmission] = useState<Submission | null>(null)
     
     const [error, setError] = useState<string | null>(null)
     const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState<string | null>(null)
@@ -311,7 +312,7 @@ const loadStudents = useCallback(async () => {
         if (activeTab === 'assignments') loadAssignments()
         if (activeTab === 'reminders') loadEvents()
         if (activeTab === 'students') loadStudents()
-        if (activeTab === 'submissions') loadSubmissions()
+        if (activeTab === 'submissions') {loadAssignments(); loadSubmissions()} 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab])
 
@@ -384,6 +385,17 @@ const loadStudents = useCallback(async () => {
         setStudents(prev => prev.filter(s => s.id !== id))
     }
 
+    const handleGradeSubmission = async (payload: { grade: number | null; feedback_md: string | null; status: string }) => {
+        if (!gradingSubmission) return
+        const updated = await gradeStudentSubmission(gradingSubmission.id, {
+            ...payload,
+            graded_by: user.id
+        })
+        setSubmissions(prev => prev.map(s => s.id === updated.id ? updated : s))
+        setGradingSubmission(null)
+    }
+
+
     return (
         <div style={{ padding: '2rem 4rem', height: 'calc(100vh - 90px)', overflowY: 'auto', boxSizing: 'border-box', fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif", color: '#fff' }}>
 
@@ -453,7 +465,7 @@ const loadStudents = useCallback(async () => {
                 <TabButton label="📝 Entregas" active={activeTab === 'submissions'} onClick={() => setActiveTab('submissions')} />
                 <TabButton label="📅 Eventos" active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} />
                 <TabButton label="👥 Alumnos inscritos" active={activeTab === 'students'} onClick={() => setActiveTab('students')} />
-                <TabButton label="👁️ Vista Alumnos" active={false} onClick={() => navigate('/assignments')} />
+                <TabButton label="🌕 Vista planetas" active={false} onClick={() => navigate('/assignments')} />
 
                 <div style={{ flex: 1 }} />
 
@@ -521,11 +533,20 @@ const loadStudents = useCallback(async () => {
                 />
             )}
 
-             {activeTab === 'submissions' && (
+            {activeTab === 'submissions' && (
                 <SubmissionsTab
                     loading={submissionsLoading}
                     submissions={submissions}
-                    onGrade={() => gradeStudentSubmission}
+                    onGrade={(submission) => setGradingSubmission(submission)}
+                />
+            )}
+
+            {gradingSubmission && (
+                <GradingModal
+                    submission={gradingSubmission}
+                    maxScore={assignments.find(a => a.id === gradingSubmission.assignment_id)?.max_score ?? null}
+                    onClose={() => setGradingSubmission(null)}
+                    onSubmit={handleGradeSubmission}
                 />
             )}
 

@@ -25,9 +25,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, user }) => {
     const handleLogout = async () => {
         try {
             await auth.signOut()
-            navigate('/login')
-        } catch (error) {
-            console.error('Logout error:', error)
+        } finally {
+            // signOut clears localStorage internally; hard-redirect so React
+            // state is also fully reset (no stale user in memory).
+            window.location.href = '/login'
         }
     }
 
