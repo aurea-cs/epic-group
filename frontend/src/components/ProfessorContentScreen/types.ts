@@ -67,9 +67,10 @@ export interface SubmissionFile {
     file_name: string | null
     storage_path: string | null
     external_url: string | null
-    mime_type: string | null
-    file_size_bytes: number | null
-    uploaded_at: string | null
+    signed_url: string | null 
+    mime_type?: string | null
+    file_size_bytes?: number | null
+    uploaded_at?: string | null
 }
 
 export interface Submission {
@@ -83,6 +84,24 @@ export interface Submission {
     feedback_md: string | null
     graded_at: string | null
     graded_by: string | null
+    studentName: string        
+    body_md?: string | null
+
+}
+
+export interface AssignmentDetail {
+  id: string
+  title: string
+  instructions_md: string | null
+  due_at: string | null
+  available_from: string | null
+  max_score: number | null
+  allowed_file_types: string[] | null
+  max_file_size_mb: number | null
+  allow_resubmission: boolean | null
+  status: string | null
+  subjects: { id: string; name: string; short_name: string | null } | null
+  submission: Submission | null
 }
 
 export type ModuleWithItems = CourseModule & { items?: ModuleItem[] }

@@ -16,6 +16,8 @@ import AssignmentsScreen from './src/components/AssignmentsScreen'
 import HierarchyConfig from './src/components/HierarchyConfig'
 import SchoolDetailScreen from './src/components/SchoolDetailScreen'
 import CourseFormScreen from './src/components/CourseFormScreen'
+import CalendarScreen from './src/components/CalendarScreen'
+import AssignmentDetailScreen from './src/components/AssignmentDetailScreen'
 import CoursePdfViewerScreen from './src/components/CoursePdfViewerScreen'
 import UploadContentScreen from './src/components/UploadContentScreen'
 import CourseContentScreen from './src/components/CourseContentScreen'
@@ -118,6 +120,7 @@ useEffect(() => {
                     <Route path="/progress" element={<ProgressScreen user={user} />} />
                     <Route path="/students" element={<StudentsAdminScreen user={user} />} />
                     <Route path="/schedule" element={<ScheduleScreen user={user} />} />
+                    <Route path="/calendar" element={<CalendarScreen user={user} />} />
                     <Route path="/alumnos" element={<StudentsScreen user={user} />} />
                     <Route path="/alumnos/:studentId" element={<StudentProgressScreen user={user} />} />
                     <Route path="/calificaciones" element={<GradesScreen user={user} />} />
@@ -133,7 +136,7 @@ useEffect(() => {
                     <Route path="/professor/assignments/courses" element={<ProfessorAssignmentCoursesScreen user={user} />} />
                     <Route path="/professor/assignments/courses/:courseId/content" element={<ProfessorAssignmentContentScreen user={user} />} />
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                  </Routes>
+                    <Route path="/assignments/:assignmentId" element={<AssignmentDetailScreen user={user} />} />                  </Routes>
                 </MainLayout>
               ) : (
                 <Navigate to="/login" replace />

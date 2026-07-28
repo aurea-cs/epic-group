@@ -1486,16 +1486,10 @@ app.get('/api/subjects/:subjectId/submissions', async (req, res) => {
         const { data, error } = await supabase
             .from('submissions')
             .select(`
-                id,
-                submitted_at,
-                graded_at,
-                graded_by,
-                feedback_md,
-                grade,
-                status,
-                student_id,
-                assignment_id,
+                id, submitted_at, graded_at, graded_by, feedback_md, grade, status, body_md,
+                student_id, assignment_id,
                 assignments!inner(subject_id),
+                users!submissions_student_id_fkey(full_name, firstname, lastname, email),
                 submission_files(id, file_name, storage_path, external_url, mime_type, file_size_bytes, uploaded_at)
             `)
             .eq('assignments.subject_id', subjectId)
@@ -1503,10 +1497,32 @@ app.get('/api/subjects/:subjectId/submissions', async (req, res) => {
 
         if (error) throw error;
 
-        const submissions = data.map(({ assignments, submission_files, ...s }) => ({
-            ...s,
-            files: submission_files || []
-        }));
+        const submissions = await Promise.all(
+            data.map(async ({ assignments, users, submission_files, ...s }) => {
+                const files = await Promise.all(
+                    (submission_files || []).map(async (f) => {
+                        if (f.external_url) return { ...f, signed_url: f.external_url };
+                        if (!f.storage_path) return { ...f, signed_url: null };
+                        const { data: signed, error: signError } = await supabase.storage
+                            .from('submissions')
+                            .createSignedUrl(f.storage_path, 60 * 60);
+                        if (signError) {
+                            console.error('Error signing file:', f.storage_path, signError);
+                            return { ...f, signed_url: null };
+                        }
+                        return { ...f, signed_url: signed.signedUrl };
+                    })
+                );
+
+                const u: any = Array.isArray(users) ? users[0] : users;
+                const studentName = u?.full_name
+                    || [u?.firstname, u?.lastname].filter(Boolean).join(' ')
+                    || u?.email
+                    || 'Alumno desconocido';
+
+                return { ...s, studentName, files };
+            })
+        );
 
         res.json(submissions);
     } catch (error: any) {
@@ -1525,7 +1541,7 @@ app.patch('/api/submissions/:id', async (req, res) => {
             ...(grade !== undefined && { grade }),
             ...(feedback_md !== undefined && { feedback_md }),
             ...(graded_by !== undefined && { graded_by }),
-            ...(status !== undefined && { status: status || 'graded' }),
+            ...(status !== undefined && { status }),
             graded_at: new Date().toISOString()
         };
 
@@ -1543,7 +1559,18 @@ app.patch('/api/submissions/:id', async (req, res) => {
         if (error) throw error;
 
         const { submission_files, ...s } = data;
-        res.json({ ...s, files: submission_files || [] });
+        const files = await Promise.all(
+            (submission_files || []).map(async (f) => {
+                if (f.external_url) return { ...f, signed_url: f.external_url };
+                if (!f.storage_path) return { ...f, signed_url: null };
+                const { data: signed } = await supabase.storage
+                    .from('submissions')
+                    .createSignedUrl(f.storage_path, 60 * 60);
+                return { ...f, signed_url: signed?.signedUrl || null };
+            })
+        );
+
+        res.json({ ...s, files });
     } catch (error: any) {
         console.error('Error grading submission:', error);
         res.status(500).json({ error: error.message });
@@ -2442,6 +2469,94 @@ app.get('/api/users/:userId/profile-details', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// GET calendar items (assignments + events) for a user, from now through end of year
+app.get('/api/calendar/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { role } = req.query;
+
+        // Resolve subject ids the user has access to
+        let subjectIds = [];
+        if (role === 'professor') {
+            const { data, error } = await supabase
+                .from('professor_subjects')
+                .select('subject_id')
+                .eq('professor_id', userId)
+                .eq('is_active', true);
+            if (error) throw error;
+            subjectIds = data.map(r => r.subject_id);
+        } else {
+            const { data, error } = await supabase
+                .from('enrollments')
+                .select('subject_id')
+                .eq('student_id', userId)
+                .eq('status', 'active');
+            if (error) throw error;
+            subjectIds = data.map(r => r.subject_id);
+        }
+
+        if (subjectIds.length === 0) {
+            return res.json([]);
+        }
+
+        const yearStart = `${new Date().getFullYear()}-01-01`;
+        const yearEnd = `${new Date().getFullYear()}-12-31`;
+
+        const [assignmentsRes, eventsRes] = await Promise.all([
+            supabase
+                .from('assignments')
+                .select('id, title, due_at, subject_id, subjects(name, short_name)')
+                .in('subject_id', subjectIds)
+                .gte('due_at', yearStart)
+                .lte('due_at', yearEnd),
+            supabase
+                .from('calendar_events')
+                .select('id, title, description_md, event_date, type, subject_id, subjects(name, short_name)')
+                .in('subject_id', subjectIds)
+                .gte('event_date', yearStart)
+                .lte('event_date', yearEnd)
+        ]);
+
+        if (assignmentsRes.error) throw assignmentsRes.error;
+        if (eventsRes.error) throw eventsRes.error;
+
+        const assignmentItems = (assignmentsRes.data || [])
+            .filter(a => a.due_at)
+            .map(a => {
+                const subj: any = Array.isArray(a.subjects) ? a.subjects[0] : a.subjects;
+                return {
+                    id: a.id,
+                    kind: 'assignment',
+                    title: a.title,
+                    date: a.due_at.split('T')[0],
+                    time: a.due_at.split('T')[1]?.substring(0, 5) || null,
+                    description: null,
+                    subjectName: subj?.short_name || subj?.name || null
+                };
+            });
+
+        const eventItems = (eventsRes.data || []).map(e => {
+            const subj: any = Array.isArray(e.subjects) ? e.subjects[0] : e.subjects;
+            return {
+                id: e.id,
+                kind: 'event',
+                title: e.title,
+                date: e.event_date,
+                time: null,
+                description: e.description_md,
+                eventType: e.type,
+                subjectName: subj?.short_name || subj?.name || null
+            };
+        });
+
+        res.json([...assignmentItems, ...eventItems]);
+    } catch (error: any) {
+        console.error('Error fetching calendar:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // GET weekly schedule for a user (professor or student)
 app.get('/api/schedule/:userId', async (req, res) => {
     try {
@@ -2836,7 +2951,171 @@ app.delete('/api/calendar-events/:id', async (req, res) => {
     }
 });
 
+//================== SUBMISSIONS ===============0000
+
+// GET a single assignment, with the current student's own submission (if any)
+app.get('/api/assignments/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { student_id } = req.query;
+
+        const { data: assignment, error } = await supabase
+            .from('assignments')
+            .select(`
+                id, title, instructions_md, due_at, available_from, max_score,
+                allowed_file_types, max_file_size_mb, allow_resubmission, status,
+                subjects(id, name, short_name)
+            `)
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+
+        let submission = null;
+        if (student_id) {
+            const { data: subData, error: subError } = await supabase
+                .from('submissions')
+                .select(`
+                    id, submitted_at, graded_at, graded_by, feedback_md, grade, status,
+                    attempt_number, body_md,
+                    submission_files(id, file_name, storage_path, external_url, mime_type, file_size_bytes, uploaded_at)
+                `)
+                .eq('assignment_id', id)
+                .eq('student_id', student_id)
+                .order('submitted_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (subError) throw subError;
+            if (subData) {
+                const { submission_files, ...s } = subData;
+                submission = { ...s, files: submission_files || [] };
+            }
+        }
+
+        res.json({ ...assignment, submission });
+    } catch (error: any) {
+        console.error('Error fetching assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/assignments/:id/submit', upload.array('files'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { student_id, body_md } = req.body;
+        const files: any[] = Array.isArray(req.files)
+            ? req.files
+            : (req.files ? Object.values(req.files).flat() : []);
+
+        if (!student_id) {
+            return res.status(400).json({ error: 'student_id is required' });
+        }
+
+        // Enforce the due date server-side
+        const { data: assignment, error: assignmentError } = await supabase
+            .from('assignments')
+            .select('due_at')
+            .eq('id', id)
+            .single();
+
+        if (assignmentError) throw assignmentError;
+
+        if (assignment.due_at && new Date(assignment.due_at).getTime() < Date.now()) {
+            return res.status(400).json({ error: 'La fecha límite de entrega ya pasó.' });
+        }
+
+        // Find and wipe ALL existing submissions for this student+assignment
+        // (not .maybeSingle() — legacy data may have multiple rows per student+assignment)
+        const { data: existingSubs, error: existingError } = await supabase
+            .from('submissions')
+            .select('id, submission_files(id, storage_path)')
+            .eq('assignment_id', id)
+            .eq('student_id', student_id);
+
+        if (existingError) throw existingError;
+
+        if (existingSubs && existingSubs.length > 0) {
+            const allPaths = existingSubs
+                .flatMap(sub => sub.submission_files || [])
+                .map(f => f.storage_path)
+                .filter(Boolean);
+
+            if (allPaths.length > 0) {
+                const { error: removeError } = await supabase.storage
+                    .from('submissions')
+                    .remove(allPaths);
+                if (removeError) console.error('Error removing old files from storage:', removeError);
+            }
+
+            const existingIds = existingSubs.map(s => s.id);
+
+            const { error: deleteFilesError } = await supabase
+                .from('submission_files')
+                .delete()
+                .in('submission_id', existingIds);
+            if (deleteFilesError) throw deleteFilesError;
+
+            const { error: deleteSubError } = await supabase
+                .from('submissions')
+                .delete()
+                .in('id', existingIds);
+            if (deleteSubError) throw deleteSubError;
+        }
+
+        // Create the new (only) submission
+        const { data: submission, error: subError } = await supabase
+            .from('submissions')
+            .insert({
+                assignment_id: id,
+                student_id,
+                body_md: body_md || null,
+                status: 'submitted',
+                attempt_number: 1,
+                submitted_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (subError) throw subError;
+
+        const uploadedFiles = [];
+        for (const file of files) {
+            const path = `submissions/${submission.id}/${Date.now()}-${file.originalname}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('submissions')
+                .upload(path, file.buffer, { contentType: file.mimetype });
+
+            if (uploadError) throw uploadError;
+
+            const { data: fileRow, error: fileError } = await supabase
+                .from('submission_files')
+                .insert({
+                    id: crypto.randomUUID(),
+                    submission_id: submission.id,
+                    storage_path: path,
+                    file_name: file.originalname,
+                    mime_type: file.mimetype,
+                    file_size_bytes: file.size,
+                    uploaded_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+
+            if (fileError) throw fileError;
+            uploadedFiles.push(fileRow);
+        }
+
+        res.status(201).json({ ...submission, files: uploadedFiles });
+    } catch (error: any) {
+        console.error('Error submitting assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Start the server
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
+
