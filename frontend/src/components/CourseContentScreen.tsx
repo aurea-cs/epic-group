@@ -18,9 +18,13 @@ import {
     toggleItemVisibility,
     toggleItemVisibilityProfessor,
     updateModuleItem,
+    getModuleVrCode,
+    saveModuleVrCode,
+    deleteModuleVrCode,
     type Subject,
     type CourseModule,
     type ModuleItem,
+    type VrCodeEntry,
 } from '../lib/adminApi'
 import './HierarchyConfig.css'
 
@@ -64,11 +68,19 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
 
     const [showEditItemModal, setShowEditItemModal] = useState(false)
     const [editingItem, setEditingItem] = useState<ModuleItem | null>(null)
+
+    // VR modal state
+    const [showVrModal, setShowVrModal] = useState(false)
+    const [vrModuleId, setVrModuleId] = useState<string | null>(null)
+    const [existingVrCode, setExistingVrCode] = useState<VrCodeEntry | null>(null)
+    const [vrForm, setVrForm] = useState({ code: '', image_url: '' })
+    const [vrLoading, setVrLoading] = useState(false)
     const [editItemForm, setEditItemForm] = useState<{
         title: string
         description: string
         content_url: string
-    }>({ title: '', description: '', content_url: '' })
+        image_url: string
+    }>({ title: '', description: '', content_url: '', image_url: '' })
 
     // Form states
     const [moduleForm, setModuleForm] = useState({ title: '' })
@@ -76,12 +88,14 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
         type: 'pdf' | 'video' | 'link' | 'assignment',
         title: string,
         description: string,
-        content_url: string
+        content_url: string,
+        image_url: string
     }>({
         type: 'pdf',
         title: '',
         description: '',
-        content_url: ''
+        content_url: '',
+        image_url: ''
     })
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -111,7 +125,8 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
         setEditItemForm({
             title: item.title,
             description: item.description || '',
-            content_url: item.content_url || ''
+            content_url: item.content_url || '',
+            image_url: item.image_url || ''
         })
         setOpenMenuItemId(null)
         setMenuPosition(null)
@@ -124,13 +139,68 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
             await updateModuleItem(editingItem.id, {
                 title: editItemForm.title,
                 description: editItemForm.description,
-                content_url: editItemForm.content_url
+                content_url: editItemForm.content_url,
+                image_url: editItemForm.image_url || undefined
             })
             await loadData()
             setShowEditItemModal(false)
             setEditingItem(null)
         } catch (err: any) {
             alert(err.message || 'Error al guardar cambios')
+        }
+    }
+
+    // ========== VR ROOM HANDLERS ==========
+
+    const handleOpenVrModal = async (moduleId: string) => {
+        setVrModuleId(moduleId)
+        setVrLoading(true)
+        setShowVrModal(true)
+        try {
+            const existing = await getModuleVrCode(moduleId)
+            setExistingVrCode(existing)
+            setVrForm({
+                code: existing?.code || '',
+                image_url: existing?.image_url || ''
+            })
+        } catch {
+            setExistingVrCode(null)
+            setVrForm({ code: '', image_url: '' })
+        } finally {
+            setVrLoading(false)
+        }
+    }
+
+    const handleSaveVrCode = async () => {
+        if (!vrModuleId) return
+        const trimmed = vrForm.code.trim()
+        if (!/^\d{3}$/.test(trimmed)) {
+            alert('El código debe ser exactamente 3 dígitos')
+            return
+        }
+        try {
+            setVrLoading(true)
+            await saveModuleVrCode(vrModuleId, trimmed, vrForm.image_url.trim() || undefined)
+            setShowVrModal(false)
+        } catch (err: any) {
+            alert(err.message || 'Error al guardar código VR')
+        } finally {
+            setVrLoading(false)
+        }
+    }
+
+    const handleDeleteVrCode = async () => {
+        if (!vrModuleId || !confirm('¿Eliminar el código VR de este módulo?')) return
+        try {
+            setVrLoading(true)
+            await deleteModuleVrCode(vrModuleId)
+            setExistingVrCode(null)
+            setVrForm({ code: '', image_url: '' })
+            setShowVrModal(false)
+        } catch (err: any) {
+            alert(err.message || 'Error al eliminar código VR')
+        } finally {
+            setVrLoading(false)
         }
     }
 
@@ -301,7 +371,8 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
             type: 'pdf',
             title: '',
             description: '',
-            content_url: ''
+            content_url: '',
+            image_url: ''
         })
         setSelectedFile(null)
         setShowItemModal(true)
@@ -319,6 +390,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
             } else {
                 await createModuleItem(activeModuleId, {
                     ...itemForm,
+                    image_url: itemForm.image_url || undefined,
                     order_index: 999
                 })
             }
@@ -472,6 +544,12 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                     }}>
                                         <h3 style={{ margin: 0, color: '#1f295a' }}>{module.title}</h3>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button
+                                                onClick={() => handleOpenVrModal(module.id)}
+                                                className="btn-icon"
+                                                title="Sala VR"
+                                                style={{ background: 'rgba(108, 92, 231, 0.12)', color: '#6c5ce7', fontSize: '1rem' }}
+                                            >🥽</button>
                                             <button onClick={() => handleEditModule(module)} className="btn-icon" style={{ background: 'rgba(31, 41, 90, 0.1)', color: '#1f295a' }}>✏️</button>
                                             <button onClick={() => handleDeleteModule(module.id)} className="btn-icon" style={{ background: 'rgba(31, 41, 90, 0.1)', color: '#1f295a' }}>🗑️</button>
                                         </div>
@@ -665,6 +743,16 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                     />
                                 </div>
                             )}
+                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                <label>URL de Imagen <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span></label>
+                                <input
+                                    type="text"
+                                    className="modern-input"
+                                    value={itemForm.image_url}
+                                    onChange={e => setItemForm({ ...itemForm, image_url: e.target.value })}
+                                    placeholder="https://... (imagen de portada)"
+                                />
+                            </div>
                         </div>
                         <div className="modal-actions">
                             <button className="btn-cancel-modern" onClick={() => setShowItemModal(false)}>Cancelar</button>
@@ -787,10 +875,86 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                         />
                     </div>
                 )}
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label>URL de Imagen <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span></label>
+                    <input
+                        type="text"
+                        className="modern-input"
+                        value={editItemForm.image_url}
+                        onChange={e => setEditItemForm({ ...editItemForm, image_url: e.target.value })}
+                        placeholder="https://... (imagen de portada)"
+                    />
+                </div>
             </div>
             <div className="modal-actions">
                 <button className="btn-cancel-modern" onClick={() => setShowEditItemModal(false)}>Cancelar</button>
                 <button className="btn-save-modern" onClick={handleSaveEditItem}>Guardar</button>
+            </div>
+        </div>
+    </div>
+)}
+{showVrModal && (
+    <div className="modal-overlay" onClick={() => !vrLoading && setShowVrModal(false)}>
+        <div className="school-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <div className="modal-header" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>🥽</span>
+                <h2 style={{ margin: 0 }}>{existingVrCode ? 'Editar Sala VR' : 'Vincular Sala VR'}</h2>
+            </div>
+
+            {vrLoading ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#6c5ce7' }}>
+                    <div className="loading-spinner" />
+                </div>
+            ) : (
+                <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
+                    <div className="form-group">
+                        <label>
+                            Código de Sala
+                            <span style={{ fontWeight: 400, opacity: 0.6, marginLeft: '0.4rem' }}>(3 dígitos)</span>
+                        </label>
+                        <input
+                            type="text"
+                            className="modern-input"
+                            value={vrForm.code}
+                            maxLength={3}
+                            onChange={e => setVrForm({ ...vrForm, code: e.target.value.replace(/\D/g, '').slice(0, 3) })}
+                            placeholder="Ej: 042"
+                            autoFocus
+                            style={{ letterSpacing: '0.25em', fontSize: '1.4rem', textAlign: 'center', fontWeight: 700 }}
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>
+                            URL de Imagen
+                            <span style={{ fontWeight: 400, opacity: 0.6, marginLeft: '0.4rem' }}>(opcional)</span>
+                        </label>
+                        <input
+                            type="text"
+                            className="modern-input"
+                            value={vrForm.image_url}
+                            onChange={e => setVrForm({ ...vrForm, image_url: e.target.value })}
+                            placeholder="https://... (preview de la sala)"
+                        />
+                    </div>
+                </div>
+            )}
+
+            <div className="modal-actions" style={{ justifyContent: existingVrCode ? 'space-between' : 'flex-end' }}>
+                {existingVrCode && (
+                    <button
+                        onClick={handleDeleteVrCode}
+                        disabled={vrLoading}
+                        style={{
+                            background: 'transparent', border: '1px solid #dc2626',
+                            color: '#dc2626', borderRadius: '8px', padding: '0.6rem 1.2rem',
+                            cursor: 'pointer', fontSize: '0.875rem'
+                        }}
+                    >Eliminar</button>
+                )}
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button className="btn-cancel-modern" onClick={() => setShowVrModal(false)} disabled={vrLoading}>Cancelar</button>
+                    <button className="btn-save-modern" onClick={handleSaveVrCode} disabled={vrLoading || vrForm.code.length !== 3}>Guardar</button>
+                </div>
             </div>
         </div>
     </div>

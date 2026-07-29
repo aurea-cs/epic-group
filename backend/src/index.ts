@@ -1892,6 +1892,76 @@ app.get('/api/modules/:moduleId/vr-code', async (req, res) => {
     }
 });
 
+// Save (create or update) VR code for a module
+app.put('/api/modules/:moduleId/vr-code', async (req, res) => {
+    try {
+        const { moduleId } = req.params;
+        const { code, image_url } = req.body;
+
+        if (!code) {
+            return res.status(400).json({ error: 'Code is required' });
+        }
+
+        // Check if a record already exists for this module
+        const { data: existing, error: findError } = await supabase
+            .from('module_vr_code')
+            .select('id')
+            .eq('module_id', moduleId)
+            .maybeSingle();
+
+        if (findError) throw findError;
+
+        // Build the payload — include image_url only when provided so that
+        // environments where the column doesn't exist yet don't break.
+        const payload: Record<string, any> = { code: String(code) };
+        if (image_url !== undefined) payload.image_url = image_url || null;
+
+        let data: any;
+        let error: any;
+
+        if (existing) {
+            // UPDATE existing row
+            ({ data, error } = await supabase
+                .from('module_vr_code')
+                .update(payload)
+                .eq('module_id', moduleId)
+                .select()
+                .single());
+        } else {
+            // INSERT new row
+            ({ data, error } = await supabase
+                .from('module_vr_code')
+                .insert({ module_id: moduleId, ...payload })
+                .select()
+                .single());
+        }
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error: any) {
+        console.error('Error saving VR code:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete VR code for a module
+app.delete('/api/modules/:moduleId/vr-code', async (req, res) => {
+    try {
+        const { moduleId } = req.params;
+
+        const { error } = await supabase
+            .from('module_vr_code')
+            .delete()
+            .eq('module_id', moduleId);
+
+        if (error) throw error;
+        res.json({ message: 'VR code deleted successfully' });
+    } catch (error: any) {
+        console.error('Error deleting VR code:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get modules for a subject
 app.get('/api/admin/subjects/:subjectId/modules', async (req, res) => {
     try {
@@ -2003,7 +2073,7 @@ app.delete('/api/admin/modules/:id', async (req, res) => {
 app.post('/api/admin/modules/:moduleId/items', async (req, res) => {
     try {
         const { moduleId } = req.params;
-        const { type, title, description, content_url, order_index } = req.body;
+        const { type, title, description, content_url, order_index, image_url } = req.body;
 
         const { data, error } = await supabase
             .from('module_items')
@@ -2014,6 +2084,7 @@ app.post('/api/admin/modules/:moduleId/items', async (req, res) => {
                 description,
                 content_url,
                 order_index,
+                image_url,
                 is_visible: true
             })
             .select()
@@ -2099,35 +2170,17 @@ app.delete('/api/admin/modules/:id', async (req, res) => {
     }
 });
 
-// Create item
-app.post('/api/admin/modules/:moduleId/items', async (req, res) => {
-    try {
-        const { moduleId } = req.params;
-        const { type, title, description, content_url, order_index } = req.body;
 
-        const { data, error } = await supabase
-            .from('module_items')
-            .insert({ module_id: moduleId, type, title, description, content_url, order_index })
-            .select()
-            .single();
-
-        if (error) throw error;
-        res.status(201).json(data);
-    } catch (error: any) {
-        console.error('Error creating item:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
 
 // Update item
 app.put('/api/admin/items/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, content_url, order_index, is_visible } = req.body;
+        const { title, description, content_url, order_index, is_visible, image_url } = req.body;
 
         const { data, error } = await supabase
             .from('module_items')
-            .update({ title, description, content_url, order_index, is_visible })
+            .update({ title, description, content_url, order_index, is_visible, image_url })
             .eq('id', id)
             .select()
             .single();

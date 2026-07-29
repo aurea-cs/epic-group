@@ -10,6 +10,7 @@ import {
     createSubject,
     updateSubject,
     deleteSubject,
+    deleteGrade,
     type EducationalCenter,
     type GradeLevel,
     type Subject,
@@ -60,6 +61,20 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
         course_id: '',
         visibility: 'active'
     })
+
+    const handleDeleteGrade = async (id: string) => {
+        if (!confirm(`¿Estás seguro de eliminar este ${selectedGrade?.name} y todos sus cursos asociados?`)) return
+        try {
+            setLoading(true)
+            await deleteGrade(id)
+            await loadGrades(centerId!)
+            setShowGradeModal(false)
+        } catch (err: any) {
+            setError(err.message || 'Error al eliminar grado')
+        } finally {
+            setLoading(false)
+        }
+    }
 
     // State for editing
     const [editingGrade, setEditingGrade] = useState<GradeLevel | null>(null)
@@ -261,10 +276,12 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                     </option>
                                 ))}
                             </select>
+                            <button style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer' }} onClick={() => { if (selectedGrade) handleDeleteGrade(selectedGrade.id) }}> 🗑️ </button>
                         </div>
                         <div className="filter-actions">
                             
                         </div>
+                        
                     </div>
 
                     {/* COURSES LIST VIEW */}
@@ -641,7 +658,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                 maxHeight: '90vh',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                background: '#ffffff',
+                                background: '#e7e5e9ff',
                                 color: '#1f295a',
                                 borderRadius: '24px',
                                 border: '1px solid rgba(0, 0, 0, 0.1)',

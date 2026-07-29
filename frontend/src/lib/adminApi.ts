@@ -492,6 +492,7 @@ export interface ModuleItem {
     show_teacher?: boolean
     created_at: string
     updated_at: string
+    image_url?: string
 }
 
 export interface CourseModule {
@@ -512,6 +513,7 @@ export interface VrCodeEntry {
     module_id: string
     code: string
     created_at: string
+    image_url?: string
 }
 
 export const getModuleVrCode = async (moduleId: string): Promise<VrCodeEntry | null> => {
@@ -523,6 +525,40 @@ export const getModuleVrCode = async (moduleId: string): Promise<VrCodeEntry | n
     } catch (error) {
         console.error('Error fetching VR code:', error)
         return null
+    }
+}
+
+export const saveModuleVrCode = async (
+    moduleId: string,
+    code: string,
+    imageUrl?: string
+): Promise<VrCodeEntry> => {
+    try {
+        const response = await fetch(`${API_URL}/api/modules/${moduleId}/vr-code`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, image_url: imageUrl || null }),
+        })
+        if (!response.ok) {
+            const err = await response.json()
+            throw new Error(err.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error saving VR code:', error)
+        throw error
+    }
+}
+
+export const deleteModuleVrCode = async (moduleId: string): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/modules/${moduleId}/vr-code`, {
+            method: 'DELETE',
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    } catch (error) {
+        console.error('Error deleting VR code:', error)
+        throw error
     }
 }
 

@@ -60,6 +60,8 @@ export interface ModuleItem {
     type: 'pdf' | 'video' | 'assignment' | 'link' | string
     content_url?: string | null
     show_student?: boolean | null
+    show_teacher?: boolean | null
+    image_url?: string | null
 }
 
 export interface SubmissionFile {

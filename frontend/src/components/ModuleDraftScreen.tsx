@@ -31,7 +31,7 @@ const ContentCard = ({ item, index, onViewPdf }: { item: ModuleItem, index: numb
     }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <img
-          src={sateliteImg}
+          src={item.image_url || sateliteImg}
           alt={item.title}
           style={{
             width: '180px',
@@ -174,7 +174,7 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
       border: '1px solid rgba(255,255,255,0.05)'
     }}>
       <img
-        src={dentrodespaceshipImg}
+        src={vrEntry.image_url || dentrodespaceshipImg}
         alt="VR Room"
         style={{ width: '100%', height: '200px', objectFit: 'cover' }}
       />
@@ -256,7 +256,7 @@ const ResourceCard = ({ item }: { item: ModuleItem, index: number }) => {
     }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <img
-          src={ciberImg}
+          src={item.image_url || ciberImg}
           alt={item.title}
           style={{
             width: '180px',
