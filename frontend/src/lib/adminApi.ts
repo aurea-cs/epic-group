@@ -672,6 +672,20 @@ export const toggleItemVisibility = async (itemId: string, show_student: boolean
     }
 }
 
+export const toggleItemVisibilityProfessor = async (itemId: string, show_teacher: boolean): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/module-items-p/${itemId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ show_teacher }),
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    } catch (error) {
+        console.error('Error toggling item visibility for professors:', error)
+        throw error
+    }
+}
+
 // ============================================
 // AGENDA
 // ============================================

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
 import {
@@ -14,14 +15,24 @@ import {
     assignSubjectProfessor,
     unassignSubjectProfessor,
     getCenterProfessors,
+    toggleItemVisibility,
+    toggleItemVisibilityProfessor,
+    updateModuleItem,
     type Subject,
     type CourseModule,
+    type ModuleItem,
 } from '../lib/adminApi'
 import './HierarchyConfig.css'
 
 interface CourseContentScreenProps {
     user: User
 }
+
+const Toggle = ({ on, color }: { on: boolean; color: string }) => (
+    <span style={{ width: '30px', height: '16px', borderRadius: '999px', position: 'relative', display: 'inline-block', background: on ? color : 'rgba(31,41,90,0.2)', transition: 'background 0.15s', flexShrink: 0 }}>
+        <span style={{ position: 'absolute', top: '2px', left: on ? '16px' : '2px', width: '12px', height: '12px', borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
+    </span>
+)
 
 const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     const { centerId, gradeId, courseId } = useParams<{ centerId: string, gradeId: string, courseId: string }>()
@@ -44,6 +55,21 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     const [editingModule, setEditingModule] = useState<CourseModule | null>(null)
     const [activeModuleId, setActiveModuleId] = useState<string | null>(null)
 
+    // Visibility state
+    const [visibilityLoading, setVisibilityLoading] = useState<string | null>(null)
+    const [openMenuItemId, setOpenMenuItemId] = useState<string | null>(null)
+
+    const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null)
+    const kebabRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+
+    const [showEditItemModal, setShowEditItemModal] = useState(false)
+    const [editingItem, setEditingItem] = useState<ModuleItem | null>(null)
+    const [editItemForm, setEditItemForm] = useState<{
+        title: string
+        description: string
+        content_url: string
+    }>({ title: '', description: '', content_url: '' })
+
     // Form states
     const [moduleForm, setModuleForm] = useState({ title: '' })
     const [itemForm, setItemForm] = useState<{
@@ -60,11 +86,79 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
+    const handleKebabClick = (_e: React.MouseEvent, itemId: string) => {
+        if (openMenuItemId === itemId) {
+            setOpenMenuItemId(null)
+            setMenuPosition(null)
+            return
+        }
+        const btn = kebabRefs.current[itemId]
+        if (!btn) return
+        const rect = btn.getBoundingClientRect()
+        const menuWidth = 220
+        const menuHeight = 160 // approximate
+        const left = rect.right - menuWidth
+        const spaceBelow = window.innerHeight - rect.bottom
+        const top = spaceBelow < menuHeight
+            ? rect.top - menuHeight - 4   // flip upward if too close to bottom
+            : rect.bottom + 4
+        setMenuPosition({ top, left })
+        setOpenMenuItemId(itemId)
+    }
+
+    const handleOpenEditItem = (item: ModuleItem) => {
+        setEditingItem(item)
+        setEditItemForm({
+            title: item.title,
+            description: item.description || '',
+            content_url: item.content_url || ''
+        })
+        setOpenMenuItemId(null)
+        setMenuPosition(null)
+        setShowEditItemModal(true)
+    }
+
+    const handleSaveEditItem = async () => {
+        if (!editingItem) return
+        try {
+            await updateModuleItem(editingItem.id, {
+                title: editItemForm.title,
+                description: editItemForm.description,
+                content_url: editItemForm.content_url
+            })
+            await loadData()
+            setShowEditItemModal(false)
+            setEditingItem(null)
+        } catch (err: any) {
+            alert(err.message || 'Error al guardar cambios')
+        }
+    }
+
     useEffect(() => {
         if (courseId) {
             loadData()
         }
     }, [courseId])
+
+    const menuRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        const close = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setOpenMenuItemId(null)
+                setMenuPosition(null)
+            }
+        }
+        const closeOnScroll = () => { setOpenMenuItemId(null); setMenuPosition(null) }
+        document.addEventListener('mousedown', close)
+        window.addEventListener('scroll', closeOnScroll, true)
+        window.addEventListener('resize', closeOnScroll)
+        return () => {
+            document.removeEventListener('mousedown', close)
+            window.removeEventListener('scroll', closeOnScroll, true)
+            window.removeEventListener('resize', closeOnScroll)
+        }
+    }, [])
 
     const loadData = async () => {
         if (!courseId) return
@@ -82,6 +176,32 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
             setError(err.message || 'Error al cargar datos del curso')
         } finally {
             setLoading(false)
+        }
+    }
+
+    // ========== VISIBILITY HANDLERS ==========
+
+    const handleToggleStudentVisibility = async (item: ModuleItem) => {
+        try {
+            setVisibilityLoading(item.id)
+            await toggleItemVisibility(item.id, !item.show_student)
+            await loadData()
+        } catch (err: any) {
+            alert(err.message || 'Error al cambiar visibilidad para estudiantes')
+        } finally {
+            setVisibilityLoading(null)
+        }
+    }
+
+    const handleToggleProfessorVisibility = async (item: ModuleItem) => {
+        try {
+            setVisibilityLoading(item.id)
+            await toggleItemVisibilityProfessor(item.id, !item.show_teacher)
+            await loadData()
+        } catch (err: any) {
+            alert(err.message || 'Error al cambiar visibilidad para profesores')
+        } finally {
+            setVisibilityLoading(null)
         }
     }
 
@@ -361,34 +481,69 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                     <div style={{ padding: '1rem' }}>
                                         {module.items && module.items.length > 0 ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                {module.items.map(item => (
-                                                    <div key={item.id} style={{
-                                                        padding: '1rem',
-                                                        background: '#1f295a',
-                                                        borderRadius: '8px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '1rem',
-                                                        color: '#ffffff'
-                                                    }}>
-                                                        <div style={{ fontSize: '1.5rem' }}>
-                                                            {item.type === 'pdf' ? '📄' : item.type === 'video' ? '🎥' : item.type === 'assignment' ? '📝' : '🔗'}
-                                                        </div>
-                                                        <div style={{ flex: 1 }}>
-                                                            <div style={{ fontWeight: 'bold' }}>{item.title}</div>
-                                                            {item.description && <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>{item.description}</div>}
-                                                        </div>
-                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                            {item.content_url && (
-                                                                <a href={item.content_url} target="_blank" rel="noopener noreferrer" className="btn-icon" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.2)', color: '#fff' }}>
-                                                                    ⬇️
-                                                                </a>
-                                                            )}
-                                                            <button onClick={() => handleDeleteItem(item.id)} className="btn-icon" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff' }}>🗑️</button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
+    {module.items.map(item => (
+        <div key={item.id} style={{
+            padding: '1rem',
+            background: '#1f295a',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            color: '#ffffff',
+            position: 'relative'
+        }}>
+            <div style={{ fontSize: '1.5rem' }}>
+                {item.type === 'pdf' ? '📄' : item.type === 'video' ? '🎥' : item.type === 'assignment' ? '📝' : '🔗'}
+            </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 'bold' }}>{item.title}</div>
+                {item.description && <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>{item.description}</div>}
+
+                {/* Subtle visibility indicator, always visible, no action needed to read it */}
+                <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.35rem' }}>
+                    <span style={{ fontSize: '0.72rem', color: item.show_student ? '#6ee7a8' : 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: item.show_student ? '#6ee7a8' : 'rgba(255,255,255,0.3)', display: 'inline-block' }} />
+                        Estudiantes
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: item.show_teacher ? '#c4b5fd' : 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: item.show_teacher ? '#c4b5fd' : 'rgba(255,255,255,0.3)', display: 'inline-block' }} />
+                        Profesores
+                    </span>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <button
+                    onClick={() => handleOpenEditItem(item)}
+                    title="Editar"
+                    style={{
+                        width: '28px', height: '28px', borderRadius: '6px', border: 'none',
+                        background: 'rgba(255,255,255,0.12)', color: '#fff',
+                        cursor: 'pointer', fontSize: '0.85rem',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}
+                >
+                    ✏️
+                </button>
+
+                <button
+                    ref={el => { kebabRefs.current[item.id] = el }}
+                    onClick={(e) => handleKebabClick(e, item.id)}
+                    title="Más opciones"
+                    style={{
+                        width: '28px', height: '28px', borderRadius: '6px', border: 'none',
+                        background: openMenuItemId === item.id ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)',
+                        color: '#fff', cursor: 'pointer', fontSize: '1rem',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}
+                >
+                    ⋮
+                </button>
+            </div>
+        </div>
+    ))}
+</div>
                                         ) : (
                                             <p style={{ color: 'rgba(31, 41, 90, 0.5)', fontStyle: 'italic', padding: '1rem' }}>Sin contenido</p>
                                         )}
@@ -415,6 +570,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                     </div>
                 </div>
             </div>
+
 
             {/* MODULE MODAL */}
             {showModuleModal && (
@@ -518,6 +674,127 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                 </div>
             )}
 
+            {openMenuItemId && menuPosition && createPortal(
+    <div
+        ref={menuRef}
+        style={{
+            position: 'fixed',
+            top: menuPosition.top,
+            left: menuPosition.left,
+            zIndex: 9999,
+            background: '#ffffff',
+            borderRadius: '8px',
+            minWidth: '220px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+            overflow: 'hidden',
+            border: '1px solid rgba(0,0,0,0.08)'
+        }}
+    >
+        {/* find the open item to read its current state */}
+        {(() => {
+            const item = modules.flatMap(m => m.items ?? []).find(i => i.id === openMenuItemId)
+            if (!item) return null
+            return (
+                <>
+                    <button
+                        onClick={() => { handleToggleStudentVisibility(item); setOpenMenuItemId(null); setMenuPosition(null) }}
+                        disabled={visibilityLoading === item.id}
+                        style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem' }}
+                        onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
+                        onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                        <span>Visible para estudiantes</span>
+                        <Toggle on={item.show_student!} color="#22c55e" />
+                    </button>
+
+                    <button
+                        onClick={() => { handleToggleProfessorVisibility(item); setOpenMenuItemId(null); setMenuPosition(null) }}
+                        disabled={visibilityLoading === item.id}
+                        style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem' }}
+                        onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
+                        onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                        <span>Visible para profesores</span>
+                        <Toggle on={item.show_teacher!} color="#8b5cf6" />
+                    </button>
+
+                    {item.content_url && (
+                        <>
+                            <div style={{ height: '1px', background: 'rgba(31,41,90,0.1)' }} />
+                            <a
+                                href={item.content_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => { setOpenMenuItemId(null); setMenuPosition(null) }}
+                                style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem', textDecoration: 'none' }}
+                            >
+                                ⬇️ Descargar
+                            </a>
+                        </>
+                    )}
+
+                    <div style={{ height: '1px', background: 'rgba(31,41,90,0.1)' }} />
+
+                    <button
+                        onClick={() => { setOpenMenuItemId(null); setMenuPosition(null); handleDeleteItem(item.id) }}
+                        style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#dc2626', fontSize: '0.875rem' }}
+                        onMouseOver={e => (e.currentTarget.style.background = 'rgba(220,38,38,0.06)')}
+                        onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                        🗑️ Eliminar
+                    </button>
+                </>
+            )
+        })()}
+    </div>,
+    document.body
+)}
+
+{showEditItemModal && editingItem && (
+    <div className="modal-overlay" onClick={() => setShowEditItemModal(false)}>
+        <div className="school-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+                <h2>Editar Contenido</h2>
+            </div>
+            <div className="form-grid">
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label>Título</label>
+                    <input
+                        type="text"
+                        className="modern-input"
+                        value={editItemForm.title}
+                        onChange={e => setEditItemForm({ ...editItemForm, title: e.target.value })}
+                        autoFocus
+                    />
+                </div>
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label>Descripción</label>
+                    <textarea
+                        className="modern-input"
+                        value={editItemForm.description}
+                        onChange={e => setEditItemForm({ ...editItemForm, description: e.target.value })}
+                    />
+                </div>
+                {editingItem.type !== 'pdf' && (
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label>URL del Contenido</label>
+                        <input
+                            type="text"
+                            className="modern-input"
+                            value={editItemForm.content_url}
+                            onChange={e => setEditItemForm({ ...editItemForm, content_url: e.target.value })}
+                            placeholder="https://..."
+                        />
+                    </div>
+                )}
+            </div>
+            <div className="modal-actions">
+                <button className="btn-cancel-modern" onClick={() => setShowEditItemModal(false)}>Cancelar</button>
+                <button className="btn-save-modern" onClick={handleSaveEditItem}>Guardar</button>
+            </div>
+        </div>
+    </div>
+)}
             {/* PROFESSOR ASSIGNMENT MODAL */}
             {showProfessorModal && (
                 <div className="modal-overlay" onClick={() => setShowProfessorModal(false)}>
