@@ -516,25 +516,49 @@ export interface VrCodeEntry {
     image_url?: string
 }
 
-export const getModuleVrCode = async (moduleId: string): Promise<VrCodeEntry | null> => {
+export const getModuleVrCode = async (moduleId: string): Promise<VrCodeEntry[]> => {
     try {
         const response = await fetch(`${API_URL}/api/modules/${moduleId}/vr-code`)
-        if (response.status === 404) return null
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
         return await response.json()
     } catch (error) {
-        console.error('Error fetching VR code:', error)
-        return null
+        console.error('Error fetching VR codes:', error)
+        return []
     }
 }
 
-export const saveModuleVrCode = async (
+export const addModuleVrCode = async (
     moduleId: string,
     code: string,
     imageUrl?: string
 ): Promise<VrCodeEntry> => {
     try {
         const response = await fetch(`${API_URL}/api/modules/${moduleId}/vr-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, image_url: imageUrl || null }),
+        })
+        if (!response.ok) {
+            const err = await response.json()
+            throw new Error(err.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error adding VR code:', error)
+        throw error
+    }
+}
+
+/** @deprecated use addModuleVrCode / updateModuleVrCode instead */
+export const saveModuleVrCode = addModuleVrCode
+
+export const updateModuleVrCode = async (
+    entryId: string,
+    code: string,
+    imageUrl?: string
+): Promise<VrCodeEntry> => {
+    try {
+        const response = await fetch(`${API_URL}/api/modules/vr-code/${entryId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code, image_url: imageUrl || null }),
@@ -545,14 +569,14 @@ export const saveModuleVrCode = async (
         }
         return await response.json()
     } catch (error) {
-        console.error('Error saving VR code:', error)
+        console.error('Error updating VR code:', error)
         throw error
     }
 }
 
-export const deleteModuleVrCode = async (moduleId: string): Promise<void> => {
+export const deleteModuleVrCode = async (entryId: string): Promise<void> => {
     try {
-        const response = await fetch(`${API_URL}/api/modules/${moduleId}/vr-code`, {
+        const response = await fetch(`${API_URL}/api/modules/vr-code/${entryId}`, {
             method: 'DELETE',
         })
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)

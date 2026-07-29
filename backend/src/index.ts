@@ -1868,7 +1868,7 @@ app.get('/api/subjects/:subjectId/students', async (req, res) => {
 
 // ========== COURSE CONTENT (MODULES & ITEMS) ==========
 
-// Get VR code for a module
+// Get ALL VR codes for a module (N:N — a module can have multiple VR rooms)
 app.get('/api/modules/:moduleId/vr-code', async (req, res) => {
     try {
         const { moduleId } = req.params;
@@ -1877,23 +1877,19 @@ app.get('/api/modules/:moduleId/vr-code', async (req, res) => {
             .from('module_vr_code')
             .select('*')
             .eq('module_id', moduleId)
-            .maybeSingle();
+            .order('created_at', { ascending: true });
 
         if (error) throw error;
 
-        if (!data) {
-            return res.status(404).json({ error: 'No VR code found for this module' });
-        }
-
-        res.json(data);
+        res.json(data || []);
     } catch (error: any) {
-        console.error('Error fetching VR code:', error);
+        console.error('Error fetching VR codes:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Save (create or update) VR code for a module
-app.put('/api/modules/:moduleId/vr-code', async (req, res) => {
+// Add a new VR code entry for a module (supports multiple rooms per module)
+app.post('/api/modules/:moduleId/vr-code', async (req, res) => {
     try {
         const { moduleId } = req.params;
         const { code, image_url } = req.body;
@@ -1902,57 +1898,60 @@ app.put('/api/modules/:moduleId/vr-code', async (req, res) => {
             return res.status(400).json({ error: 'Code is required' });
         }
 
-        // Check if a record already exists for this module
-        const { data: existing, error: findError } = await supabase
-            .from('module_vr_code')
-            .select('id')
-            .eq('module_id', moduleId)
-            .maybeSingle();
-
-        if (findError) throw findError;
-
-        // Build the payload — include image_url only when provided so that
-        // environments where the column doesn't exist yet don't break.
-        const payload: Record<string, any> = { code: String(code) };
+        const payload: Record<string, any> = { module_id: moduleId, code: String(code) };
         if (image_url !== undefined) payload.image_url = image_url || null;
 
-        let data: any;
-        let error: any;
-
-        if (existing) {
-            // UPDATE existing row
-            ({ data, error } = await supabase
-                .from('module_vr_code')
-                .update(payload)
-                .eq('module_id', moduleId)
-                .select()
-                .single());
-        } else {
-            // INSERT new row
-            ({ data, error } = await supabase
-                .from('module_vr_code')
-                .insert({ module_id: moduleId, ...payload })
-                .select()
-                .single());
-        }
+        const { data, error } = await supabase
+            .from('module_vr_code')
+            .insert(payload)
+            .select()
+            .single();
 
         if (error) throw error;
-        res.json(data);
+        res.status(201).json(data);
     } catch (error: any) {
-        console.error('Error saving VR code:', error);
+        console.error('Error creating VR code:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Delete VR code for a module
-app.delete('/api/modules/:moduleId/vr-code', async (req, res) => {
+// Update an existing VR code entry by its own ID
+app.put('/api/modules/vr-code/:entryId', async (req, res) => {
     try {
-        const { moduleId } = req.params;
+        const { entryId } = req.params;
+        const { code, image_url } = req.body;
+
+        if (!code) {
+            return res.status(400).json({ error: 'Code is required' });
+        }
+
+        const payload: Record<string, any> = { code: String(code) };
+        if (image_url !== undefined) payload.image_url = image_url || null;
+
+        const { data, error } = await supabase
+            .from('module_vr_code')
+            .update(payload)
+            .eq('id', entryId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error: any) {
+        console.error('Error updating VR code:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete a specific VR code entry by its own ID
+app.delete('/api/modules/vr-code/:entryId', async (req, res) => {
+    try {
+        const { entryId } = req.params;
 
         const { error } = await supabase
             .from('module_vr_code')
             .delete()
-            .eq('module_id', moduleId);
+            .eq('id', entryId);
 
         if (error) throw error;
         res.json({ message: 'VR code deleted successfully' });

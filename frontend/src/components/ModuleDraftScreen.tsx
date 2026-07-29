@@ -334,7 +334,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ }) => {
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
   const navigate = useNavigate()
   const [moduleData, setModuleData] = useState<CourseModule | null>(null)
-  const [vrEntry, setVrEntry] = useState<VrCodeEntry | null>(null)
+  const [vrEntries, setVrEntries] = useState<VrCodeEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [, setError] = useState<string | null>(null)
   const [activePdfUrl, setActivePdfUrl] = useState<string | null>(null)
@@ -362,7 +362,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ }) => {
       }
 
       setModuleData(targetModule)
-      setVrEntry(vr)
+      setVrEntries(vr)
     } catch (err: any) {
       setError(err.message || 'Error al cargar los ítems del módulo')
     } finally {
@@ -477,7 +477,9 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ }) => {
             scrollbarColor: 'rgba(255,255,255,0.3) transparent'
           }}>
             <VrSchoolCard />
-            {vrEntry && <VrCard vrEntry={vrEntry} />}
+            {vrEntries.map((entry) => (
+              <VrCard key={entry.id} vrEntry={entry} />
+            ))}
           </div>
         </div>
       </div>

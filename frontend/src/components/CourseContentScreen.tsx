@@ -19,7 +19,8 @@ import {
     toggleItemVisibilityProfessor,
     updateModuleItem,
     getModuleVrCode,
-    saveModuleVrCode,
+    addModuleVrCode,
+    updateModuleVrCode,
     deleteModuleVrCode,
     type Subject,
     type CourseModule,
@@ -72,9 +73,11 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     // VR modal state
     const [showVrModal, setShowVrModal] = useState(false)
     const [vrModuleId, setVrModuleId] = useState<string | null>(null)
-    const [existingVrCode, setExistingVrCode] = useState<VrCodeEntry | null>(null)
+    const [vrEntries, setVrEntries] = useState<VrCodeEntry[]>([])
+    const [vrEditingEntry, setVrEditingEntry] = useState<VrCodeEntry | null>(null) // null = adding new
     const [vrForm, setVrForm] = useState({ code: '', image_url: '' })
     const [vrLoading, setVrLoading] = useState(false)
+    const [vrSubView, setVrSubView] = useState<'list' | 'form'>('list') // 'list' shows all entries
     const [editItemForm, setEditItemForm] = useState<{
         title: string
         description: string
@@ -156,22 +159,20 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
         setVrModuleId(moduleId)
         setVrLoading(true)
         setShowVrModal(true)
+        setVrSubView('list')
+        setVrEditingEntry(null)
+        setVrForm({ code: '', image_url: '' })
         try {
-            const existing = await getModuleVrCode(moduleId)
-            setExistingVrCode(existing)
-            setVrForm({
-                code: existing?.code || '',
-                image_url: existing?.image_url || ''
-            })
+            const entries = await getModuleVrCode(moduleId)
+            setVrEntries(entries)
         } catch {
-            setExistingVrCode(null)
-            setVrForm({ code: '', image_url: '' })
+            setVrEntries([])
         } finally {
             setVrLoading(false)
         }
     }
 
-    const handleSaveVrCode = async () => {
+    const handleAddVrCode = async () => {
         if (!vrModuleId) return
         const trimmed = vrForm.code.trim()
         if (!/^\d{3}$/.test(trimmed)) {
@@ -180,28 +181,55 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
         }
         try {
             setVrLoading(true)
-            await saveModuleVrCode(vrModuleId, trimmed, vrForm.image_url.trim() || undefined)
-            setShowVrModal(false)
+            const newEntry = await addModuleVrCode(vrModuleId, trimmed, vrForm.image_url.trim() || undefined)
+            setVrEntries(prev => [...prev, newEntry])
+            setVrSubView('list')
+            setVrForm({ code: '', image_url: '' })
         } catch (err: any) {
-            alert(err.message || 'Error al guardar código VR')
+            alert(err.message || 'Error al agregar código VR')
         } finally {
             setVrLoading(false)
         }
     }
 
-    const handleDeleteVrCode = async () => {
-        if (!vrModuleId || !confirm('¿Eliminar el código VR de este módulo?')) return
+    const handleUpdateVrCode = async () => {
+        if (!vrEditingEntry) return
+        const trimmed = vrForm.code.trim()
+        if (!/^\d{3}$/.test(trimmed)) {
+            alert('El código debe ser exactamente 3 dígitos')
+            return
+        }
         try {
             setVrLoading(true)
-            await deleteModuleVrCode(vrModuleId)
-            setExistingVrCode(null)
+            const updated = await updateModuleVrCode(vrEditingEntry.id, trimmed, vrForm.image_url.trim() || undefined)
+            setVrEntries(prev => prev.map(e => e.id === updated.id ? updated : e))
+            setVrSubView('list')
+            setVrEditingEntry(null)
             setVrForm({ code: '', image_url: '' })
-            setShowVrModal(false)
+        } catch (err: any) {
+            alert(err.message || 'Error al actualizar código VR')
+        } finally {
+            setVrLoading(false)
+        }
+    }
+
+    const handleDeleteVrEntry = async (entryId: string) => {
+        if (!confirm('¿Eliminar esta Sala VR?')) return
+        try {
+            setVrLoading(true)
+            await deleteModuleVrCode(entryId)
+            setVrEntries(prev => prev.filter(e => e.id !== entryId))
         } catch (err: any) {
             alert(err.message || 'Error al eliminar código VR')
         } finally {
             setVrLoading(false)
         }
+    }
+
+    const handleOpenEditEntry = (entry: VrCodeEntry) => {
+        setVrEditingEntry(entry)
+        setVrForm({ code: entry.code, image_url: entry.image_url || '' })
+        setVrSubView('form')
     }
 
     useEffect(() => {
@@ -893,69 +921,125 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
         </div>
     </div>
 )}
+
 {showVrModal && (
-    <div className="modal-overlay" onClick={() => !vrLoading && setShowVrModal(false)}>
+    <div className="modal-overlay" onClick={() => { if (!vrLoading) { setShowVrModal(false) } }}>
         <div className="school-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+
+            {/* Header */}
             <div className="modal-header" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {vrSubView === 'form' && (
+                    <button
+                        onClick={() => { setVrSubView('list'); setVrEditingEntry(null); setVrForm({ code: '', image_url: '' }) }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'rgba(255,255,255,0.7)', padding: '0 0.25rem', lineHeight: 1 }}
+                    >←</button>
+                )}
                 <span style={{ fontSize: '1.5rem' }}>🥽</span>
-                <h2 style={{ margin: 0 }}>{existingVrCode ? 'Editar Sala VR' : 'Vincular Sala VR'}</h2>
+                <h2 style={{ margin: 0 }}>
+                    {vrSubView === 'list'
+                        ? 'Salas VR del Módulo'
+                        : vrEditingEntry ? 'Editar Sala VR' : 'Nueva Sala VR'}
+                </h2>
             </div>
 
             {vrLoading ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: '#6c5ce7' }}>
                     <div className="loading-spinner" />
                 </div>
-            ) : (
-                <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
-                    <div className="form-group">
-                        <label>
-                            Código de Sala
-                            <span style={{ fontWeight: 400, opacity: 0.6, marginLeft: '0.4rem' }}>(3 dígitos)</span>
-                        </label>
-                        <input
-                            type="text"
-                            className="modern-input"
-                            value={vrForm.code}
-                            maxLength={3}
-                            onChange={e => setVrForm({ ...vrForm, code: e.target.value.replace(/\D/g, '').slice(0, 3) })}
-                            placeholder="Ej: 042"
-                            autoFocus
-                            style={{ letterSpacing: '0.25em', fontSize: '1.4rem', textAlign: 'center', fontWeight: 700 }}
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>
-                            URL de Imagen
-                            <span style={{ fontWeight: 400, opacity: 0.6, marginLeft: '0.4rem' }}>(opcional)</span>
-                        </label>
-                        <input
-                            type="text"
-                            className="modern-input"
-                            value={vrForm.image_url}
-                            onChange={e => setVrForm({ ...vrForm, image_url: e.target.value })}
-                            placeholder="https://... (preview de la sala)"
-                        />
-                    </div>
-                </div>
-            )}
 
-            <div className="modal-actions" style={{ justifyContent: existingVrCode ? 'space-between' : 'flex-end' }}>
-                {existingVrCode && (
-                    <button
-                        onClick={handleDeleteVrCode}
-                        disabled={vrLoading}
-                        style={{
-                            background: 'transparent', border: '1px solid #dc2626',
-                            color: '#dc2626', borderRadius: '8px', padding: '0.6rem 1.2rem',
-                            cursor: 'pointer', fontSize: '0.875rem'
-                        }}
-                    >Eliminar</button>
-                )}
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button className="btn-cancel-modern" onClick={() => setShowVrModal(false)} disabled={vrLoading}>Cancelar</button>
-                    <button className="btn-save-modern" onClick={handleSaveVrCode} disabled={vrLoading || vrForm.code.length !== 3}>Guardar</button>
+            ) : vrSubView === 'list' ? (
+                // ── LIST VIEW ──
+                <div style={{ padding: '0.5rem 0 1rem' }}>
+                    {vrEntries.length === 0 ? (
+                        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', padding: '1.5rem 0' }}>
+                            No hay salas VR vinculadas a este módulo
+                        </p>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                            {vrEntries.map(entry => (
+                                <div key={entry.id} style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                    padding: '0.75rem 1rem', borderRadius: '8px',
+                                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)'
+                                }}>
+                                    {entry.image_url ? (
+                                        <img src={entry.image_url} alt="sala" style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
+                                    ) : (
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '6px', background: 'rgba(108,92,231,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>🥽</div>
+                                    )}
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: 700, fontSize: '1.3rem', letterSpacing: '0.2em', color: '#fff' }}>{entry.code}</div>
+                                        {entry.image_url && <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: '0.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.image_url}</div>}
+                                    </div>
+                                    <button
+                                        onClick={() => handleOpenEditEntry(entry)}
+                                        style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '6px', width: '30px', height: '30px', cursor: 'pointer', color: '#fff', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >✏️</button>
+                                    <button
+                                        onClick={() => handleDeleteVrEntry(entry.id)}
+                                        style={{ background: 'rgba(220,38,38,0.15)', border: 'none', borderRadius: '6px', width: '30px', height: '30px', cursor: 'pointer', color: '#f87171', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >🗑️</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
+                        <button className="btn-cancel-modern" onClick={() => setShowVrModal(false)}>Cerrar</button>
+                        <button
+                            className="btn-save-modern"
+                            onClick={() => { setVrEditingEntry(null); setVrForm({ code: '', image_url: '' }); setVrSubView('form') }}
+                        >+ Agregar Sala</button>
+                    </div>
                 </div>
-            </div>
+
+            ) : (
+                // ── FORM VIEW (add or edit) ──
+                <>
+                    <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
+                        <div className="form-group">
+                            <label>
+                                Código de Sala
+                                <span style={{ fontWeight: 400, opacity: 0.6, marginLeft: '0.4rem' }}>(3 dígitos)</span>
+                            </label>
+                            <input
+                                type="text"
+                                className="modern-input"
+                                value={vrForm.code}
+                                maxLength={3}
+                                onChange={e => setVrForm({ ...vrForm, code: e.target.value.replace(/\D/g, '').slice(0, 3) })}
+                                placeholder="Ej: 042"
+                                autoFocus
+                                style={{ letterSpacing: '0.25em', fontSize: '1.4rem', textAlign: 'center', fontWeight: 700 }}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>
+                                URL de Imagen
+                                <span style={{ fontWeight: 400, opacity: 0.6, marginLeft: '0.4rem' }}>(opcional)</span>
+                            </label>
+                            <input
+                                type="text"
+                                className="modern-input"
+                                value={vrForm.image_url}
+                                onChange={e => setVrForm({ ...vrForm, image_url: e.target.value })}
+                                placeholder="https://... (preview de la sala)"
+                            />
+                        </div>
+                    </div>
+                    <div className="modal-actions">
+                        <button
+                            className="btn-cancel-modern"
+                            onClick={() => { setVrSubView('list'); setVrEditingEntry(null); setVrForm({ code: '', image_url: '' }) }}
+                            disabled={vrLoading}
+                        >Cancelar</button>
+                        <button
+                            className="btn-save-modern"
+                            onClick={vrEditingEntry ? handleUpdateVrCode : handleAddVrCode}
+                            disabled={vrLoading || vrForm.code.length !== 3}
+                        >Guardar</button>
+                    </div>
+                </>
+            )}
         </div>
     </div>
 )}
