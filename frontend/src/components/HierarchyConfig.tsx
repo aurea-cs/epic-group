@@ -18,9 +18,6 @@ import {
     type Subject as _Subject,
 } from '../lib/adminApi'
 import { User } from '@supabase/supabase-js'
-import { getGradesByCenter } from '../lib/adminApi'
-import StudentManagement from './StudentManagement'
-import CenterContentUpload from './CenterContentUpload'
 import './HierarchyConfig.css'
 import './ProfessorDashboard.css' // Import for the dashboard cards styling
 
@@ -51,26 +48,6 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
     // State for hierarchy view
     const [activeCenterId,] = useState<string>('')
     const [, setHierarchy] = useState<Hierarchy | null>(null)
-
-    // State for quick actions modal
-    const [showActionModal, setShowActionModal] = useState(false)
-    const [actionType, setActionType] = useState<'pdf' | 'student' | 'course' | null>(null)
-    const [actionCenterId, setActionCenterId] = useState<string>('')
-    const [actionGradeId, setActionGradeId] = useState<string>('')
-    const [actionGrades, setActionGrades] = useState<_GradeLevel[]>([])
-    const [loadingActionGrades, setLoadingActionGrades] = useState(false)
-    const [showDropdown, setShowDropdown] = useState(false)
-
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            const target = e.target as HTMLElement
-            if (!target.closest('.add-dropdown-container')) {
-                setShowDropdown(false)
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
 
     // Load centers on mount
     useEffect(() => {
@@ -107,50 +84,6 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
             setError(err.message || 'Error al cargar centros educativos')
         } finally {
             setLoading(false)
-        }
-    }
-
-    // const _loadGrades = async (centerId: string) => {
-    //     try {
-    //         setLoading(true)
-    //         await getGradesByCenter(centerId)
-    //         // setGrades(data)
-    //     } catch (err: any) {
-    //         setError(err.message || 'Error al cargar grados')
-    //     } finally {
-    //         setLoading(false)
-    //     }
-    // }
-
-    // ========== QUICK ACTIONS FUNCTIONS ==========
-
-    const openActionModal = (type: 'pdf' | 'student' | 'course') => {
-        setActionType(type)
-        setActionCenterId('')
-        setActionGradeId('')
-        setShowActionModal(true)
-    }
-
-    const handleActionCenterChange = async (centerId: string) => {
-        setActionCenterId(centerId)
-        setActionGradeId('')
-        if (actionType === 'course' && centerId) {
-            try {
-                setLoadingActionGrades(true)
-                const grades = await getGradesByCenter(centerId)
-                setActionGrades(grades)
-            } catch (error) {
-                console.error("Error loading grades", error)
-            } finally {
-                setLoadingActionGrades(false)
-            }
-        }
-    }
-
-    const handleActionNext = () => {
-        if (actionType === 'course' && actionCenterId && actionGradeId) {
-            navigate(`/admin/school/${actionCenterId}/grade/${actionGradeId}/course/new`)
-            setShowActionModal(false)
         }
     }
 
@@ -216,7 +149,7 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                         <h2 className="section-title-modern" style={{ color: 'white' }}>Centros educativos</h2>
                         <div className="add-dropdown-container" style={{ position: 'relative' }}>
                             <button
-                                onClick={() => setShowDropdown(!showDropdown)}
+                                onClick={() => handleCreateCenter()}
                                 style={{
                                     background: '#d966ff',
                                     color: '#ffffff',
@@ -234,55 +167,6 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                             >
                                 Agregar... <span style={{ fontSize: '0.8rem', marginLeft: '0.2rem' }}>▼</span>
                             </button>
-
-                            {showDropdown && (
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    right: 0,
-                                    marginTop: '0.5rem',
-                                    background: '#ffffff',
-                                    borderRadius: '12px',
-                                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-                                    border: '1px solid rgba(0,0,0,0.05)',
-                                    minWidth: '220px',
-                                    zIndex: 100,
-                                    overflow: 'hidden'
-                                }}>
-                                    <button
-                                        onClick={() => { openActionModal('pdf'); setShowDropdown(false); }}
-                                        style={{ width: '100%', textAlign: 'left', padding: '1rem', background: 'transparent', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', color: '#1f295a', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        📄 Cargar PDFs
-                                    </button>
-                                    <button
-                                        onClick={() => { openActionModal('student'); setShowDropdown(false); }}
-                                        style={{ width: '100%', textAlign: 'left', padding: '1rem', background: 'transparent', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', color: '#1f295a', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        👥 Registrar Alumnos
-                                    </button>
-                                    <button
-                                        onClick={() => { openActionModal('course'); setShowDropdown(false); }}
-                                        style={{ width: '100%', textAlign: 'left', padding: '1rem', background: 'transparent', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', color: '#1f295a', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        📚 Crear Materia
-                                    </button>
-                                    <button
-                                        onClick={() => { handleCreateCenter(); setShowDropdown(false); }}
-                                        style={{ width: '100%', textAlign: 'left', padding: '1rem', background: 'transparent', border: 'none', cursor: 'pointer', color: '#1f295a', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        🏫 Agregar centro
-                                    </button>
-                                </div>
-                            )}
                         </div>
                     </div>
 
@@ -403,127 +287,6 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                                     {loading ? 'Guardando...' : 'Guardar'}
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Global Action Modal */}
-                {showActionModal && (
-                    <div className="modal-overlay" onClick={() => setShowActionModal(false)}>
-                        <div className="school-modal-content" style={{ 
-                            maxWidth: actionType === 'student' ? '900px' : '600px', 
-                            width: '95%',
-                            background: ['student', 'course'].includes(actionType as string) ? '#ffffff' : undefined
-                        }} onClick={(e) => e.stopPropagation()}>
-
-                            {actionType === 'pdf' && (
-                                <>
-                                    {!actionCenterId ? (
-                                        <div style={{ padding: '1rem' }}>
-                                            <div className="modal-header">
-                                                <div className="modal-icon">📄</div>
-                                                <h2>Seleccionar Centro</h2>
-                                                <p>Elige a qué centro deseas asignar los PDFs.</p>
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Centro Educativo</label>
-                                                <select
-                                                    value={actionCenterId}
-                                                    onChange={(e) => setActionCenterId(e.target.value)}
-                                                    className="modern-input"
-                                                >
-                                                    <option value="">Seleccione un centro...</option>
-                                                    {centers.map(c => (
-                                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div className="modal-actions" style={{ marginTop: '2rem' }}>
-                                                <button className="btn-cancel-modern" onClick={() => setShowActionModal(false)}>
-                                                    Cancelar
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <CenterContentUpload
-                                            centerId={actionCenterId}
-                                            centerName={centers.find(c => c.id === actionCenterId)?.name || ''}
-                                            onClose={() => setShowActionModal(false)}
-                                        />
-                                    )}
-                                </>
-                            )}
-
-                            {actionType === 'student' && (
-                                <div style={{ maxHeight: '85vh', overflowY: 'auto' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '1rem 1rem 0 0' }}>
-                                        <button className="btn-icon" onClick={() => setShowActionModal(false)} style={{ color: '#d966ff', fontSize: '1.5rem', background: 'transparent', border: 'none', cursor: 'pointer' }}>×</button>
-                                    </div>
-                                    <StudentManagement />
-                                </div>
-                            )}
-
-                            {actionType === 'course' && (
-                                <div style={{ padding: '1rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 0 1rem 0' }}>
-                                        <button className="btn-icon" onClick={() => setShowActionModal(false)} style={{ color: '#d966ff', fontSize: '1.5rem', background: 'transparent', border: 'none', cursor: 'pointer' }}>×</button>
-                                    </div>
-                                    <div className="modal-header">
-                                        <div className="modal-icon">📚</div>
-                                        <h2 style={{ color: '#d966ff' }}>Crear Materia</h2>
-                                        <p style={{ color: '#d966ff' }}>Selecciona el centro y grado donde se creará la materia.</p>
-                                    </div>
-                                    <div className="form-grid">
-                                        <div className="form-group">
-                                            <label style={{ color: '#d966ff', fontWeight: 'bold' }}>Centro Educativo</label>
-                                            <select
-                                                value={actionCenterId}
-                                                onChange={(e) => handleActionCenterChange(e.target.value)}
-                                                className="modern-input"
-                                                style={{ background: '#f8fafc', color: '#d966ff', border: '1px solid rgba(217, 102, 255, 0.2)' }}
-                                            >
-                                                <option value="">Seleccione un centro...</option>
-                                                {centers.map(c => (
-                                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        {actionCenterId && (
-                                            <div className="form-group">
-                                                <label style={{ color: '#d966ff', fontWeight: 'bold' }}>Grado</label>
-                                                {loadingActionGrades ? (
-                                                    <p style={{ color: '#d966ff', marginTop: '0.5rem' }}>Cargando grados...</p>
-                                                ) : (
-                                                    <select
-                                                        value={actionGradeId}
-                                                        onChange={(e) => setActionGradeId(e.target.value)}
-                                                        className="modern-input"
-                                                        style={{ background: '#f8fafc', color: '#d966ff', border: '1px solid rgba(217, 102, 255, 0.2)' }}
-                                                    >
-                                                        <option value="">Seleccione un grado...</option>
-                                                        {actionGrades.map(g => (
-                                                            <option key={g.id} value={g.id}>{g.name}</option>
-                                                        ))}
-                                                    </select>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="modal-actions" style={{ marginTop: '2rem' }}>
-                                        <button className="btn-cancel-modern" style={{ color: '#d966ff', borderColor: '#d966ff' }} onClick={() => setShowActionModal(false)}>
-                                            Cancelar
-                                        </button>
-                                        <button
-                                            className="btn-save-modern"
-                                            onClick={handleActionNext}
-                                            disabled={!actionCenterId || !actionGradeId}
-                                            style={{ background: '#d966ff', color: '#ffffff' }}
-                                        >
-                                            Continuar a Crear Materia
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
                 )}

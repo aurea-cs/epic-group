@@ -33,20 +33,20 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
               </div>
               <p className="agenda-text">
                 {isAdmin ? (
-                  'Haz click para revisar los campos formativos de tu grado'
+                  'Haz click para administrar los centros educativos y su contenido.'
                 ) : userRole === 'professor' ? (
                   <>
                     Haz click para checar a tus materias,<br />asignar tareas, y ver entregas de los alumnos.
                   </>
                 ) : (
                   <>
-                    Haz click para ver tus horarios de clase<br />
+                    Haz click para ver tus horarios de clase,<br />
                      ¡Accede a tu agenda!
                   </>
                 )}
               </p>
-              <button className="level-up-btn" onClick={() => navigate(isAdmin ? '/schedule' : userRole === 'professor' ? '/students' : '/schedule')}>
-                {isAdmin ? 'Ver mi agenda' : userRole === 'professor' ? 'Ver mis alumnos' : 'Ver mi agenda'}
+              <button className="level-up-btn" onClick={() => navigate(isAdmin ? '/students' : userRole === 'professor' ? '/students' : '/schedule')}>
+                {isAdmin ? 'Ver alumnos' : userRole === 'professor' ? 'Ver mis alumnos' : 'Ver mi agenda'}
               </button>
             </div>
           </div>
