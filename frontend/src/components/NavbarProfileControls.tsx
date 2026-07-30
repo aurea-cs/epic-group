@@ -70,31 +70,7 @@ const NavbarProfileControls: React.FC<NavbarProfileControlsProps> = ({
 
   return (
     <div className="profile-controls">
-      <button
-        className="notification-button"
-        type="button"
-        aria-label="Abrir notificaciones"
-        onClick={handleNotifications}
-      >
-        <svg
-          className="notification-icon"
-          xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M10 21h4" />
-          <path d="M12 17c3.866 0 7-2.239 7-5v-2a7 7 0 0 0-14 0v2c0 2.761 3.134 5 7 5z" />
-        </svg>
-        {notificationCount > 0 && (
-          <span className="notification-badge">{badgeContent}</span>
-        )}
-      </button>
+
 
       <div
         className={`profile-dropdown ${isOpen ? 'open' : ''}`}

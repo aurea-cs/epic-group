@@ -152,11 +152,6 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
     navigate(`/course/${course.id}/planet/1`, { state: { title: courseTitle, courseTitle: courseTitle } })
   }
 
-  const handleStartCourse = () => {
-    if (coursePlanets.length > 0) {
-      handlePlanetClick(coursePlanets[0].courseData)
-    }
-  }
 
   return (
     <div className="assignments-screen">
@@ -251,12 +246,6 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
           </div>
         </div>
 
-        {/* Botón START */}
-        <div className="start-button-container">
-          <button className="start-button" onClick={handleStartCourse}>
-            START
-          </button>
-        </div>
       </div>
     </div>
   )

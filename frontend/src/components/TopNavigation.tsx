@@ -122,9 +122,7 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
               notificationCount={notificationCount}
               onOpenNotifications={onOpenNotifications}
             />
-            <button className="hamburger-btn" onClick={() => console.log('Menu opened')} aria-label="Menu">
-              <span className="hamburger-icon">=</span>
-            </button>
+
           </div>
         </div>
       </div>

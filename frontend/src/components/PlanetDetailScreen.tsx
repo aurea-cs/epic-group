@@ -26,7 +26,7 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = ({ user }) => {
   const state = location.state as { pdfUrl?: string; title?: string } | null;
 
   const title = state?.title || `Curso ${courseId}`;
-  
+
   const [subPlanets, setSubPlanets] = useState<any[]>([]);
   const [radius, setRadius] = useState(250);
 
@@ -46,28 +46,28 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = ({ user }) => {
     const fetchModules = async () => {
       try {
         if (!courseId) return;
-        
+
         // Fetch modules and read items in parallel
         const [res, readItemsList] = await Promise.all([
           fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/subjects/${courseId}/modules`),
           getStudentReadItems(user.id)
         ]);
-        
+
         if (!res.ok) throw new Error('Error fetching modules');
         const data = await res.json();
-        
+
         const readItemsSet = new Set(readItemsList);
-        
+
         const numSubPlanets = data.length;
         const items = data.map((module: any, i: number) => {
           const angle = (i / numSubPlanets) * (2 * Math.PI);
           const asset = PLANET_ASSETS[i % PLANET_ASSETS.length];
-          
+
           const mItems = (module.items || []).filter((item: any) => item.type === 'pdf');
           const totalItems = mItems.length;
-          
+
           const completedItems = mItems.filter((it: any) => it.is_completed || readItemsSet.has(it.id)).length;
-          
+
           let stars = 0;
           if (totalItems > 0) {
             const progress = completedItems / totalItems;
@@ -79,7 +79,7 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = ({ user }) => {
               stars = 1;
             }
           }
-          
+
           return { id: module.id, moduleId: module.id, title: module.title, angle, asset, stars };
         });
         setSubPlanets(items);
@@ -119,7 +119,7 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = ({ user }) => {
         {/* Planeta central */}
         <div className="central-planet">
           <img src={image30} alt="Planeta Central" />
-          <div className="central-title">Núcleo</div>
+          <div className="central-title">Sala VR</div>
         </div>
 
         {/* Planetas orbitando */}
@@ -127,25 +127,26 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = ({ user }) => {
           const x = Math.cos(sp.angle) * radius;
           const y = Math.sin(sp.angle) * radius;
           return (
-          <div
-            key={sp.id}
-            className="orbiting-planet"
-            style={{
-              transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`
-            }}
-            onClick={() => handleSubPlanetClick(sp)}
-          >
-            <div className="planet-stars-top">
-              {Array.from({ length: 3 }, (_, index) => (
-                <div
-                  key={index}
-                  className={`star ${index < sp.stars ? 'filled' : 'empty'}`}
-                ></div>
-              ))}
+            <div
+              key={sp.id}
+              className="orbiting-planet"
+              style={{
+                left: `calc(50% + ${x}px)`,
+                top: `calc(50% + ${y}px)`
+              }}
+              onClick={() => handleSubPlanetClick(sp)}
+            >
+              <div className="planet-stars-top">
+                {Array.from({ length: 3 }, (_, index) => (
+                  <div
+                    key={index}
+                    className={`star ${index < sp.stars ? 'filled' : 'empty'}`}
+                  ></div>
+                ))}
+              </div>
+              <img src={sp.asset} alt={`Sub-planeta ${sp.id}`} />
+              <div className="sub-title">{sp.title}</div>
             </div>
-            <img src={sp.asset} alt={`Sub-planeta ${sp.id}`} />
-            <div className="sub-title">{sp.title}</div>
-          </div>
           );
         })}
 
