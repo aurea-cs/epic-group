@@ -29,6 +29,8 @@ import {
 } from '../lib/adminApi'
 import './HierarchyConfig.css'
 import ImageUploadField from './general/ImageUploadField'
+import CustomSelect from './general/CustomSelect'
+import ConfirmModal from './general/ConfirmModal'
 
 interface CourseContentScreenProps {
     user: User
@@ -43,6 +45,11 @@ const Toggle = ({ on, color }: { on: boolean; color: string }) => (
 const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     const { centerId, gradeId, courseId } = useParams<{ centerId: string, gradeId: string, courseId: string }>()
     const navigate = useNavigate()
+
+    // Delete state
+    const [confirmDeleteModule, setConfirmDeleteModule] = useState<CourseModule | null>(null)
+    const [confirmDeleteItem, setConfirmDeleteItem] = useState<ModuleItem | null>(null)
+    const [confirmDeleteVrEntry, setConfirmDeleteVrEntry] = useState<VrCodeEntry | null>(null)
 
     const [subject, setSubject] = useState<Subject | null>(null)
     const [modules, setModules] = useState<CourseModule[]>([])
@@ -88,7 +95,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     // Form states
     const [moduleForm, setModuleForm] = useState({ title: '' })
     const [itemForm, setItemForm] = useState<{
-        type: 'pdf' | 'video' | 'link' | 'assignment',
+        type: 'pdf' | 'video' | 'link',
         title: string,
         description: string,
         content_url: string,
@@ -202,7 +209,6 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     }
 
     const handleDeleteVrEntry = async (entryId: string, moduleId: string) => {
-        if (!confirm('¿Eliminar esta Sala VR?')) return
         try {
             setVrLoading(true)
             await deleteModuleVrCode(entryId)
@@ -211,6 +217,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
             alert(err.message || 'Error al eliminar código VR')
         } finally {
             setVrLoading(false)
+            setConfirmDeleteVrEntry(null)
         }
     }
 
@@ -371,13 +378,13 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     }
 
     const handleDeleteModule = async (moduleId: string) => {
-        if (!confirm('¿Estás seguro de eliminar este módulo y todo su contenido?')) return
         try {
             await deleteCourseModule(moduleId)
             await loadData()
         } catch (err: any) {
             alert(err.message || 'Error al eliminar módulo')
         }
+        setConfirmDeleteModule(null)
     }
 
     // ========== ITEM HANDLERS ==========
@@ -419,13 +426,14 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     }
 
     const handleDeleteItem = async (itemId: string) => {
-        if (!confirm('¿Eliminar este elemento?')) return
         try {
             await deleteModuleItem(itemId)
             await loadData()
         } catch (err: any) {
             alert(err.message || 'Error al eliminar elemento')
         }
+                    setConfirmDeleteItem(null)
+
     }
 
     if (loading) {
@@ -461,12 +469,6 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                 style={{ background: 'rgba(31, 41, 90, 0.1)', padding: '0.8rem' }}
                             >
                                 ⚙️
-                            </button>
-                            <button
-                                className="btn-add"
-                                onClick={handleCreateModule}
-                            >
-                                + Módulo
                             </button>
                         </div>
                     </div>
@@ -535,7 +537,13 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                             + Asignar Profesor
                         </button>
                     </div>
-
+                    <button
+                        className="btn-add"
+                        onClick={handleCreateModule}
+                        style={{ marginBottom: '1rem', marginLeft: 'auto', display: 'block' }}
+                    >
+                        Nuevo Módulo
+                    </button>
                     {/* Modules List */}
                     <div className="modules-container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                         {modules.length === 0 ? (
@@ -561,8 +569,8 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                     }}>
                                         <h3 style={{ margin: 0, color: '#1f295a' }}>{module.title}</h3>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            <button onClick={() => handleEditModule(module)} className="btn-icon" style={{ background: 'rgba(31, 41, 90, 0.1)', color: '#1f295a' }}>✏️</button>
-                                            <button onClick={() => handleDeleteModule(module.id)} className="btn-icon" style={{ background: 'rgba(31, 41, 90, 0.1)', color: '#1f295a' }}>🗑️</button>
+                                            <button onClick={() => handleEditModule(module)} className="btn-icon-admin" style={{ background: 'rgba(31, 41, 90, 0.1)', color: '#1f295a' }}>✏️</button>
+                                            <button onClick={() => setConfirmDeleteModule(module)} className="btn-icon-admin" style={{ background: 'rgba(255, 0, 81, 0.2)', color: '#1f295a' }}>🗑️</button>
                                         </div>
                                     </div>
 
@@ -619,7 +627,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                     ✏️
                 </button>
                 <button
-                    onClick={() => handleDeleteVrEntry(entry.id, module.id)}
+                    onClick={() => setConfirmDeleteVrEntry(entry)}
                     title="Eliminar"
                     style={{
                         width: '28px', height: '28px', borderRadius: '6px', border: 'none',
@@ -645,7 +653,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
             position: 'relative'
         }}>
             <div style={{ fontSize: '1.5rem' }}>
-                {item.type === 'pdf' ? '📄' : item.type === 'video' ? '🎥' : item.type === 'assignment' ? '📝' : '🔗'}
+                {item.type === 'pdf' ? '📄' : item.type === 'video' ? '🎥' : '🔗'}
             </div>
 
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -726,7 +734,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                                     cursor: 'pointer'
                                                 }}
                                             >
-                                                🥽 Agregar sala
+                                                🚀 Agregar sala
                                             </button>
                                         </div>
                                     </div>
@@ -771,27 +779,28 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                             <h2>Agregar Contenido</h2>
                         </div>
                         <div className="form-grid">
-                            <div className="form-group">
-                                <label>Tipo</label>
-                                <select
-                                    className="modern-input"
+                            <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+                                <div className="form-group" style={{ width: '100%' }}>
+                                    <label style={{ marginBottom: '12px' }}>Tipo</label>
+                                    <CustomSelect 
+                                    options={[
+                                        { value: 'pdf', label: 'Documento PDF' },
+                                        { value: 'video', label: 'Video' },
+                                        { value: 'link', label: 'Enlace' },
+                                    ]}
                                     value={itemForm.type}
-                                    onChange={e => setItemForm({ ...itemForm, type: e.target.value as any })}
-                                >
-                                    <option value="pdf">Documento PDF</option>
-                                    <option value="video">Video</option>
-                                    <option value="link">Enlace</option>
-                                    <option value="assignment">Tarea</option>
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>Título</label>
-                                <input
-                                    type="text"
-                                    className="modern-input"
-                                    value={itemForm.title}
-                                    onChange={e => setItemForm({ ...itemForm, title: e.target.value })}
-                                />
+                                    onChange={val => setItemForm({ ...itemForm, type: val as any })}
+                                    />
+                                </div>
+                                <div className="form-group" style={{ width: '100%' }}>
+                                    <label>Título</label>
+                                    <input
+                                        type="text"
+                                        className="modern-input"
+                                        value={itemForm.title}
+                                        onChange={e => setItemForm({ ...itemForm, title: e.target.value })}
+                                    />
+                                </div>
                             </div>
                             <div className="form-group" style={{ gridColumn: 'span 2' }}>
                                 <label>Descripción</label>
@@ -901,7 +910,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                 onClick={() => { setOpenMenuItemId(null); setMenuPosition(null) }}
                                 style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem', textDecoration: 'none' }}
                             >
-                                ⬇️ Descargar
+                                ⬇️ Ver contenido
                             </a>
                         </>
                     )}
@@ -909,7 +918,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                     <div style={{ height: '1px', background: 'rgba(31,41,90,0.1)' }} />
 
                     <button
-                        onClick={() => { setOpenMenuItemId(null); setMenuPosition(null); handleDeleteItem(item.id) }}
+                        onClick={() => { setOpenMenuItemId(null); setMenuPosition(null); setConfirmDeleteItem(item) }}
                         style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#dc2626', fontSize: '0.875rem' }}
                         onMouseOver={e => (e.currentTarget.style.background = 'rgba(220,38,38,0.06)')}
                         onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
@@ -944,6 +953,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                     <label>Descripción</label>
                     <textarea
                         className="modern-input"
+                        style={{ minHeight: '120px' }}
                         value={editItemForm.description}
                         onChange={e => setEditItemForm({ ...editItemForm, description: e.target.value })}
                     />
@@ -978,13 +988,12 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
 
 {showVrModal && (
     <div className="modal-overlay" onClick={() => { if (!vrLoading) { setShowVrModal(false) } }}>
-        <div className="school-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+        <div className="school-modal-content" onClick={e => e.stopPropagation()}>
 
             {/* Header */}
             <div className="modal-header" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>🥽</span>
                 <h2 style={{ margin: 0 }}>
-                    {vrEditingEntry ? 'Editar Sala VR' : 'Nueva Sala VR'}
+                    {vrEditingEntry ? '🚀  Editar Sala VR' : '🚀  Nueva Sala VR'}
                 </h2>
             </div>
 
@@ -1116,6 +1125,42 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {confirmDeleteModule !== null && (
+                <ConfirmModal
+                    onCancel={() => setConfirmDeleteModule(null)}
+                    onConfirm={() => handleDeleteModule(confirmDeleteModule.id)}
+                    title="Eliminar módulo"
+                    confirmLabel="Sí, eliminar"
+                    cancelLabel="Cancelar"
+                    danger
+                    message={`¿Estás seguro de eliminar el módulo "${confirmDeleteModule.title}"?`}
+                />
+            )}
+
+            {confirmDeleteItem !== null && (
+                <ConfirmModal
+                    onCancel={() => setConfirmDeleteItem(null)}
+                    onConfirm={() => handleDeleteItem(confirmDeleteItem.id)}
+                    title="Eliminar elemento"
+                    confirmLabel="Sí, eliminar"
+                    cancelLabel="Cancelar"
+                    danger
+                    message={`¿Estás seguro de eliminar el elemento "${confirmDeleteItem.title}"?`}
+                />
+            )}
+
+            {confirmDeleteVrEntry !== null && (
+                <ConfirmModal
+                    onCancel={() => setConfirmDeleteVrEntry(null)}
+                    onConfirm={() => handleDeleteVrEntry(confirmDeleteVrEntry.id, confirmDeleteVrEntry.module_id)}
+                    title="Eliminar Sala VR"
+                    confirmLabel="Sí, eliminar"
+                    cancelLabel="Cancelar"
+                    danger
+                    message={`¿Estás seguro de eliminar la Sala VR "${confirmDeleteVrEntry.title}"?`}
+                />
             )}
         </div>
     )

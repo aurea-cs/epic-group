@@ -18,7 +18,8 @@ import {
 import StudentManagement from './StudentManagement'
 import TeacherManagement from './TeacherManagement'
 import ContentManagement from './ContentManagement'
-import './HierarchyConfig.css' // Reusing styles
+import './HierarchyConfig.css' 
+import ConfirmModal from './general/ConfirmModal'
 
 interface SchoolDetailScreenProps {
     user: User
@@ -27,7 +28,10 @@ interface SchoolDetailScreenProps {
 const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
     const { centerId } = useParams<{ centerId: string }>()
     const navigate = useNavigate()
-
+    
+    // State for confirming deletion
+    const [confirmDeleteGrade, setConfirmDeleteGrade] = useState<GradeLevel | null>(null)
+    const [confirmDeleteSubject, setConfirmDeleteSubject] = useState<Subject | null>(null)
 
     // State for data
     const [center, setCenter] = useState<EducationalCenter | null>(null)
@@ -63,7 +67,6 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
     })
 
     const handleDeleteGrade = async (id: string) => {
-        if (!confirm(`¿Estás seguro de eliminar este ${selectedGrade?.name} y todos sus cursos asociados?`)) return
         try {
             setLoading(true)
             await deleteGrade(id)
@@ -197,7 +200,6 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
     }
 
     const handleDeleteSubject = async (id: string) => {
-        if (!confirm('¿Estás seguro de eliminar esta materia? Se eliminarán todas las secciones asociadas.')) return
         if (!selectedGrade) return
 
         try {
@@ -276,7 +278,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                     </option>
                                 ))}
                             </select>
-                            <button style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer' }} onClick={() => { if (selectedGrade) handleDeleteGrade(selectedGrade.id) }}> 🗑️ </button>
+                            <button style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer' }} onClick={() => { if (selectedGrade) setConfirmDeleteGrade(selectedGrade)}}> 🗑️ </button>
                         </div>
                         <div className="filter-actions">
                             
@@ -313,20 +315,10 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                         </div>
                                         <div className="col-actions">
                                             <button
-                                                className="btn-icon-small"
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    openSubjectDetail(subject)
-                                                }}
-                                                title="Ver Detalle"
-                                            >
-                                                👁️
-                                            </button>
-                                            <button
                                                 className="btn-icon-small delete"
                                                 onClick={(e) => {
                                                     e.stopPropagation()
-                                                    handleDeleteSubject(subject.id)
+                                                    setConfirmDeleteSubject(subject)
                                                 }}
                                                 title="Eliminar"
                                             >
@@ -740,6 +732,34 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                 )
             }
 
+
+            {confirmDeleteGrade && (
+                <ConfirmModal
+                    message={`¿Seguro que quieres eliminar el grado ${selectedGrade?.name} y todos sus cursos?`}
+                    confirmLabel="Sí, eliminar"
+                    cancelLabel="Cancelar"
+                    danger
+                    onConfirm={() => {
+                        handleDeleteGrade(confirmDeleteGrade.id)
+                        setConfirmDeleteGrade(null)
+                    }}
+                    onCancel={() => setConfirmDeleteGrade(null)}
+                />
+            )}
+
+            {confirmDeleteSubject && (
+                <ConfirmModal
+                    message={`¿Seguro que quieres eliminar la materia ${confirmDeleteSubject?.name} y todo su contenido?`}
+                    confirmLabel="Sí, eliminar"
+                    cancelLabel="Cancelar"
+                    danger
+                    onConfirm={() => {
+                        handleDeleteSubject(confirmDeleteSubject.id)
+                        setConfirmDeleteSubject(null)
+                    }}
+                    onCancel={() => setConfirmDeleteSubject(null)}
+                />
+            )}
             {/* NEW: TYPE SELECTION MODAL FOR COURSES (INSIDE GRADE) */}
             {
                 showCourseTypeModal && (
