@@ -119,11 +119,10 @@
 
 .orbiting-planet {
   position: absolute;
-  top: 50%;
-  left: 50%;
   width: 60px;
   height: 60px;
   cursor: pointer;
+  transform: translate(-50%, -50%);
   transition: transform 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -139,7 +138,7 @@
 }
 
 .orbiting-planet:hover {
-  transform: scale(1.2);
+  transform: translate(-50%, -50%) scale(1.2);
 }
 
 .sub-title {

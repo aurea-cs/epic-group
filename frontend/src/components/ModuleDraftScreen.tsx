@@ -4,6 +4,7 @@ import { User } from '@supabase/supabase-js'
 import { getCourseModules, getModuleVrCode, CourseModule, ModuleItem, VrCodeEntry } from '../lib/adminApi'
 import { getUserRole } from '../utils/getUserRole'
 import { Book, Gamepad2, FileText, ArrowRight, Folder, Play } from 'lucide-react'
+import { markItemAsRead } from '../lib/api'
 import bannerImg from '../assets/banner.png'
 import sateliteImg from '../assets/satelite.png'
 import ciberImg from '../assets/ciber.png'
@@ -14,26 +15,27 @@ interface ModuleDraftScreenProps {
   user: User
 }
 
-const ContentCard = ({ item, index, onViewPdf }: { item: ModuleItem, index: number, onViewPdf: (url: string) => void }) => {
-  const handleClick = () => {
-    if (!item.content_url) {
-      alert('Este contenido no tiene una URL configurada aún.');
-      return;
-    }
-    const readItems = JSON.parse(localStorage.getItem('readItems') || '{}');
-    readItems[item.id] = true;
-    localStorage.setItem('readItems', JSON.stringify(readItems));
-    if (item.type === 'pdf') {
-      onViewPdf(item.content_url);
-    } else {
-      window.open(item.content_url, '_blank', 'noopener,noreferrer');
-    }
-  }
-
+const ContentCard = ({ item, index, onViewPdf, userId }: { item: ModuleItem, index: number, onViewPdf: (url: string) => void, userId: string }) => {
   return (
     <div 
       className="hoverable-card"
-      onClick={handleClick}
+      onClick={() => {
+            if (!item.content_url) {
+              alert('Este contenido no tiene una URL configurada aún.');
+              return;
+            }
+            const readItems = JSON.parse(localStorage.getItem('readItems') || '{}');
+            readItems[item.id] = true;
+            localStorage.setItem('readItems', JSON.stringify(readItems));
+            
+            markItemAsRead(userId, item.id).catch(console.error);
+            
+            if (item.type === 'pdf') {
+              onViewPdf(item.content_url);
+            } else {
+              window.open(item.content_url, '_blank', 'noopener,noreferrer');
+            }
+          }}
       style={{
       backgroundColor: '#25164E',
       borderRadius: '16px',
@@ -381,7 +383,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
           }}>
             {contenidos.length > 0 ? (
               contenidos.map((item, idx) => (
-                <ContentCard key={item.id} item={item} index={idx} onViewPdf={handleViewPdf} />
+                <ContentCard key={item.id} item={item} index={idx} onViewPdf={handleViewPdf} userId={user.id} />
               ))
             ) : (
               <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>

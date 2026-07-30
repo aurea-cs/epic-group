@@ -305,12 +305,43 @@ app.get('/api/students/:studentId/progress', async (req, res) => {
                 .in('id', subjectIds);
                 
             if (subjects) {
-                courses = subjects.map((sub, idx) => ({
-                    id: sub.id,
-                    name: sub.name,
-                    progress: Math.floor(Math.random() * 100), // Mock progress
-                    color: ['#2563eb', '#16a34a', '#d97706', '#9333ea'][idx % 4]
-                }));
+                // Fetch progress for these subjects
+                const { data: modules } = await supabase
+                    .from('modules')
+                    .select('id, subject_id, items:module_items(id, type)')
+                    .in('subject_id', subjectIds);
+                    
+                const { data: progressData } = await supabase
+                    .from('student_item_progress')
+                    .select('item_id')
+                    .eq('student_id', studentId);
+                    
+                const completedItemIds = new Set((progressData || []).map(p => p.item_id));
+
+                courses = subjects.map((sub, idx) => {
+                    const subjectModules = (modules || []).filter(m => m.subject_id === sub.id);
+                    let totalPdfs = 0;
+                    let completedPdfs = 0;
+                    
+                    subjectModules.forEach(mod => {
+                        const pdfItems = (mod.items || []).filter((it: any) => it.type === 'pdf');
+                        totalPdfs += pdfItems.length;
+                        pdfItems.forEach((it: any) => {
+                            if (completedItemIds.has(it.id)) {
+                                completedPdfs++;
+                            }
+                        });
+                    });
+                    
+                    const progressPercent = totalPdfs > 0 ? Math.floor((completedPdfs / totalPdfs) * 100) : 0;
+
+                    return {
+                        id: sub.id,
+                        name: sub.name,
+                        progress: progressPercent,
+                        color: ['#2563eb', '#16a34a', '#d97706', '#9333ea'][idx % 4]
+                    };
+                });
             }
         }
 
@@ -353,6 +384,50 @@ app.get('/api/students/:studentId/progress', async (req, res) => {
     }
 });
 
+// ============================================
+// STUDENT ITEM PROGRESS ENDPOINTS
+// ============================================
+
+// Mark an item as read
+app.post('/api/students/:studentId/read-item/:itemId', async (req, res) => {
+    try {
+        const { studentId, itemId } = req.params;
+        const { error } = await supabase
+            .from('student_item_progress')
+            .insert({
+                student_id: studentId,
+                item_id: itemId
+            });
+            
+        // Ignore unique constraint errors if already read
+        if (error && error.code !== '23505') { 
+            throw error;
+        }
+        
+        res.json({ success: true });
+    } catch (error: any) {
+        console.error('Error marking item as read:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get all read items for a student
+app.get('/api/students/:studentId/read-items', async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { data, error } = await supabase
+            .from('student_item_progress')
+            .select('item_id')
+            .eq('student_id', studentId);
+            
+        if (error) throw error;
+        
+        res.json((data || []).map(d => d.item_id));
+    } catch (error: any) {
+        console.error('Error fetching read items:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 
 // Add comment to student
