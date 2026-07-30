@@ -28,6 +28,7 @@ import {
     type VrCodeEntry,
 } from '../lib/adminApi'
 import './HierarchyConfig.css'
+import ImageUploadField from './general/ImageUploadField'
 
 interface CourseContentScreenProps {
     user: User
@@ -831,13 +832,10 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                 </div>
                             )}
                             <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                                <label>URL de Imagen <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span></label>
-                                <input
-                                    type="text"
-                                    className="modern-input"
+                                <ImageUploadField
+                                    label="Imagen de portada"
                                     value={itemForm.image_url}
-                                    onChange={e => setItemForm({ ...itemForm, image_url: e.target.value })}
-                                    placeholder="https://... (imagen de portada)"
+                                    onChange={url => setItemForm({ ...itemForm, image_url: url })}
                                 />
                             </div>
                         </div>
@@ -963,13 +961,10 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                     </div>
                 )}
                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                    <label>URL de Imagen <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span></label>
-                    <input
-                        type="text"
-                        className="modern-input"
+                    <ImageUploadField
+                        label="Imagen de portada"
                         value={editItemForm.image_url}
-                        onChange={e => setEditItemForm({ ...editItemForm, image_url: e.target.value })}
-                        placeholder="https://... (imagen de portada)"
+                        onChange={url => setEditItemForm({ ...editItemForm, image_url: url })}
                     />
                 </div>
             </div>
@@ -1033,16 +1028,10 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                             />
                         </div>
                         <div className="form-group">
-                            <label>
-                                URL de Imagen
-                                <span style={{ fontWeight: 400, opacity: 0.6, marginLeft: '0.4rem' }}>(opcional)</span>
-                            </label>
-                            <input
-                                type="text"
-                                className="modern-input"
+                            <ImageUploadField
+                                label="Imagen de la sala"
                                 value={vrForm.image_url}
-                                onChange={e => setVrForm({ ...vrForm, image_url: e.target.value })}
-                                placeholder="https://... (preview de la sala)"
+                                onChange={url => setVrForm({ ...vrForm, image_url: url })}
                             />
                         </div>
                     </div>

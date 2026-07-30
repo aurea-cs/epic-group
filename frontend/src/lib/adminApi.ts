@@ -754,3 +754,20 @@ export const getUserAgenda = async (userId: string, role: string): Promise<Subje
         throw error
     }
 }
+
+// ============================================
+// IMAGE UPLOAD
+// ============================================
+
+
+export const uploadImage = async (file: File): Promise<string> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await fetch(`${API_URL}/api/upload/image`, {
+        method: 'POST',
+        body: formData,
+    })
+    if (!response.ok) throw new Error(`Upload failed: ${response.status}`)
+    const data = await response.json()
+    return data.url
+}

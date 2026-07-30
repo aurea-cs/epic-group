@@ -50,7 +50,7 @@ const ContentCard = ({ item, index, onViewPdf, userId }: { item: ModuleItem, ind
     }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <img
-          src={item.image_url || sateliteImg}
+          src={item.image_url}
           alt={item.title}
           style={{
             width: '180px',

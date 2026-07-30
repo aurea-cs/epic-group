@@ -26,14 +26,6 @@ const upload = multer({
         fileSize: 60 * 1024 * 1024, // 10MB limit
         files: 10 // Maximum 10 files per upload
     },
-    fileFilter: (req, file, cb) => {
-        // Only accept PDF files
-        if (file.mimetype === 'application/pdf') {
-            cb(null, true);
-        } else {
-            cb(new Error('Only PDF files are allowed'));
-        }
-    }
 });
 
 // Toggle item visibility for professors
@@ -1940,6 +1932,34 @@ app.get('/api/subjects/:subjectId/students', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+app.post('/api/upload/image', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: 'No file provided' })
+
+        const ext = req.file.originalname.split('.').pop()
+        const filename = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+        const storagePath = filename
+
+        const { error } = await supabase.storage
+            .from('images')
+            .upload(storagePath, req.file.buffer, {
+                contentType: req.file.mimetype,
+                upsert: false
+            })
+
+        if (error) throw error
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('images')
+            .getPublicUrl(storagePath)
+
+        res.json({ url: publicUrl })
+    } catch (err: any) {
+        console.error('Image upload error:', err)
+        res.status(500).json({ error: err.message })
+    }
+})
 
 // ========== COURSE CONTENT (MODULES & ITEMS) ==========
 
