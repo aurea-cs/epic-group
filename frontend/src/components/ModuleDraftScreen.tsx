@@ -6,7 +6,7 @@ import { getUserRole } from '../utils/getUserRole'
 import { Book, Gamepad2, FileText, ArrowRight, Folder, Play } from 'lucide-react'
 import { markItemAsRead } from '../lib/api'
 import bannerImg from '../assets/banner.png'
-import sateliteImg from '../assets/satelite.png'
+
 import ciberImg from '../assets/ciber.png'
 import dentrodespaceshipImg from '../assets/dentrodespaceship.png'
 import './ModuleDraftScreen.css'
