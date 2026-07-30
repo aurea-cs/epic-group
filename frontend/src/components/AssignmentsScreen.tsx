@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
 import { useNavigate } from 'react-router-dom'
+import { getStudentReadItems } from '../lib/api'
 import './AssignmentsScreen.css'
 import { getUserRole } from '../utils/getUserRole'
 
@@ -73,6 +74,17 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
           };
         }
 
+        // Fetch read items once for all courses
+        let readItemsSet = new Set<string>();
+        if (userRole === 'student') {
+          try {
+            const items = await getStudentReadItems(user.id);
+            readItemsSet = new Set(items);
+          } catch (e) {
+            console.error('Error fetching read items:', e);
+          }
+        }
+
         // Process courses sequentially to avoid overwhelming the backend with simultaneous requests
         const planets = []
         for (let index = 0; index < coursesToRender.length; index++) {
@@ -88,14 +100,12 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
               let totalItems = 0
               let completedItems = 0
               
-              const readItems = JSON.parse(localStorage.getItem('readItems') || '{}')
-              
               modules.forEach((module: any) => {
                 const items = (module.items || []).filter((item: any) => item.type === 'pdf')
                 totalItems += items.length
                 
                 items.forEach((item: any) => {
-                  if (item.is_completed || readItems[item.id]) {
+                  if (item.is_completed || readItemsSet.has(item.id)) {
                     completedItems++
                   }
                 })

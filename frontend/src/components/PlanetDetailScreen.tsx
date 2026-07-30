@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { getStudentReadItems } from '../lib/api';
 import './PlanetDetailScreen.css';
 
 import planetasolito1 from '../assets/planetasolito1.png';
@@ -18,7 +19,7 @@ interface PlanetDetailScreenProps {
   user: User;
 }
 
-const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = () => {
+const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = ({ user }) => {
   const { courseId, } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,9 +46,17 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = () => {
     const fetchModules = async () => {
       try {
         if (!courseId) return;
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/subjects/${courseId}/modules`);
+        
+        // Fetch modules and read items in parallel
+        const [res, readItemsList] = await Promise.all([
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/subjects/${courseId}/modules`),
+          getStudentReadItems(user.id)
+        ]);
+        
         if (!res.ok) throw new Error('Error fetching modules');
         const data = await res.json();
+        
+        const readItemsSet = new Set(readItemsList);
         
         const numSubPlanets = data.length;
         const items = data.map((module: any, i: number) => {
@@ -57,8 +66,7 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = () => {
           const mItems = (module.items || []).filter((item: any) => item.type === 'pdf');
           const totalItems = mItems.length;
           
-          const readItems = JSON.parse(localStorage.getItem('readItems') || '{}');
-          const completedItems = mItems.filter((it: any) => it.is_completed || readItems[it.id]).length;
+          const completedItems = mItems.filter((it: any) => it.is_completed || readItemsSet.has(it.id)).length;
           
           let stars = 0;
           if (totalItems > 0) {
@@ -80,7 +88,7 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = () => {
       }
     };
     fetchModules();
-  }, [courseId]);
+  }, [courseId, user.id]);
 
   const handleSubPlanetClick = (module: any) => {
     navigate(`/course/${courseId}/module/${module.moduleId}/items`, {

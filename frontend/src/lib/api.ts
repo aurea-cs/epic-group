@@ -69,6 +69,40 @@ export const getStudentProgress = async (studentId: string, professorId?: string
 }
 
 /**
+ * Mark a module item as read for a student
+ */
+export const markItemAsRead = async (studentId: string, itemId: string): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/students/${studentId}/read-item/${itemId}`, {
+            method: 'POST',
+        })
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Error marking item as read:', error)
+        throw error
+    }
+}
+
+/**
+ * Get all read items for a student
+ */
+export const getStudentReadItems = async (studentId: string): Promise<string[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/students/${studentId}/read-items`)
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data = await response.json()
+        return data
+    } catch (error) {
+        console.error('Error fetching read items:', error)
+        throw error
+    }
+}
+
+/**
  * Fetch all students for a professor
  */
 export const getStudentsByProfessor = async (professorId: string): Promise<Student[]> => {
