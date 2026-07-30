@@ -28,8 +28,8 @@ const NavbarProfileControls: React.FC<NavbarProfileControlsProps> = ({
   userDisplayName,
   onNavigate,
   onLogout,
-  onOpenNotifications,
-  notificationCount = 0,
+  // onOpenNotifications,
+  // notificationCount = 0,
   logoutLoading = false,
   profilePath = '/profile',
   settingsPath = '/settings'
@@ -49,13 +49,13 @@ const NavbarProfileControls: React.FC<NavbarProfileControlsProps> = ({
   }, [])
 
   const initials = getInitials(userDisplayName)
-  const badgeContent = notificationCount > 99 ? '99+' : notificationCount.toString()
+  // const badgeContent = notificationCount > 99 ? '99+' : notificationCount.toString()
 
-  const handleNotifications = () => {
-    if (onOpenNotifications) {
-      onOpenNotifications()
-    }
-  }
+  // const handleNotifications = () => {
+  //   if (onOpenNotifications) {
+  //     onOpenNotifications()
+  //   }
+  // }
 
   const handleNavigate = (path: string) => {
     onNavigate(path)
