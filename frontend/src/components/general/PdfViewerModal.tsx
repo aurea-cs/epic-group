@@ -40,24 +40,28 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose }) => {
 
   // Render a single page into its canvas
   const renderPage = useCallback(async (pageNum: number) => {
-    const pdfDoc = pdfDocRef.current
-    const canvas = canvasRefs.current[pageNum]
-    if (!pdfDoc || !canvas || renderedPages.current.has(pageNum)) return
-    renderedPages.current.add(pageNum)
+      const pdfDoc = pdfDocRef.current
+      const canvas = canvasRefs.current[pageNum]
+      if (!pdfDoc || !canvas || renderedPages.current.has(pageNum)) return
+      renderedPages.current.add(pageNum)
 
-    const page = await pdfDoc.getPage(pageNum)
-    const devicePixelRatio = window.devicePixelRatio || 1
-    const baseViewport = page.getViewport({ scale: 1 })
-    const targetWidth = Math.min(window.innerWidth * 0.9, 1400)
-    const scale = (targetWidth / baseViewport.width) * devicePixelRatio
-    const viewport = page.getViewport({ scale })
+      const page = await pdfDoc.getPage(pageNum)
+      const devicePixelRatio = window.devicePixelRatio || 1
 
-    canvas.width = viewport.width
-    canvas.height = viewport.height
-    canvas.style.width = `${viewport.width / devicePixelRatio}px`
-    canvas.style.height = `${viewport.height / devicePixelRatio}px`
+      // Fill the full viewport width at native resolution
+      const targetWidth = window.innerWidth * devicePixelRatio
+      const baseViewport = page.getViewport({ scale: 1 })
+      const scale = targetWidth / baseViewport.width
+      const viewport = page.getViewport({ scale })
 
-    await page.render({ canvas, viewport }).promise
+      canvas.width = viewport.width
+      canvas.height = viewport.height
+      // CSS size: full viewport width, height proportional
+      canvas.style.width = '100vw'
+      canvas.style.height = `${viewport.height / devicePixelRatio}px`
+      canvas.style.display = 'block'
+
+      await page.render({ canvas, viewport }).promise
   }, [])
 
   // Load the PDF document once
@@ -82,88 +86,100 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose }) => {
       })
 
     return () => { cancelled = true }
-  }, [url])
+      }, [url])
 
-  // Once numPages is known AND canvases exist in the DOM, render everything.
-  // Runs after the JSX below has committed the <canvas> elements.
-  useEffect(() => {
-    if (!numPages || loading) return
-    for (let i = 1; i <= numPages; i++) {
-      renderPage(i)
-    }
-  }, [numPages, loading, renderPage])
+      // Once numPages is known AND canvases exist in the DOM, render everything.
+      // Runs after the JSX below has committed the <canvas> elements.
+      useEffect(() => {
+        if (!numPages || loading) return
+        for (let i = 1; i <= numPages; i++) {
+          renderPage(i)
+        }
+      }, [numPages, loading, renderPage])
 
-  // Lazy-render as pages scroll into view (covers cases where renderPage
-  // above hasn't caught up yet, e.g. very long documents)
-  useEffect(() => {
-    if (!numPages || !containerRef.current) return
-    const observer = new IntersectionObserver(
-      entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const pageNum = Number((entry.target as HTMLElement).dataset.page)
-            renderPage(pageNum)
-          }
-        })
-      },
-      { root: containerRef.current, rootMargin: '200px 0px' }
+      // Lazy-render as pages scroll into view (covers cases where renderPage
+      // above hasn't caught up yet, e.g. very long documents)
+      useEffect(() => {
+        if (!numPages || !containerRef.current) return
+        const observer = new IntersectionObserver(
+          entries => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                const pageNum = Number((entry.target as HTMLElement).dataset.page)
+                renderPage(pageNum)
+              }
+            })
+          },
+          { root: containerRef.current, rootMargin: '200px 0px' }
+        )
+        const wrappers = containerRef.current.querySelectorAll('[data-page]')
+        wrappers.forEach(el => observer.observe(el))
+        return () => observer.disconnect()
+      }, [numPages, renderPage])
+    return (
+        <div style={{
+            top: 0, left: 0, width: '100vw', height: '100vh',
+            backgroundColor: '#000',
+            display: 'flex', flexDirection: 'column',
+            zIndex: 9999,
+        }}>
+            <button
+                onClick={onClose}
+                style={{
+                    position: 'fixed', top: '20px', right: '20px',
+                    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%',
+                    width: '34px', height: '34px', color: 'white', fontSize: '1.1rem',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 10,
+                }}
+                onMouseOver={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
+                onMouseOut={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+            >
+                ✕
+            </button>
+
+            <div
+                ref={containerRef}
+                style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    userSelect: 'none',
+                    backgroundColor: '#000',
+                }}
+                onContextMenu={(e) => e.preventDefault()}
+            >
+                {loading && (
+                    <p style={{
+                        color: 'white', textAlign: 'center',
+                        paddingTop: '40vh', fontSize: '1rem'
+                    }}>
+                        Cargando documento...
+                    </p>
+                )}
+                {error && (
+                    <p style={{
+                        color: '#fca5a5', textAlign: 'center',
+                        paddingTop: '40vh', fontSize: '1rem'
+                    }}>
+                        {error}
+                    </p>
+                )}
+
+                {!loading && !error && numPages > 0 &&
+                    Array.from({ length: numPages }, (_, i) => i + 1).map(pageNum => (
+                        <div key={pageNum} data-page={pageNum} style={{ lineHeight: 0 }}>
+                            <canvas
+                                ref={el => { canvasRefs.current[pageNum] = el }}
+                                draggable={false}
+                                style={{ display: 'block' }}
+                            />
+                        </div>
+                    ))
+                }
+            </div>
+        </div>
     )
-    const wrappers = containerRef.current.querySelectorAll('[data-page]')
-    wrappers.forEach(el => observer.observe(el))
-    return () => observer.disconnect()
-  }, [numPages, renderPage])
-
-  return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-      backgroundColor: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(10px)',
-      display: 'flex', flexDirection: 'column', zIndex: 9999,
-    }}>
-      <button
-        onClick={onClose}
-        style={{
-          position: 'absolute', top: '20px', right: '20px',
-          background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%',
-          width: '34px', height: '34px', color: 'white', fontSize: '1.1rem',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 10,
-        }}
-        onMouseOver={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
-        onMouseOut={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
-      >
-        ✕
-      </button>
-
-      <div
-        ref={containerRef}
-        style={{
-          flex: 1, position: 'relative', backgroundColor: '#111',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          overflowY: 'auto', overflowX: 'hidden', padding: '1rem', gap: '1rem',
-          userSelect: 'none',
-        }}
-        onContextMenu={(e) => e.preventDefault()}
-      >
-        {loading && <p style={{ color: 'white' }}>Cargando documento...</p>}
-        {error && <p style={{ color: '#fca5a5' }}>{error}</p>}
-
-        {!loading && !error && numPages > 0 && Array.from({ length: numPages }, (_, i) => i + 1).map(pageNum => (
-          <div key={pageNum} data-page={pageNum}>
-            <canvas
-              ref={el => { canvasRefs.current[pageNum] = el }}
-              style={{
-                maxWidth: '100%',
-                boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
-                borderRadius: '4px',
-                display: 'block',
-              }}
-              draggable={false}
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+  }
 
 export default PdfViewerModal

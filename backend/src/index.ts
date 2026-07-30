@@ -1892,14 +1892,16 @@ app.get('/api/modules/:moduleId/vr-code', async (req, res) => {
 app.post('/api/modules/:moduleId/vr-code', async (req, res) => {
     try {
         const { moduleId } = req.params;
-        const { code, image_url } = req.body;
+        const { code, image_url, description, title } = req.body;
 
         if (!code) {
             return res.status(400).json({ error: 'Code is required' });
         }
 
-        const payload: Record<string, any> = { module_id: moduleId, code: String(code) };
+        const payload: Record<string, any> = { module_id: moduleId, code: String(code), description: String(description), title: String(title) };
         if (image_url !== undefined) payload.image_url = image_url || null;
+        if (description !== undefined) payload.description = description || null;
+        if (title !== undefined) payload.title = title || null;
 
         const { data, error } = await supabase
             .from('module_vr_code')
@@ -1919,7 +1921,7 @@ app.post('/api/modules/:moduleId/vr-code', async (req, res) => {
 app.put('/api/modules/vr-code/:entryId', async (req, res) => {
     try {
         const { entryId } = req.params;
-        const { code, image_url } = req.body;
+        const { code, image_url, description, title } = req.body;
 
         if (!code) {
             return res.status(400).json({ error: 'Code is required' });
@@ -1927,6 +1929,8 @@ app.put('/api/modules/vr-code/:entryId', async (req, res) => {
 
         const payload: Record<string, any> = { code: String(code) };
         if (image_url !== undefined) payload.image_url = image_url || null;
+        if (description !== undefined) payload.description = description || null;
+        if (title !== undefined) payload.title = title || null;
 
         const { data, error } = await supabase
             .from('module_vr_code')
@@ -1961,6 +1965,34 @@ app.delete('/api/modules/vr-code/:entryId', async (req, res) => {
     }
 });
 
+function extractStoragePath(contentUrl: string, bucket: string): string {
+    if (!contentUrl) return contentUrl
+
+    // Already a bare path (no protocol) — use as-is
+    if (!contentUrl.startsWith('http')) return contentUrl
+
+    // Signed URL: .../object/sign/bucket-name/the/actual/path?token=...
+    const signPattern = `/object/sign/${bucket}/`
+    if (contentUrl.includes(signPattern)) {
+        return contentUrl.split(signPattern)[1].split('?')[0]
+    }
+
+    // Public URL: .../object/public/bucket-name/the/actual/path
+    const publicPattern = `/object/public/${bucket}/`
+    if (contentUrl.includes(publicPattern)) {
+        return contentUrl.split(publicPattern)[1].split('?')[0]
+    }
+
+    // Authenticated URL: .../object/authenticated/bucket-name/the/actual/path
+    const authPattern = `/object/authenticated/${bucket}/`
+    if (contentUrl.includes(authPattern)) {
+        return contentUrl.split(authPattern)[1].split('?')[0]
+    }
+
+    // Fallback — return as-is and let Supabase reject it visibly
+    return contentUrl
+}
+
 // Get modules for a subject
 app.get('/api/admin/subjects/:subjectId/modules', async (req, res) => {
     try {
@@ -1981,14 +2013,21 @@ app.get('/api/admin/subjects/:subjectId/modules', async (req, res) => {
         const modules = await Promise.all(data?.map(async (module) => {
             const items = await Promise.all((module.items || []).map(async (item: any) => {
                 if (item.type === 'pdf' && item.content_url) {
-                    // Generate signed URL for PDF content
                     try {
-                        const { data: urlData } = await supabase.storage
+                        const storagePath = extractStoragePath(item.content_url, 'grade-content')
+                        const { data: urlData, error: signError } = await supabase.storage
                             .from('grade-content')
-                            .createSignedUrl(item.content_url, 3600);
-                        return { ...item, content_url: urlData?.signedUrl || item.content_url };
+                            .createSignedUrl(storagePath, 3600)
+
+                        if (signError) {
+                            console.error(`Failed to sign URL for item ${item.id}:`, signError, '| path used:', storagePath)
+                            return item // still falls back, but now you'll see it in logs
+                        }
+
+                        return { ...item, content_url: urlData.signedUrl }
                     } catch (e) {
-                        return item;
+                        console.error(`Exception signing URL for item ${item.id}:`, e)
+                        return item
                     }
                 }
                 return item;
@@ -2512,37 +2551,6 @@ app.delete('/api/admin/content/:contentId', async (req, res) => {
         res.json({ message: 'Content deleted successfully' });
     } catch (error: any) {
         console.error('Error deleting content:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get download URL for specific content
-app.get('/api/admin/content/:contentId/download-url', async (req, res) => {
-    try {
-        const { contentId } = req.params;
-
-        const { data: content, error: fetchError } = await supabase
-            .from('grade_content')
-            .select('file_path, file_name')
-            .eq('id', contentId)
-            .single();
-
-        if (fetchError || !content) {
-            return res.status(404).json({ error: 'Content not found' });
-        }
-
-        const { data: urlData, error: urlError } = await supabase.storage
-            .from('grade-content')
-            .createSignedUrl(content.file_path, 3600); // 1 hour expiry
-
-        if (urlError) throw urlError;
-
-        res.json({
-            download_url: urlData.signedUrl,
-            file_name: content.file_name
-        });
-    } catch (error: any) {
-        console.error('Error generating download URL:', error);
         res.status(500).json({ error: error.message });
     }
 });

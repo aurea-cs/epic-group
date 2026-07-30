@@ -463,18 +463,6 @@ export const deleteGradeContent = async (contentId: string): Promise<void> => {
     }
 }
 
-export const getContentDownloadUrl = async (contentId: string): Promise<string> => {
-    try {
-        const response = await fetch(`${API_URL}/api/admin/content/${contentId}/download-url`)
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-        const data = await response.json()
-        return data.download_url
-    } catch (error) {
-        console.error('Error getting download URL:', error)
-        throw error
-    }
-}
-
 // ============================================
 // COURSE MODULES & ITEMS
 // ============================================
@@ -514,6 +502,8 @@ export interface VrCodeEntry {
     code: string
     created_at: string
     image_url?: string
+    description?: string
+    title?: string
 }
 
 export const getModuleVrCode = async (moduleId: string): Promise<VrCodeEntry[]> => {
@@ -530,13 +520,15 @@ export const getModuleVrCode = async (moduleId: string): Promise<VrCodeEntry[]> 
 export const addModuleVrCode = async (
     moduleId: string,
     code: string,
-    imageUrl?: string
+    imageUrl?: string,
+    title?: string,
+    description?: string
 ): Promise<VrCodeEntry> => {
     try {
         const response = await fetch(`${API_URL}/api/modules/${moduleId}/vr-code`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, image_url: imageUrl || null }),
+            body: JSON.stringify({ code, image_url: imageUrl || null, title: title || null, description: description || null }),
         })
         if (!response.ok) {
             const err = await response.json()
@@ -555,13 +547,15 @@ export const saveModuleVrCode = addModuleVrCode
 export const updateModuleVrCode = async (
     entryId: string,
     code: string,
-    imageUrl?: string
+    imageUrl?: string,
+    title?: string,
+    description?: string
 ): Promise<VrCodeEntry> => {
     try {
         const response = await fetch(`${API_URL}/api/modules/vr-code/${entryId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, image_url: imageUrl || null }),
+            body: JSON.stringify({ code, image_url: imageUrl || null, title: title || null, description: description || null }),
         })
         if (!response.ok) {
             const err = await response.json()

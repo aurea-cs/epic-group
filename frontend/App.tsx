@@ -27,6 +27,7 @@ import ModuleDraftScreen from './src/components/ModuleDraftScreen'
 import StudentsAdminScreen from './src/components/StudentsAdminScreen'
 import ProfessorAssignmentCoursesScreen from './src/components/ProfessorAssignmentCoursesScreen'
 import ProfessorAssignmentContentScreen from './src/components/ProfessorAssignmentContentScreen'
+import PdfViewerPage from './src/components/PdfViewerPage'
 // import LandingPage from './src/components/LandingPage'
 import './App.css'
 
@@ -143,6 +144,7 @@ function App() {
               )
             }
           />
+          <Route path="/course/:courseId/module/:moduleId/pdf" element={<PdfViewerPage />} />
           <Route
             path="/course-map"
             element={user ? <CourseMapScreen user={user} /> : <Navigate to="/login" replace />}

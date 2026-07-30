@@ -2,22 +2,39 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
 import { getCourseModules, getModuleVrCode, CourseModule, ModuleItem, VrCodeEntry } from '../lib/adminApi'
-import { Book, Gamepad2, FileText, ArrowRight, Folder, Download, Play } from 'lucide-react'
+import { getUserRole } from '../utils/getUserRole'
+import { Book, Gamepad2, FileText, ArrowRight, Folder, Play } from 'lucide-react'
 import bannerImg from '../assets/banner.png'
 import sateliteImg from '../assets/satelite.png'
 import ciberImg from '../assets/ciber.png'
-import dentrodeescuelaImg from '../assets/dentrodeescuela.png'
 import dentrodespaceshipImg from '../assets/dentrodespaceship.png'
 import './ModuleDraftScreen.css'
-import PdfViewerModal from './general/PdfViewerModal'
 
 interface ModuleDraftScreenProps {
   user: User
 }
 
 const ContentCard = ({ item, index, onViewPdf }: { item: ModuleItem, index: number, onViewPdf: (url: string) => void }) => {
+  const handleClick = () => {
+    if (!item.content_url) {
+      alert('Este contenido no tiene una URL configurada aún.');
+      return;
+    }
+    const readItems = JSON.parse(localStorage.getItem('readItems') || '{}');
+    readItems[item.id] = true;
+    localStorage.setItem('readItems', JSON.stringify(readItems));
+    if (item.type === 'pdf') {
+      onViewPdf(item.content_url);
+    } else {
+      window.open(item.content_url, '_blank', 'noopener,noreferrer');
+    }
+  }
+
   return (
-    <div style={{
+    <div 
+      className="hoverable-card"
+      onClick={handleClick}
+      style={{
       backgroundColor: '#25164E',
       borderRadius: '16px',
       padding: '24px',
@@ -52,20 +69,6 @@ const ContentCard = ({ item, index, onViewPdf }: { item: ModuleItem, index: numb
       </div>
       <div style={{ marginTop: 'auto' }}>
         <button
-          onClick={() => {
-            if (!item.content_url) {
-              alert('Este contenido no tiene una URL configurada aún.');
-              return;
-            }
-            const readItems = JSON.parse(localStorage.getItem('readItems') || '{}');
-            readItems[item.id] = true;
-            localStorage.setItem('readItems', JSON.stringify(readItems));
-            if (item.type === 'pdf') {
-              onViewPdf(item.content_url);
-            } else {
-              window.open(item.content_url, '_blank', 'noopener,noreferrer');
-            }
-          }}
           style={{
             width: '100%',
             backgroundColor: 'white',
@@ -92,76 +95,14 @@ const ContentCard = ({ item, index, onViewPdf }: { item: ModuleItem, index: numb
 }
 
 
-const VrSchoolCard = () => {
-  const url = "https://epicgrouplab.itch.io/campus-san-gabriel"
-
-  return (
-    <div style={{
-      backgroundColor: '#25164E',
-      borderRadius: '16px',
-      padding: '0',
-      width: '320px',
-      flexShrink: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-      border: '1px solid rgba(255,255,255,0.05)'
-    }}>
-      <img
-        src={dentrodeescuelaImg}
-        alt="VR School"
-        style={{ width: '100%', height: '200px', objectFit: 'cover' }}
-      />
-      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
-        <div>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
-            Colegio VR (VR School)
-          </h3>
-          <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
-            Explora el campus virtual en 3D y conoce las instalaciones del colegio en una experiencia interactiva completa.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
-          <button
-            onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              color: '#25164E',
-              border: 'none',
-              padding: '10px',
-              borderRadius: '8px',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '6px',
-              fontWeight: 'bold',
-              fontSize: '0.875rem',
-              cursor: 'pointer',
-              transition: 'background 0.2s, color 0.2s'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = '#f0f0f0';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = 'white';
-            }}
-          >
-            Ingresar a VR School <ArrowRight size={16} />
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
-  const vrUrl = `https://build-launcher-code.vercel.app/?code=${vrEntry.code}&v=3`
+  const vrUrl = vrEntry.code
 
   return (
-    <div style={{
+    <div 
+      className="hoverable-card"
+      onClick={() => window.open(vrUrl, '_blank', 'noopener,noreferrer')}
+      style={{
       backgroundColor: '#25164E',
       borderRadius: '16px',
       padding: '0',
@@ -181,10 +122,10 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
         <div>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
-            Sala VR
+            {vrEntry.title || "Sala VR"}
           </h3>
           <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
-            Explora un mundo inmersivo donde la realidad virtual te transporta a nuevas dimensiones.
+            {vrEntry.description || "Explora un mundo inmersivo donde la realidad virtual te transporta a nuevas dimensiones."}
           </p>
           <div style={{
             marginTop: '10px',
@@ -195,18 +136,12 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
             alignItems: 'center',
             gap: '8px'
           }}>
-            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Código de acceso
-            </span>
-            <span style={{ fontSize: '1rem', fontWeight: 'bold', color: '#FCEE50', letterSpacing: '0.15em' }}>
-              {vrEntry.code}
-            </span>
+            Plataforma VR
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
           <button
-            onClick={() => window.open(vrUrl, '_blank', 'noopener,noreferrer')}
             style={{
             flex: 1,
             backgroundColor: 'transparent',
@@ -240,9 +175,21 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
   )
 }
 
-const ResourceCard = ({ item }: { item: ModuleItem, index: number }) => {
+const ResourceCard = ({ item, onViewPdf }: { item: ModuleItem, index: number, onViewPdf: (url: string) => void }) => {
+  const handleClick = () => {
+    if (item.content_url) {
+      if (item.type === 'video') { window.open(item.content_url, '_blank') }
+      else {
+        onViewPdf(item.content_url!)
+      }
+    }
+  }
+
   return (
-    <div style={{
+    <div 
+      className="hoverable-card"
+      onClick={handleClick}
+      style={{
       backgroundColor: '#25164E',
       borderRadius: '16px',
       padding: '24px',
@@ -278,7 +225,6 @@ const ResourceCard = ({ item }: { item: ModuleItem, index: number }) => {
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {item.content_url && (
           <button
-            onClick={() => window.open(item.content_url!, '_blank')}
             style={{
               width: '100%',
               backgroundColor: 'white',
@@ -300,7 +246,7 @@ const ResourceCard = ({ item }: { item: ModuleItem, index: number }) => {
             {item.type === 'video' ? (
               <>Ver Video <Play size={16} fill="currentColor" /></>
             ) : (
-              <>Descargar Recursos <Download size={16} /></>
+              <>Ver Recurso </>
             )}
           </button>
         )}
@@ -330,17 +276,21 @@ const ResourceCard = ({ item }: { item: ModuleItem, index: number }) => {
   )
 }
 
-const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ }) => {
+const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
   const navigate = useNavigate()
   const [moduleData, setModuleData] = useState<CourseModule | null>(null)
   const [vrEntries, setVrEntries] = useState<VrCodeEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [, setError] = useState<string | null>(null)
-  const [activePdfUrl, setActivePdfUrl] = useState<string | null>(null)
 
-  // const userRole = getUserRole(user)
-  // const isProfessor = userRole === 'professor' || userRole === 'admin'
+  const userRole = getUserRole(user)
+
+  const handleViewPdf = (url: string) => {
+    navigate(
+      `/course/${courseId}/module/${moduleId}/pdf?url=${encodeURIComponent(url)}`
+    )
+  }
 
   useEffect(() => {
     if (courseId && moduleId) {
@@ -403,7 +353,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ }) => {
         </button>
 
         <h1 className="module-draft-title">
-          {moduleData?.title ? `Modulo - ${moduleData.title}` : 'Modulo 1 - Nombre del Modulo'}
+          {moduleData?.title ? `Módulo - ${moduleData.title}` : 'Módulo 1 - Nombre del Módulo'}
         </h1>
 
         <p style={{ color: 'white', fontSize: '1rem', lineHeight: '1.6', opacity: 0.9, marginBottom: '3rem', maxWidth: '1000px' }}>
@@ -422,13 +372,16 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ }) => {
             display: 'flex',
             gap: '24px',
             overflowX: 'auto',
+            paddingTop: '12px',
             paddingBottom: '2rem',
+            paddingLeft: '8px',
+            paddingRight: '8px',
             scrollbarWidth: 'thin',
             scrollbarColor: 'rgba(255,255,255,0.3) transparent'
           }}>
             {contenidos.length > 0 ? (
               contenidos.map((item, idx) => (
-                <ContentCard key={item.id} item={item} index={idx} onViewPdf={setActivePdfUrl} />
+                <ContentCard key={item.id} item={item} index={idx} onViewPdf={handleViewPdf} />
               ))
             ) : (
               <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
@@ -439,29 +392,34 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ }) => {
         </div>
 
         {/* Recursos Section */}
-        <div style={{ marginBottom: '4rem' }}>
-          <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
-            <Folder size={24} color="#FCEE50" /> RECURSOS
-          </h2>
-          <div style={{
-            display: 'flex',
-            gap: '24px',
-            overflowX: 'auto',
-            paddingBottom: '2rem',
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'rgba(255,255,255,0.3) transparent'
-          }}>
-            {recursos.length > 0 ? (
-              recursos.map((item, idx) => (
-                <ResourceCard key={item.id} item={item} index={idx} />
-              ))
-            ) : (
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
-                No hay recursos disponibles para este módulo.
-              </p>
-            )}
+        {userRole !== 'student' && (
+          <div style={{ marginBottom: '4rem' }}>
+            <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
+              <Folder size={24} color="#FCEE50" /> RECURSOS
+            </h2>
+            <div style={{
+              display: 'flex',
+              gap: '24px',
+              overflowX: 'auto',
+              paddingTop: '12px',
+              paddingBottom: '2rem',
+              paddingLeft: '8px',
+              paddingRight: '8px',
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(255,255,255,0.3) transparent'
+            }}>
+              {recursos.length > 0 ? (
+                recursos.map((item, idx) => (
+                  <ResourceCard key={item.id} item={item} index={idx} onViewPdf={handleViewPdf} />
+                ))
+              ) : (
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
+                  No hay recursos disponibles para este módulo.
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Salas VR Section */}
         <div>
@@ -472,11 +430,13 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ }) => {
             display: 'flex',
             gap: '24px',
             overflowX: 'auto',
+            paddingTop: '12px',
             paddingBottom: '2rem',
+            paddingLeft: '8px',
+            paddingRight: '8px',
             scrollbarWidth: 'thin',
             scrollbarColor: 'rgba(255,255,255,0.3) transparent'
           }}>
-            <VrSchoolCard />
             {vrEntries.map((entry) => (
               <VrCard key={entry.id} vrEntry={entry} />
             ))}
@@ -484,9 +444,6 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ }) => {
         </div>
       </div>
       </div>
-      {activePdfUrl && (
-        <PdfViewerModal url={activePdfUrl} onClose={() => setActivePdfUrl(null)} />
-      )}
     </div>
   )
 }
