@@ -119,7 +119,7 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = ({ user }) => {
         {/* Planeta central */}
         <div className="central-planet">
           <img src={image30} alt="Planeta Central" />
-          <div className="central-title">Sala VR</div>
+          <div className="central-title">Núcleo</div>
         </div>
 
         {/* Planetas orbitando */}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Pencil, Trash2 } from 'lucide-react'
 import {
     getCenters,
     createCenter,
@@ -196,9 +197,9 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                                                 handleEditCenter(center)
                                             }}
                                             title="Editar"
-                                            style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', padding: '0.5rem', cursor: 'pointer', color: '#d966ff' }}
+                                            style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', padding: '0.5rem', cursor: 'pointer', color: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                         >
-                                            ✏️
+                                            <Pencil size={16} />
                                         </button>
                                         <button
                                             className="btn-icon"
@@ -207,9 +208,9 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                                                 handleDeleteCenter(center.id)
                                             }}
                                             title="Eliminar"
-                                            style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', padding: '0.5rem', cursor: 'pointer', color: '#d966ff' }}
+                                            style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', padding: '0.5rem', cursor: 'pointer', color: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                         >
-                                            🗑️
+                                            <Trash2 size={16} />
                                         </button>
                                     </div>
                                 </div>

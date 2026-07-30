@@ -24,14 +24,14 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const endpoint = userRole === 'student' 
+        const endpoint = userRole === 'student'
           ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/students/${user.id}/courses`
           : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/professors/${user.id}/courses`;
-          
+
         const res = await fetch(endpoint)
         if (!res.ok) throw new Error('Error fetching courses')
         const data = await res.json()
-        
+
         let coursesToRender = data;
         // Mock fallback if no courses are assigned so the UI is still visible
         if (!coursesToRender || coursesToRender.length === 0) {
@@ -44,7 +44,7 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
 
         // Define some planet images and positions
         const images = [planetasolito1, planetasolito2, planetasolito3, planetasolito4, planetasolito5]
-        
+
         const getPlanetPosition = (index: number) => {
           const predefined = [
             { top: '80%', left: '20%' },
@@ -63,11 +63,11 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
             { top: '70%', left: '55%' },
             { top: '48%', left: '20%' }
           ];
-          
+
           if (index < predefined.length) {
             return predefined[index];
           }
-          
+
           return {
             top: `${35 + (index * 13) % 55}%`,
             left: `${15 + (index * 17) % 70}%`
@@ -91,7 +91,7 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
           const course = coursesToRender[index]
           let stars = 0
           let completed = false
-          
+
           try {
             // Fetch modules for the course to calculate progress
             const modRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/subjects/${course.id}/modules`)
@@ -99,18 +99,18 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
               const modules = await modRes.json()
               let totalItems = 0
               let completedItems = 0
-              
+
               modules.forEach((module: any) => {
                 const items = (module.items || []).filter((item: any) => item.type === 'pdf')
                 totalItems += items.length
-                
+
                 items.forEach((item: any) => {
                   if (item.is_completed || readItemsSet.has(item.id)) {
                     completedItems++
                   }
                 })
               })
-              
+
               if (totalItems > 0) {
                 const progress = completedItems / totalItems
                 if (progress === 1) {
@@ -153,11 +153,17 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
   }
 
 
+  const handleStartCourse = () => {
+    if (coursePlanets.length > 0) {
+      handlePlanetClick(coursePlanets[0].courseData)
+    }
+  }
+
   return (
     <div className="assignments-screen">
       <div className="map-container">
-        <button 
-          onClick={() => navigate('/dashboard')} 
+        <button
+          onClick={() => navigate('/dashboard')}
           className="assignments-back-button"
         >
           ← Inicio
@@ -244,6 +250,13 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
               <div className="engine-glow"></div>
             </div>
           </div>
+        </div>
+
+        {/* Botón START */}
+        <div className="start-button-container">
+          <button className="start-button" onClick={handleStartCourse}>
+            CAMPUS VR
+          </button>
         </div>
 
       </div>

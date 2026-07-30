@@ -528,7 +528,8 @@
 }
 
 .item-card:hover .item-actions,
-.school-card:hover .item-actions {
+.school-card:hover .item-actions,
+.class-card:hover .item-actions {
     opacity: 1;
     transform: translateX(0);
 }

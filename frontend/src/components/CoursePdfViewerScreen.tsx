@@ -20,7 +20,7 @@ const courseDescriptions: Record<string, string> = {
   'default': 'Explora este curso y descubre todo lo que necesitas para avanzar en tu aprendizaje. Aprende conceptos clave, desarrolla nuevas habilidades y alcanza tus objetivos educativos.'
 }
 
-const CoursePdfViewerScreen: React.FC<CoursePdfViewerScreenProps> = () => {
+const CoursePdfViewerScreen = (_props: CoursePdfViewerScreenProps) => {
   const navigate = useNavigate()
   const location = useLocation()
   const { courseId, resourceId } = useParams()
