@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { User } from '@supabase/supabase-js'
 import './StudentsAdminScreen.css'
 import CustomSelect from './general/CustomSelect'
+import { getUserRole } from '../utils/getUserRole'
 
 interface StudentsAdminScreenProps {
   user: User
@@ -255,7 +256,7 @@ const DeleteConfirmModal: React.FC<{ student: Student; onClose: () => void; onCo
 )
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
+const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
   const [students, setStudents] = useState<Student[]>([])
   const [allCenters, setAllCenters] = useState<Center[]>([])
   const [loading, setLoading] = useState(true)
@@ -266,6 +267,9 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
   const [deletingStudent, setDeletingStudent] = useState<Student | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  const userRole = getUserRole(user)
+  const isAdmin = userRole === 'admin'
 
   const fetchStudents = useCallback(async () => {
     setLoading(true)
@@ -326,14 +330,16 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
               Administra, edita y organiza todos los alumnos de la plataforma
             </p>
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            style={{ padding: '11px 22px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: '#fff', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 20px rgba(168,85,247,0.4)', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 25px rgba(168,85,247,0.55)' }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(168,85,247,0.4)' }}
-          >
-            ➕ Nuevo Alumno
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              style={{ padding: '11px 22px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: '#fff', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 20px rgba(168,85,247,0.4)', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 25px rgba(168,85,247,0.55)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(168,85,247,0.4)' }}
+            >
+              ➕ Nuevo Alumno
+            </button>
+          )}
         </div>
 
         {/* Stats */}
@@ -382,7 +388,7 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{searchQuery || filterCenter ? '🔍' : '🎓'}</div>
               <h3 style={{ margin: '0 0 0.5rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{searchQuery || filterCenter ? 'Sin resultados' : 'No hay alumnos aún'}</h3>
               <p style={{ margin: '0 0 1.5rem', color: 'rgba(255,255,255,0.35)', fontSize: '0.88rem' }}>{searchQuery || filterCenter ? 'Prueba con otros filtros.' : 'Crea el primer alumno para comenzar.'}</p>
-              {!searchQuery && !filterCenter && (
+              {!searchQuery && !filterCenter && isAdmin && (
                 <button onClick={() => setShowAddModal(true)} style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: '#fff', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(168,85,247,0.35)' }}>➕ Nuevo Alumno</button>
               )}
             </div>
@@ -394,7 +400,7 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
                     <Th>Alumno</Th>
                     <Th>Correo Electrónico</Th>
                     <Th>Centros Inscritos</Th>
-                    <Th align="right">Acciones</Th>
+                    {isAdmin && <Th align="right">Acciones</Th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -440,12 +446,14 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = () => {
                       </td>
 
                       {/* Actions */}
-                      <td style={{ ...tdStyle, textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                          <ActionButton label="✏️ Editar" bg="rgba(192,132,252,0.13)" hoverBg="rgba(192,132,252,0.25)" textColor="#e9d5ff" border="1px solid rgba(192,132,252,0.3)" onClick={() => setEditingStudent(student)} />
-                          <ActionButton label="🗑️" bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => setDeletingStudent(student)} />
-                        </div>
-                      </td>
+                      {isAdmin && (
+                        <td style={{ ...tdStyle, textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                            <ActionButton label="✏️ Editar" bg="rgba(192,132,252,0.13)" hoverBg="rgba(192,132,252,0.25)" textColor="#e9d5ff" border="1px solid rgba(192,132,252,0.3)" onClick={() => setEditingStudent(student)} />
+                            <ActionButton label="🗑️" bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => setDeletingStudent(student)} />
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
