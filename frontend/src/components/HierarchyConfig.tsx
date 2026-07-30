@@ -20,7 +20,8 @@ import {
 } from '../lib/adminApi'
 import { User } from '@supabase/supabase-js'
 import './HierarchyConfig.css'
-import './ProfessorDashboard.css' // Import for the dashboard cards styling
+import './ProfessorDashboard.css' 
+import ConfirmModal from './general/ConfirmModal'
 
 interface HierarchyConfigProps {
     user: User
@@ -28,6 +29,10 @@ interface HierarchyConfigProps {
 
 const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
     const navigate = useNavigate()
+
+    // State for deletion
+    const [confirmDeleteCenter, setConfirmDeleteCenter] = useState<EducationalCenter | null>(null)
+    
     // State for data
     const [centers, setCenters] = useState<EducationalCenter[]>([])
     const [selectedCenter, setSelectedCenter] = useState<EducationalCenter | null>(null)
@@ -125,8 +130,6 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
     }
 
     const handleDeleteCenter = async (id: string) => {
-        if (!confirm('¿Estás seguro de eliminar este centro? Se eliminarán todos los grados, secciones y materias asociadas.')) return
-
         try {
             setLoading(true)
             await deleteCenter(id)
@@ -137,6 +140,7 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
         } catch (err: any) {
             setError(err.message || 'Error al eliminar centro')
         } finally {
+            setConfirmDeleteCenter(null)
             setLoading(false)
         }
     }
@@ -178,15 +182,25 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                             <p style={{ gridColumn: '1 / -1', color: '#64748b' }}>No tienes centros registrados actualmente.</p>
                         ) : (
                             centers.map(center => (
-                                <div key={center.id} className="class-card" style={{ position: 'relative', background: 'white', color: '#d966ff' }} onClick={() => navigate(`/admin/school/${center.id}`)}>
+                                <div key={center.id} className="class-card" style={{ position: 'relative', background: 'white', color: '#310041c0' }} onClick={() => navigate(`/admin/school/${center.id}`)}>
                                     <div className="class-header">
-                                        <h3 style={{ color: '#d966ff' }}>{center.name}</h3>
-                                        <div style={{ opacity: 0.7 }}>🏫</div>
+                                        <h3 style={{ color: '#310041ff' }}>{center.name}</h3>
                                     </div>
                                     <div className="class-stats">
                                         <div className="stat-row">
-                                            <span className="stat-icon">📍</span>
-                                            <span>Centro Educativo</span>
+                                            <span>{center.address || "Dirección no registrada"}</span>
+                                        </div>
+                                    </div>
+                                    <div className="class-stats">
+                                        <div className="stat-row">
+                                            <span className="stat-icon">📞</span>
+                                            <span>{center.phone || "Teléfono no registrado"}</span>
+                                        </div>
+                                    </div>
+                                    <div className="class-stats">
+                                        <div className="stat-row">
+                                            <span className="stat-icon">✉️</span>
+                                            <span>{center.email || "Correo electrónico no registrado"}</span>
                                         </div>
                                     </div>
                                     <div className="item-actions" style={{ position: 'absolute', bottom: '1rem', right: '1rem', display: 'flex', gap: '0.5rem' }}>
@@ -205,7 +219,7 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                                             className="btn-icon"
                                             onClick={(e) => {
                                                 e.stopPropagation()
-                                                handleDeleteCenter(center.id)
+                                                setConfirmDeleteCenter(center)
                                             }}
                                             title="Eliminar"
                                             style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', padding: '0.5rem', cursor: 'pointer', color: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -290,6 +304,16 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                             </div>
                         </div>
                     </div>
+                )}
+
+                { confirmDeleteCenter !== null && (
+                    <ConfirmModal
+                        message={`¿Estás seguro de eliminar este centro? Se eliminarán todos los grados, secciones y materias asociadas.`}
+                        onConfirm={()=>handleDeleteCenter(confirmDeleteCenter.id)}
+                        onCancel={() => setConfirmDeleteCenter(null)}
+                        confirmLabel='Sí, eliminar'
+                        danger
+                    />
                 )}
             </div>
         </>

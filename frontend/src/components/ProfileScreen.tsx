@@ -167,10 +167,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
           </div>
 
           {/* Activity / Progress Card */}
-          {(!isProfessor || userRole === 'admin') && (
+          {(!isProfessor ) && (
             <div style={{ background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
               <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>📊</span> {userRole === 'admin' ? 'Gestión Adicional' : 'Tu Progreso'}
+                <span style={{ fontSize: '1.5rem' }}>📊</span> Tu Progreso
               </h3>
               
               {userRole === 'admin' ? (
