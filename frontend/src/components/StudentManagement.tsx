@@ -583,7 +583,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
                 {activeTab === 'csv' && (
                     <div className="csv-upload-subject">
                         <h4 style={{ color: '#842fa0ff' }}>Subir Archivo CSV</h4>
-                        <div className="csv-helper-text" style={{ color: '#4b5563' }}>Formato requerido: <code>email, password, full_name, [cohort]</code></div>
+                        <div className="csv-helper-text" style={{ color: '#4b5563' }}>Formato requerido: <code>email, password, full_name, cohort</code></div>
                         <input type="file" accept=".csv" onChange={handleFileUpload} className="modern-input" style={{ maxWidth: '400px', margin: '0 auto', background: '#f8fafc', color: '#842fa0ff', border: '1px solid rgba(31, 41, 90, 0.2)' }} disabled={parsing || loading} />
                     </div>
                 )}
