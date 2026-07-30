@@ -165,7 +165,7 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                                 }}
                             >
-                                Agregar... <span style={{ fontSize: '0.8rem', marginLeft: '0.2rem' }}>▼</span>
+                                Nuevo centro
                             </button>
                         </div>
                     </div>
