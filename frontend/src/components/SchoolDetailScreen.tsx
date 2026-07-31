@@ -143,7 +143,10 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
         }
     }
 
-
+    const isSecundaria = gradeForm.name === 'Secundaria';
+    const isPrimaria = gradeForm.name === 'Primaria';
+    const label = isSecundaria || isPrimaria ? 'Grado' : 'Semestre';
+    const options = isSecundaria ? [1, 2, 3] : [1, 2, 3, 4, 5, 6];
 
     // ========== GRADE FUNCTIONS ==========
 
@@ -608,18 +611,18 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                     </select>
                                 </div>
                                 <div className="form-group">
-                                    <label style={{ color: '#1f295a', fontWeight: 'bold' }}>{gradeForm.name && gradeForm.name !== 'Primaria' ? 'Semestre' : 'Grado'}</label>
-                                    <select
-                                        value={gradeForm.level || ''}
-                                        onChange={(e) => setGradeForm({ ...gradeForm, level: parseInt(e.target.value) })}
-                                        className="modern-input"
-                                        style={{ background: '#f8fafc', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
-                                    >
-                                        <option value="">Seleccione un {gradeForm.name && gradeForm.name !== 'Primaria' ? 'semestre' : 'grado'}...</option>
-                                        {[1, 2, 3, 4, 5, 6].map(num => (
-                                            <option key={num} value={num}>{num}</option>
-                                        ))}
-                                    </select>
+                                            <label style={{ color: '#1f295a', fontWeight: 'bold' }}>{label}</label>
+                                            <select
+                                                value={gradeForm.level || ''}
+                                                onChange={(e) => setGradeForm({ ...gradeForm, level: parseInt(e.target.value) })}
+                                                className="modern-input"
+                                                style={{ background: '#f8fafc', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
+                                            >
+                                                <option value="">Seleccione un {label.toLowerCase()}...</option>
+                                                {options.map(num => (
+                                                    <option key={num} value={num}>{num}</option>
+                                                ))}
+                                            </select>
                                 </div>
                             </div>
                             <div className="modal-actions">
