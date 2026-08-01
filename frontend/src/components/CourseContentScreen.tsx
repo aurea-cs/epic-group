@@ -442,7 +442,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
 
     return (
         <div className="course-content-screen">
-            <div className="hierarchy-config" style={{ padding: '2rem 4rem' }}>
+            <div className="hierarchy-config course-content-config" style={{ padding: '2rem 4rem' }}>
                 <div style={{ maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
 
                     {/* Header */}
@@ -559,7 +559,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                     overflow: 'hidden'
                                 }}>
                                     {/* Module Header */}
-                                    <div style={{
+                                    <div className="module-header-container" style={{
                                         padding: '1.5rem',
                                         background: 'rgba(31, 41, 90, 0.05)',
                                         borderBottom: '1px solid rgba(31, 41, 90, 0.1)',
@@ -582,23 +582,13 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
 
                                                 {/* VR Room rows */}
                                                 {(vrEntriesByModule[module.id] || []).map(entry => (
-                                                    <div key={entry.id} style={{
-                                                        padding: '1rem',
-                                                        background: 'linear-gradient(135deg, #2d1b69 0%, #1a1040 100%)',
-                                                        borderRadius: '8px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '1rem',
-                                                        color: '#ffffff',
-                                                        position: 'relative',
-                                                        border: '1px solid rgba(108,92,231,0.35)'
-                                                    }}>
+                                                    <div key={entry.id} className="module-item-row vr-room">
                                                         <div style={{ fontSize: '1.5rem' }}>🚀</div>
 
                                                         <div style={{ flex: 1, minWidth: 0 }}>
                                                             <div style={{ fontWeight: 'bold' }}>{entry.title || 'Sala VR'}</div>
                                                             {entry.description && <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>{entry.description}</div>}
-                                                            <a href={entry.code} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#c4b5fd', marginTop: '0.25rem', letterSpacing: '0.1em' }}>Link: {entry.code}</a>
+                                                            <a href={entry.code} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#c4b5fd', marginTop: '0.25rem', letterSpacing: '0.1em', display: 'block', wordBreak: 'break-all' }}>Link: {entry.code}</a>
                                                         </div>
 
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -642,16 +632,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                                     </div>
                                                 ))}
                                                 {module.items && module.items.map(item => (
-                                                    <div key={item.id} style={{
-                                                        padding: '1rem',
-                                                        background: '#1f295a',
-                                                        borderRadius: '8px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '1rem',
-                                                        color: '#ffffff',
-                                                        position: 'relative'
-                                                    }}>
+                                                    <div key={item.id} className="module-item-row standard">
                                                         <div style={{ fontSize: '1.5rem' }}>
                                                             {item.type === 'pdf' ? '📄' : item.type === 'video' ? '🎥' : '🔗'}
                                                         </div>
