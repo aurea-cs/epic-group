@@ -9,6 +9,7 @@ interface StudentsTabProps {
     onEdit: (student: Student) => void
     onDelete: (id: string) => void
     allCenters: { id: string, name: string }[]
+    hideActions?: boolean
 }
 
 function avatarColor(name: string): string {
@@ -17,7 +18,7 @@ function avatarColor(name: string): string {
   return colors[Math.abs(h) % colors.length]
 }
 
-const StudentsTab: React.FC<StudentsTabProps> = ({ loading, students, onEdit, onDelete }) => {
+const StudentsTab: React.FC<StudentsTabProps> = ({ loading, students, onEdit, onDelete, hideActions }) => {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCenter, setFilterCenter] = useState('')
@@ -68,7 +69,7 @@ const StudentsTab: React.FC<StudentsTabProps> = ({ loading, students, onEdit, on
                     <th style={thStyle}>Alumno</th>
                     <th style={thStyle}>Correo Electrónico</th>
                     <th style={thStyle}>Centros Inscritos</th>
-                    <th style={{ ...thStyle, textAlign: 'right' }}>Acciones</th>
+                    {!hideActions && <th style={{ ...thStyle, textAlign: 'right' }}>Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -115,12 +116,14 @@ const StudentsTab: React.FC<StudentsTabProps> = ({ loading, students, onEdit, on
                       </td>
 
                       {/* Actions */}
-                      <td style={{ ...tdStyle, textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                          <ActionButton label="✏️ Editar" bg="rgba(192,132,252,0.13)" hoverBg="rgba(192,132,252,0.25)" textColor="#e9d5ff" border="1px solid rgba(192,132,252,0.3)" onClick={() => onEdit(student)} />
-                          <ActionButton label="🗑️" bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => onDelete(student.id)} />
-                        </div>
-                      </td>
+                      {!hideActions && (
+                        <td style={{ ...tdStyle, textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                            <ActionButton label="✏️ Editar" bg="rgba(192,132,252,0.13)" hoverBg="rgba(192,132,252,0.25)" textColor="#e9d5ff" border="1px solid rgba(192,132,252,0.3)" onClick={() => onEdit(student)} />
+                            <ActionButton label="🗑️" bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => onDelete(student.id)} />
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

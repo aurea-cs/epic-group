@@ -94,14 +94,27 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
     // Load subjects when grade is selected
     useEffect(() => {
         if (selectedGrade) {
+            if (centerId) {
+                localStorage.setItem(`selectedGrade_${centerId}`, selectedGrade.id)
+            }
             loadSubjects(selectedGrade.id)
         } else if (grades.length > 0) {
             // Auto-select first grade if none is selected
-            setSelectedGrade(grades[0])
+            if (centerId) {
+                const savedGradeId = localStorage.getItem(`selectedGrade_${centerId}`)
+                const savedGrade = savedGradeId ? grades.find(g => g.id === savedGradeId) : null
+                if (savedGrade) {
+                    setSelectedGrade(savedGrade)
+                } else {
+                    setSelectedGrade(grades[0])
+                }
+            } else {
+                setSelectedGrade(grades[0])
+            }
         } else {
             setSubjects([])
         }
-    }, [selectedGrade, grades])
+    }, [selectedGrade, grades, centerId])
 
 
 
@@ -300,9 +313,9 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
 
                         <div className="courses-list-body">
                             {loading && subjects.length === 0 ? (
-                                <p className="empty-text">Cargando materias...</p>
+                                <p className="empty-text" style={{ color: 'white' }}>Cargando materias...</p>
                             ) : subjects.length === 0 ? (
-                                <p className="empty-text">No hay materias registradas en este grado.</p>
+                                <p className="empty-text" style={{ color: 'white' }}>No hay materias registradas en este grado.</p>
                             ) : (
                                 subjects.map((subject) => (
                                     <div key={subject.id} className="course-list-row" onClick={() => openSubjectDetail(subject)}>

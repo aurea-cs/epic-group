@@ -7,6 +7,7 @@ import {
     toggleItemVisibility,
     type Subject,
 } from '../lib/adminApi'
+import { getUserRole } from '../utils/getUserRole'
 import './HierarchyConfig.css'
 
 import type { Assignment, CalendarEvent, Student, ModuleWithItems, Center, Submission, TabKey } from './ProfessorContentScreen/types'
@@ -195,6 +196,7 @@ async function gradeStudentSubmission(
 
 const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScreenProps> = ({ user }) => {
     const { courseId } = useParams<{ courseId: string }>()
+    const isAdmin = getUserRole(user) === 'admin'
 
     const [subject, setSubject] = useState<Subject | null>(null)
     const [modules, setModules] = useState<ModuleWithItems[]>([])
@@ -485,7 +487,7 @@ const loadStudents = useCallback(async () => {
                         onClick={() => { setEditingEvent(null); setShowEventModal(true) }}
                     />
                 )}
-                {activeTab === 'students' && (
+                {activeTab === 'students' && isAdmin && (
                     <ActionButton
                         label="Nuevo alumno ➕"
                         bg="rgba(192,132,252,0.18)" hoverBg="rgba(192,132,252,0.3)" textColor="#f3e8ff"
@@ -530,6 +532,7 @@ const loadStudents = useCallback(async () => {
                     onEdit={student => { setEditingStudent(student); setShowStudentModal(true) }}
                     onDelete={id => setConfirmDeleteStudentId(id)}
                     allCenters={allCenters}
+                    hideActions={!isAdmin}
                 />
             )}
 

@@ -432,7 +432,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
         } catch (err: any) {
             alert(err.message || 'Error al eliminar elemento')
         }
-                    setConfirmDeleteItem(null)
+        setConfirmDeleteItem(null)
 
     }
 
@@ -547,7 +547,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                     {/* Modules List */}
                     <div className="modules-container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                         {modules.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '4rem', color: '#1f295a', border: '2px dashed rgba(31, 41, 90, 0.3)', borderRadius: '1rem' }}>
+                            <div style={{ textAlign: 'center', padding: '4rem', color: '#ffffffff', border: '2px dashed rgba(31, 41, 90, 0.3)', borderRadius: '1rem' }}>
                                 <p>No hay módulos creados. Comienza agregando uno.</p>
                             </div>
                         ) : (
@@ -579,132 +579,132 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                         {(module.items && module.items.length > 0) || (vrEntriesByModule[module.id] && vrEntriesByModule[module.id].length > 0) ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
 
-                                                
-    {/* VR Room rows */}
-    {(vrEntriesByModule[module.id] || []).map(entry => (
-        <div key={entry.id} style={{
-            padding: '1rem',
-            background: 'linear-gradient(135deg, #2d1b69 0%, #1a1040 100%)',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            color: '#ffffff',
-            position: 'relative',
-            border: '1px solid rgba(108,92,231,0.35)'
-        }}>
-            <div style={{ fontSize: '1.5rem' }}>🚀</div>
 
-            <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 'bold' }}>{entry.title || 'Sala VR'}</div>
-                {entry.description && <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>{entry.description}</div>}
-                <a href={entry.code} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#c4b5fd', marginTop: '0.25rem', letterSpacing: '0.1em' }}>Link: {entry.code}</a>
-            </div>
+                                                {/* VR Room rows */}
+                                                {(vrEntriesByModule[module.id] || []).map(entry => (
+                                                    <div key={entry.id} style={{
+                                                        padding: '1rem',
+                                                        background: 'linear-gradient(135deg, #2d1b69 0%, #1a1040 100%)',
+                                                        borderRadius: '8px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '1rem',
+                                                        color: '#ffffff',
+                                                        position: 'relative',
+                                                        border: '1px solid rgba(108,92,231,0.35)'
+                                                    }}>
+                                                        <div style={{ fontSize: '1.5rem' }}>🚀</div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <a
-                    href={entry.code}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                        padding: '0.3rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(196,181,253,0.5)',
-                        background: 'rgba(108,92,231,0.2)', color: '#c4b5fd', fontSize: '0.8rem',
-                        textDecoration: 'none', fontWeight: '600', whiteSpace: 'nowrap'
-                    }}
-                >
-                    Ver 🔗
-                </a>
-                <button
-                    onClick={() => handleOpenEditVrModal(entry)}
-                    title="Editar"
-                    style={{
-                        width: '28px', height: '28px', borderRadius: '6px', border: 'none',
-                        background: 'rgba(255,255,255,0.12)', color: '#fff',
-                        cursor: 'pointer', fontSize: '0.85rem',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}
-                >
-                    ✏️
-                </button>
-                <button
-                    onClick={() => setConfirmDeleteVrEntry(entry)}
-                    title="Eliminar"
-                    style={{
-                        width: '28px', height: '28px', borderRadius: '6px', border: 'none',
-                        background: 'rgba(220,38,38,0.15)', color: '#f87171',
-                        cursor: 'pointer', fontSize: '0.85rem',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}
-                >
-                    🗑️
-                </button>
-            </div>
-        </div>
-    ))}
-    {module.items && module.items.map(item => (
-        <div key={item.id} style={{
-            padding: '1rem',
-            background: '#1f295a',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            color: '#ffffff',
-            position: 'relative'
-        }}>
-            <div style={{ fontSize: '1.5rem' }}>
-                {item.type === 'pdf' ? '📄' : item.type === 'video' ? '🎥' : '🔗'}
-            </div>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div style={{ fontWeight: 'bold' }}>{entry.title || 'Sala VR'}</div>
+                                                            {entry.description && <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>{entry.description}</div>}
+                                                            <a href={entry.code} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#c4b5fd', marginTop: '0.25rem', letterSpacing: '0.1em' }}>Link: {entry.code}</a>
+                                                        </div>
 
-            <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 'bold' }}>{item.title}</div>
-                {item.description && <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>{item.description}</div>}
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                            <a
+                                                                href={entry.code}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                style={{
+                                                                    padding: '0.3rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(196,181,253,0.5)',
+                                                                    background: 'rgba(108,92,231,0.2)', color: '#c4b5fd', fontSize: '0.8rem',
+                                                                    textDecoration: 'none', fontWeight: '600', whiteSpace: 'nowrap'
+                                                                }}
+                                                            >
+                                                                Ver 🔗
+                                                            </a>
+                                                            <button
+                                                                onClick={() => handleOpenEditVrModal(entry)}
+                                                                title="Editar"
+                                                                style={{
+                                                                    width: '28px', height: '28px', borderRadius: '6px', border: 'none',
+                                                                    background: 'rgba(255,255,255,0.12)', color: '#fff',
+                                                                    cursor: 'pointer', fontSize: '0.85rem',
+                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                                }}
+                                                            >
+                                                                ✏️
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setConfirmDeleteVrEntry(entry)}
+                                                                title="Eliminar"
+                                                                style={{
+                                                                    width: '28px', height: '28px', borderRadius: '6px', border: 'none',
+                                                                    background: 'rgba(220,38,38,0.15)', color: '#f87171',
+                                                                    cursor: 'pointer', fontSize: '0.85rem',
+                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                                }}
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {module.items && module.items.map(item => (
+                                                    <div key={item.id} style={{
+                                                        padding: '1rem',
+                                                        background: '#1f295a',
+                                                        borderRadius: '8px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '1rem',
+                                                        color: '#ffffff',
+                                                        position: 'relative'
+                                                    }}>
+                                                        <div style={{ fontSize: '1.5rem' }}>
+                                                            {item.type === 'pdf' ? '📄' : item.type === 'video' ? '🎥' : '🔗'}
+                                                        </div>
 
-                {/* Subtle visibility indicator, always visible, no action needed to read it */}
-                <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.35rem' }}>
-                    <span style={{ fontSize: '0.72rem', color: item.show_student ? '#6ee7a8' : 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: item.show_student ? '#6ee7a8' : 'rgba(255,255,255,0.3)', display: 'inline-block' }} />
-                        Estudiantes
-                    </span>
-                    <span style={{ fontSize: '0.72rem', color: item.show_teacher ? '#c4b5fd' : 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: item.show_teacher ? '#c4b5fd' : 'rgba(255,255,255,0.3)', display: 'inline-block' }} />
-                        Profesores
-                    </span>
-                </div>
-            </div>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div style={{ fontWeight: 'bold' }}>{item.title}</div>
+                                                            {item.description && <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>{item.description}</div>}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <button
-                    onClick={() => handleOpenEditItem(item)}
-                    title="Editar"
-                    style={{
-                        width: '28px', height: '28px', borderRadius: '6px', border: 'none',
-                        background: 'rgba(255,255,255,0.12)', color: '#fff',
-                        cursor: 'pointer', fontSize: '0.85rem',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}
-                >
-                    ✏️
-                </button>
+                                                            {/* Subtle visibility indicator, always visible, no action needed to read it */}
+                                                            <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.35rem' }}>
+                                                                <span style={{ fontSize: '0.72rem', color: item.show_student ? '#6ee7a8' : 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: item.show_student ? '#6ee7a8' : 'rgba(255,255,255,0.3)', display: 'inline-block' }} />
+                                                                    Estudiantes
+                                                                </span>
+                                                                <span style={{ fontSize: '0.72rem', color: item.show_teacher ? '#c4b5fd' : 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: item.show_teacher ? '#c4b5fd' : 'rgba(255,255,255,0.3)', display: 'inline-block' }} />
+                                                                    Profesores
+                                                                </span>
+                                                            </div>
+                                                        </div>
 
-                <button
-                    ref={el => { kebabRefs.current[item.id] = el }}
-                    onClick={(e) => handleKebabClick(e, item.id)}
-                    title="Más opciones"
-                    style={{
-                        width: '28px', height: '28px', borderRadius: '6px', border: 'none',
-                        background: openMenuItemId === item.id ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)',
-                        color: '#fff', cursor: 'pointer', fontSize: '1rem',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}
-                >
-                    ⋮
-                </button>
-            </div>
-        </div>
-    ))}
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                            <button
+                                                                onClick={() => handleOpenEditItem(item)}
+                                                                title="Editar"
+                                                                style={{
+                                                                    width: '28px', height: '28px', borderRadius: '6px', border: 'none',
+                                                                    background: 'rgba(255,255,255,0.12)', color: '#fff',
+                                                                    cursor: 'pointer', fontSize: '0.85rem',
+                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                                }}
+                                                            >
+                                                                ✏️
+                                                            </button>
 
-</div>
+                                                            <button
+                                                                ref={el => { kebabRefs.current[item.id] = el }}
+                                                                onClick={(e) => handleKebabClick(e, item.id)}
+                                                                title="Más opciones"
+                                                                style={{
+                                                                    width: '28px', height: '28px', borderRadius: '6px', border: 'none',
+                                                                    background: openMenuItemId === item.id ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)',
+                                                                    color: '#fff', cursor: 'pointer', fontSize: '1rem',
+                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                                }}
+                                                            >
+                                                                ⋮
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+
+                                            </div>
                                         ) : (
                                             <p style={{ color: 'rgba(31, 41, 90, 0.5)', fontStyle: 'italic', padding: '1rem' }}>Sin contenido</p>
                                         )}
@@ -782,14 +782,14 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                             <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
                                 <div className="form-group" style={{ width: '100%' }}>
                                     <label style={{ marginBottom: '12px' }}>Tipo</label>
-                                    <CustomSelect 
-                                    options={[
-                                        { value: 'pdf', label: 'Documento PDF' },
-                                        { value: 'video', label: 'Video' },
-                                        { value: 'link', label: 'Enlace' },
-                                    ]}
-                                    value={itemForm.type}
-                                    onChange={val => setItemForm({ ...itemForm, type: val as any })}
+                                    <CustomSelect
+                                        options={[
+                                            { value: 'pdf', label: 'Documento PDF' },
+                                            { value: 'video', label: 'Video' },
+                                            { value: 'link', label: 'Enlace' },
+                                        ]}
+                                        value={itemForm.type}
+                                        onChange={val => setItemForm({ ...itemForm, type: val as any })}
                                     />
                                 </div>
                                 <div className="form-group" style={{ width: '100%' }}>
@@ -857,210 +857,210 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
             )}
 
             {openMenuItemId && menuPosition && createPortal(
-    <div
-        ref={menuRef}
-        style={{
-            position: 'fixed',
-            top: menuPosition.top,
-            left: menuPosition.left,
-            zIndex: 9999,
-            background: '#ffffff',
-            borderRadius: '8px',
-            minWidth: '220px',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-            overflow: 'hidden',
-            border: '1px solid rgba(0,0,0,0.08)'
-        }}
-    >
-        {/* find the open item to read its current state */}
-        {(() => {
-            const item = modules.flatMap(m => m.items ?? []).find(i => i.id === openMenuItemId)
-            if (!item) return null
-            return (
-                <>
-                    <button
-                        onClick={() => { handleToggleStudentVisibility(item); setOpenMenuItemId(null); setMenuPosition(null) }}
-                        disabled={visibilityLoading === item.id}
-                        style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem' }}
-                        onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
-                        onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
-                    >
-                        <span>Visible para estudiantes</span>
-                        <Toggle on={item.show_student!} color="#22c55e" />
-                    </button>
+                <div
+                    ref={menuRef}
+                    style={{
+                        position: 'fixed',
+                        top: menuPosition.top,
+                        left: menuPosition.left,
+                        zIndex: 9999,
+                        background: '#ffffff',
+                        borderRadius: '8px',
+                        minWidth: '220px',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                        overflow: 'hidden',
+                        border: '1px solid rgba(0,0,0,0.08)'
+                    }}
+                >
+                    {/* find the open item to read its current state */}
+                    {(() => {
+                        const item = modules.flatMap(m => m.items ?? []).find(i => i.id === openMenuItemId)
+                        if (!item) return null
+                        return (
+                            <>
+                                <button
+                                    onClick={() => { handleToggleStudentVisibility(item); setOpenMenuItemId(null); setMenuPosition(null) }}
+                                    disabled={visibilityLoading === item.id}
+                                    style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem' }}
+                                    onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
+                                    onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                                >
+                                    <span>Visible para estudiantes</span>
+                                    <Toggle on={item.show_student!} color="#22c55e" />
+                                </button>
 
-                    <button
-                        onClick={() => { handleToggleProfessorVisibility(item); setOpenMenuItemId(null); setMenuPosition(null) }}
-                        disabled={visibilityLoading === item.id}
-                        style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem' }}
-                        onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
-                        onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
-                    >
-                        <span>Visible para profesores</span>
-                        <Toggle on={item.show_teacher!} color="#8b5cf6" />
-                    </button>
+                                <button
+                                    onClick={() => { handleToggleProfessorVisibility(item); setOpenMenuItemId(null); setMenuPosition(null) }}
+                                    disabled={visibilityLoading === item.id}
+                                    style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem' }}
+                                    onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
+                                    onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                                >
+                                    <span>Visible para profesores</span>
+                                    <Toggle on={item.show_teacher!} color="#8b5cf6" />
+                                </button>
 
-                    {item.content_url && (
-                        <>
-                            <div style={{ height: '1px', background: 'rgba(31,41,90,0.1)' }} />
-                            <a
-                                href={item.content_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={() => { setOpenMenuItemId(null); setMenuPosition(null) }}
-                                style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem', textDecoration: 'none' }}
-                            >
-                                ⬇️ Ver contenido
-                            </a>
-                        </>
-                    )}
+                                {item.content_url && (
+                                    <>
+                                        <div style={{ height: '1px', background: 'rgba(31,41,90,0.1)' }} />
+                                        <a
+                                            href={item.content_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={() => { setOpenMenuItemId(null); setMenuPosition(null) }}
+                                            style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem', textDecoration: 'none' }}
+                                        >
+                                            ⬇️ Ver contenido
+                                        </a>
+                                    </>
+                                )}
 
-                    <div style={{ height: '1px', background: 'rgba(31,41,90,0.1)' }} />
+                                <div style={{ height: '1px', background: 'rgba(31,41,90,0.1)' }} />
 
-                    <button
-                        onClick={() => { setOpenMenuItemId(null); setMenuPosition(null); setConfirmDeleteItem(item) }}
-                        style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#dc2626', fontSize: '0.875rem' }}
-                        onMouseOver={e => (e.currentTarget.style.background = 'rgba(220,38,38,0.06)')}
-                        onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
-                    >
-                        🗑️ Eliminar
-                    </button>
-                </>
-            )
-        })()}
-    </div>,
-    document.body
-)}
-
-{showEditItemModal && editingItem && (
-    <div className="modal-overlay" onClick={() => setShowEditItemModal(false)}>
-        <div className="school-modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-                <h2>Editar Contenido</h2>
-            </div>
-            <div className="form-grid">
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                    <label>Título</label>
-                    <input
-                        type="text"
-                        className="modern-input"
-                        value={editItemForm.title}
-                        onChange={e => setEditItemForm({ ...editItemForm, title: e.target.value })}
-                        autoFocus
-                    />
-                </div>
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                    <label>Descripción</label>
-                    <textarea
-                        className="modern-input"
-                        style={{ minHeight: '120px' }}
-                        value={editItemForm.description}
-                        onChange={e => setEditItemForm({ ...editItemForm, description: e.target.value })}
-                    />
-                </div>
-                {editingItem.type !== 'pdf' && (
-                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                        <label>URL del Contenido</label>
-                        <input
-                            type="text"
-                            className="modern-input"
-                            value={editItemForm.content_url}
-                            onChange={e => setEditItemForm({ ...editItemForm, content_url: e.target.value })}
-                            placeholder="https://..."
-                        />
-                    </div>
-                )}
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                    <ImageUploadField
-                        label="Imagen de portada"
-                        value={editItemForm.image_url}
-                        onChange={url => setEditItemForm({ ...editItemForm, image_url: url })}
-                    />
-                </div>
-            </div>
-            <div className="modal-actions">
-                <button className="btn-cancel-modern" onClick={() => setShowEditItemModal(false)}>Cancelar</button>
-                <button className="btn-save-modern" onClick={handleSaveEditItem}>Guardar</button>
-            </div>
-        </div>
-    </div>
-)}
-
-{showVrModal && (
-    <div className="modal-overlay" onClick={() => { if (!vrLoading) { setShowVrModal(false) } }}>
-        <div className="school-modal-content" onClick={e => e.stopPropagation()}>
-
-            {/* Header */}
-            <div className="modal-header" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <h2 style={{ margin: 0 }}>
-                    {vrEditingEntry ? '🚀  Editar Sala VR' : '🚀  Nueva Sala VR'}
-                </h2>
-            </div>
-
-            {vrLoading ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#6c5ce7' }}>
-                    <div className="loading-spinner" />
-                </div>
-            ) : (
-                <>
-                    <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
-                        <div className="form-group">
-                            <label>
-                                Link de la Sala
-                            </label>
-                            <input
-                                type="text"
-                                className="modern-input"
-                                value={vrForm.code}
-                                onChange={e => setVrForm({ ...vrForm, code: e.target.value })}
-                                placeholder="https://..."
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Título <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span></label>
-                            <input
-                                type="text"
-                                className="modern-input"
-                                value={vrForm.title}
-                                onChange={e => setVrForm({ ...vrForm, title: e.target.value })}
-                                placeholder="Ej: Sala de Exploración"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Descripción <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span></label>
-                            <textarea
-                                className="modern-input"
-                                value={vrForm.description}
-                                onChange={e => setVrForm({ ...vrForm, description: e.target.value })}
-                                placeholder="Descripción breve de la sala..."
-                                style={{ minHeight: '80px' }}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <ImageUploadField
-                                label="Imagen de la sala"
-                                value={vrForm.image_url}
-                                onChange={url => setVrForm({ ...vrForm, image_url: url })}
-                            />
-                        </div>
-                    </div>
-                    <div className="modal-actions">
-                        <button
-                            className="btn-cancel-modern"
-                            onClick={() => { setShowVrModal(false); setVrEditingEntry(null); setVrForm({ code: '', image_url: '', title: '', description: '' }) }}
-                            disabled={vrLoading}
-                        >Cancelar</button>
-                        <button
-                            className="btn-save-modern"
-                            onClick={vrEditingEntry ? handleUpdateVrCode : handleAddVrCode}
-                            disabled={vrLoading}
-                        >Guardar</button>
-                    </div>
-                </>
+                                <button
+                                    onClick={() => { setOpenMenuItemId(null); setMenuPosition(null); setConfirmDeleteItem(item) }}
+                                    style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#dc2626', fontSize: '0.875rem' }}
+                                    onMouseOver={e => (e.currentTarget.style.background = 'rgba(220,38,38,0.06)')}
+                                    onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                                >
+                                    🗑️ Eliminar
+                                </button>
+                            </>
+                        )
+                    })()}
+                </div>,
+                document.body
             )}
-        </div>
-    </div>
-)}
+
+            {showEditItemModal && editingItem && (
+                <div className="modal-overlay" onClick={() => setShowEditItemModal(false)}>
+                    <div className="school-modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Editar Contenido</h2>
+                        </div>
+                        <div className="form-grid">
+                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                <label>Título</label>
+                                <input
+                                    type="text"
+                                    className="modern-input"
+                                    value={editItemForm.title}
+                                    onChange={e => setEditItemForm({ ...editItemForm, title: e.target.value })}
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                <label>Descripción</label>
+                                <textarea
+                                    className="modern-input"
+                                    style={{ minHeight: '120px' }}
+                                    value={editItemForm.description}
+                                    onChange={e => setEditItemForm({ ...editItemForm, description: e.target.value })}
+                                />
+                            </div>
+                            {editingItem.type !== 'pdf' && (
+                                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                    <label>URL del Contenido</label>
+                                    <input
+                                        type="text"
+                                        className="modern-input"
+                                        value={editItemForm.content_url}
+                                        onChange={e => setEditItemForm({ ...editItemForm, content_url: e.target.value })}
+                                        placeholder="https://..."
+                                    />
+                                </div>
+                            )}
+                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                <ImageUploadField
+                                    label="Imagen de portada"
+                                    value={editItemForm.image_url}
+                                    onChange={url => setEditItemForm({ ...editItemForm, image_url: url })}
+                                />
+                            </div>
+                        </div>
+                        <div className="modal-actions">
+                            <button className="btn-cancel-modern" onClick={() => setShowEditItemModal(false)}>Cancelar</button>
+                            <button className="btn-save-modern" onClick={handleSaveEditItem}>Guardar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showVrModal && (
+                <div className="modal-overlay" onClick={() => { if (!vrLoading) { setShowVrModal(false) } }}>
+                    <div className="school-modal-content" onClick={e => e.stopPropagation()}>
+
+                        {/* Header */}
+                        <div className="modal-header" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <h2 style={{ margin: 0 }}>
+                                {vrEditingEntry ? '🚀  Editar Sala VR' : '🚀  Nueva Sala VR'}
+                            </h2>
+                        </div>
+
+                        {vrLoading ? (
+                            <div style={{ padding: '2rem', textAlign: 'center', color: '#6c5ce7' }}>
+                                <div className="loading-spinner" />
+                            </div>
+                        ) : (
+                            <>
+                                <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
+                                    <div className="form-group">
+                                        <label>
+                                            Link de la Sala
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="modern-input"
+                                            value={vrForm.code}
+                                            onChange={e => setVrForm({ ...vrForm, code: e.target.value })}
+                                            placeholder="https://..."
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Título <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span></label>
+                                        <input
+                                            type="text"
+                                            className="modern-input"
+                                            value={vrForm.title}
+                                            onChange={e => setVrForm({ ...vrForm, title: e.target.value })}
+                                            placeholder="Ej: Sala de Exploración"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Descripción <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span></label>
+                                        <textarea
+                                            className="modern-input"
+                                            value={vrForm.description}
+                                            onChange={e => setVrForm({ ...vrForm, description: e.target.value })}
+                                            placeholder="Descripción breve de la sala..."
+                                            style={{ minHeight: '80px' }}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <ImageUploadField
+                                            label="Imagen de la sala"
+                                            value={vrForm.image_url}
+                                            onChange={url => setVrForm({ ...vrForm, image_url: url })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="modal-actions">
+                                    <button
+                                        className="btn-cancel-modern"
+                                        onClick={() => { setShowVrModal(false); setVrEditingEntry(null); setVrForm({ code: '', image_url: '', title: '', description: '' }) }}
+                                        disabled={vrLoading}
+                                    >Cancelar</button>
+                                    <button
+                                        className="btn-save-modern"
+                                        onClick={vrEditingEntry ? handleUpdateVrCode : handleAddVrCode}
+                                        disabled={vrLoading}
+                                    >Guardar</button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
             {/* PROFESSOR ASSIGNMENT MODAL */}
             {showProfessorModal && (
                 <div className="modal-overlay" onClick={() => setShowProfessorModal(false)}>
