@@ -1,16 +1,114 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { tdStyle, EyeToggle } from '../general/SharedUI'
 import { ITEM_TYPE_ICON, type ModuleWithItems } from './types'
+
 interface ContentTabProps {
     loading: boolean
     modules: ModuleWithItems[]
     itemVisibility: Record<string, boolean>
     onToggleItemVisibility: (itemId: string) => void
+    onBulkDelete?: (itemIds: string[]) => void
+    onBulkEditVisibility?: (itemIds: string[], visible: boolean) => void
 }
 
-const ContentTab: React.FC<ContentTabProps> = ({ loading, modules, itemVisibility, onToggleItemVisibility }) => {
+const ContentTab: React.FC<ContentTabProps> = ({ 
+    loading, 
+    modules, 
+    itemVisibility, 
+    onToggleItemVisibility,
+    onBulkDelete,
+    onBulkEditVisibility
+}) => {
+    const [selectedIds, setSelectedIds] = useState<string[]>([])
+
+    const toggleSelection = (id: string) => {
+        setSelectedIds(prev => 
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        )
+    }
+
+    const toggleModuleSelection = (moduleId: string) => {
+        const module = modules.find(m => m.id === moduleId)
+        if (!module || !module.items) return
+        
+        const moduleItemIds = module.items.map(item => item.id)
+        const allSelected = moduleItemIds.every(id => selectedIds.includes(id))
+        
+        if (allSelected) {
+            setSelectedIds(prev => prev.filter(id => !moduleItemIds.includes(id)))
+        } else {
+            setSelectedIds(prev => {
+                const newIds = new Set(prev)
+                moduleItemIds.forEach(id => newIds.add(id))
+                return Array.from(newIds)
+            })
+        }
+    }
+
+    const clearSelection = () => setSelectedIds([])
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative' }}>
+            
+            {/* Bulk Actions Bar */}
+            {selectedIds.length > 0 && (
+                <div style={{ 
+                    position: 'sticky', 
+                    top: 0, 
+                    zIndex: 10,
+                    background: 'linear-gradient(90deg, rgba(124, 58, 237, 0.95) 0%, rgba(168, 85, 247, 0.95) 100%)', 
+                    padding: '1rem 1.5rem', 
+                    borderRadius: '12px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <span style={{ fontWeight: 600, color: '#fff' }}>
+                            {selectedIds.length} {selectedIds.length === 1 ? 'elemento seleccionado' : 'elementos seleccionados'}
+                        </span>
+                        <button 
+                            onClick={clearSelection}
+                            style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '0.85rem' }}
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <button 
+                            onClick={() => {
+                                if (onBulkEditVisibility) onBulkEditVisibility(selectedIds, true)
+                                clearSelection()
+                            }}
+                            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}
+                        >
+                            👁️ Mostrar
+                        </button>
+                        <button 
+                            onClick={() => {
+                                if (onBulkEditVisibility) onBulkEditVisibility(selectedIds, false)
+                                clearSelection()
+                            }}
+                            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}
+                        >
+                            🚫 Ocultar
+                        </button>
+                        <button 
+                            onClick={() => {
+                                if (onBulkDelete) onBulkDelete(selectedIds)
+                                clearSelection()
+                            }}
+                            style={{ background: 'rgba(248,113,113,0.2)', border: '1px solid rgba(248,113,113,0.5)', color: '#fca5a5', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}
+                        >
+                            🗑️ Eliminar
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {loading ? (
                 <div style={{ padding: '1.25rem', color: 'rgba(255,255,255,0.6)' }}>Cargando módulos…</div>
             ) : modules.length === 0 ? (
@@ -20,10 +118,23 @@ const ContentTab: React.FC<ContentTabProps> = ({ loading, modules, itemVisibilit
             ) : (
                 modules.map(m => {
                     const items = m.items || []
+                    const moduleItemIds = items.map(i => i.id)
+                    const allSelected = items.length > 0 && moduleItemIds.every(id => selectedIds.includes(id))
+                    const someSelected = items.length > 0 && moduleItemIds.some(id => selectedIds.includes(id)) && !allSelected
+
                     return (
                         <div key={m.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', overflow: 'hidden' }}>
                             {/* Module header */}
-                            <div style={{ padding: '1.1rem 1.25rem', background: 'rgba(192,132,252,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                            <div style={{ padding: '1.1rem 1.25rem', background: 'rgba(192,132,252,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <input 
+                                    type="checkbox" 
+                                    checked={allSelected}
+                                    ref={input => {
+                                        if (input) input.indeterminate = someSelected
+                                    }}
+                                    onChange={() => toggleModuleSelection(m.id)}
+                                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#a855f7' }}
+                                />
                                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#f3e8ff' }}>{m.title}</h3>
                             </div>
 
@@ -32,10 +143,24 @@ const ContentTab: React.FC<ContentTabProps> = ({ loading, modules, itemVisibilit
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <tbody>
                                         {items.length === 0 ? (
-                                            <tr><td style={tdStyle} colSpan={2}>Este tema todavía no tiene contenido.</td></tr>
+                                            <tr><td style={tdStyle} colSpan={3}>Este tema todavía no tiene contenido.</td></tr>
                                         ) : (
                                             items.map(item => (
-                                                <tr key={item.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <tr key={item.id} 
+                                                    style={{ 
+                                                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                                        background: selectedIds.includes(item.id) ? 'rgba(168, 85, 247, 0.1)' : 'transparent',
+                                                        transition: 'background 0.2s'
+                                                    }}
+                                                >
+                                                    <td style={{ ...tdStyle, width: '40px', textAlign: 'center' }}>
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={selectedIds.includes(item.id)}
+                                                            onChange={() => toggleSelection(item.id)}
+                                                            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#a855f7' }}
+                                                        />
+                                                    </td>
                                                     <td style={tdStyle}>
                                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                                                             <span style={{ fontSize: '1.1rem' }}>{ITEM_TYPE_ICON[item.type] || '📎'}</span>

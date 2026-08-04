@@ -5,6 +5,7 @@ import {
     getSubjectById,
     getCourseModules,
     toggleItemVisibility,
+    deleteModuleItem,
     type Subject,
 } from '../lib/adminApi'
 import { getUserRole } from '../utils/getUserRole'
@@ -328,6 +329,32 @@ const loadStudents = useCallback(async () => {
         })
     }
 
+    const handleBulkDelete = async (itemIds: string[]) => {
+        if (!confirm(`¿Seguro que quieres eliminar ${itemIds.length} elementos?`)) return
+        try {
+            await Promise.all(itemIds.map(id => deleteModuleItem(id)))
+            if (courseId) {
+                const mods = await getCourseModules(courseId)
+                setModules(mods as ModuleWithItems[])
+            }
+        } catch (e: any) {
+            setError(e.message || 'Error al eliminar elementos')
+        }
+    }
+
+    const handleBulkEditVisibility = async (itemIds: string[], visible: boolean) => {
+        try {
+            await Promise.all(itemIds.map(id => toggleItemVisibility(id, visible)))
+            setItemVisibility(prev => {
+                const next = { ...prev }
+                itemIds.forEach(id => next[id] = visible)
+                return next
+            })
+        } catch (e: any) {
+            setError(e.message || 'Error al actualizar visibilidad')
+        }
+    }
+
     const handleCreateAssignment = async (payload: Omit<Assignment, 'id' | 'created_at' | 'updated_at' | 'subject_id' | 'professor_id'>) => {
         if (!courseId) return
         const created = await createAssignmentRequest({
@@ -503,6 +530,8 @@ const loadStudents = useCallback(async () => {
                     modules={modules}
                     itemVisibility={itemVisibility}
                     onToggleItemVisibility={handleToggleItemVisibility}
+                    onBulkDelete={handleBulkDelete}
+                    onBulkEditVisibility={handleBulkEditVisibility}
                 />
             )}
 
