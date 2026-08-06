@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { User } from '@supabase/supabase-js'
+import { useNavigate } from 'react-router-dom'
 import './StudentsAdminScreen.css'
 import CustomSelect from './general/CustomSelect'
 import { getUserRole } from '../utils/getUserRole'
@@ -85,10 +86,10 @@ const Th: React.FC<{ children: React.ReactNode; align?: 'left' | 'right' }> = ({
 )
 
 const ActionButton: React.FC<{
-  label: string; bg: string; hoverBg: string; textColor: string; border: string; onClick: () => void
+  label: string; bg: string; hoverBg: string; textColor: string; border: string; onClick: (e: React.MouseEvent) => void
 }> = ({ label, bg, hoverBg, textColor, border, onClick }) => (
   <button
-    onClick={onClick}
+    onClick={(e) => { e.stopPropagation(); onClick(e); }}
     style={{ padding: '6px 12px', borderRadius: '8px', border, background: bg, color: textColor, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, whiteSpace: 'nowrap', transition: 'background 0.15s' }}
     onMouseEnter={e => (e.currentTarget.style.background = hoverBg)}
     onMouseLeave={e => (e.currentTarget.style.background = bg)}
@@ -257,6 +258,7 @@ const DeleteConfirmModal: React.FC<{ student: Student; onClose: () => void; onCo
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
+  const navigate = useNavigate()
   const [students, setStudents] = useState<Student[]>([])
   const [allCenters, setAllCenters] = useState<Center[]>([])
   const [loading, setLoading] = useState(true)
@@ -407,7 +409,8 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
                   {filtered.map((student, idx) => (
                     <tr
                       key={student.id}
-                      style={{ borderBottom: idx < filtered.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'background 0.15s', cursor: 'default' }}
+                      onClick={() => navigate(`/alumnos/${student.id}`)}
+                      style={{ borderBottom: idx < filtered.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'background 0.15s', cursor: 'pointer' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(192,132,252,0.05)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >

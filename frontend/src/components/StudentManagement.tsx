@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react';
 import './HierarchyConfig.css'
 
 interface UserData {
@@ -381,7 +381,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || 'Error al obtener tutores')
             setTutors(data)
-            setTutorTarget(student)  
+            setTutorTarget(student)
             setShowTutors(true)
         } catch (err: any) {
             alert(err.message || 'Error al obtener tutores')
@@ -433,7 +433,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
         setLoading(false)
         fetchEnrolledStudents()
     }
-    
+
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
         if (!file) return

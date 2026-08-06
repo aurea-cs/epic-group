@@ -9,6 +9,12 @@ import {
 } from '../lib/adminApi'
 import './HierarchyConfig.css' // Reusing styles
 
+interface ScheduleBlock {
+    day: string;
+    start: string;
+    end: string;
+}
+
 interface CourseFormScreenProps {
     user: User
 }
@@ -22,6 +28,7 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
     const [error, setError] = useState<string | null>(null)
 
     // Form State
+    const [schedules, setSchedules] = useState<ScheduleBlock[]>([])
     const [formData, setFormData] = useState<Partial<Subject>>({
         name: '',
         short_name: '',
@@ -29,10 +36,7 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
         start_date: '',
         end_date: '',
         visibility: 'active',
-        max_students: 30,
-        schedule_days: [],
-        schedule_start_time: '',
-        schedule_end_time: ''
+        max_students: 30
     })
 
     const isEditing = !!courseId && courseId !== 'new'
@@ -50,11 +54,23 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
                         start_date: subject.start_date ? subject.start_date.split('T')[0] : '',
                         end_date: subject.end_date ? subject.end_date.split('T')[0] : '',
                         visibility: subject.visibility || 'active',
-                        max_students: subject.max_students || 30,
-                        schedule_days: subject.schedule_days || [],
-                        schedule_start_time: subject.schedule_start_time || '',
-                        schedule_end_time: subject.schedule_end_time || ''
+                        max_students: subject.max_students || 30
                     })
+                    
+                    const parsedSchedules: ScheduleBlock[] = [];
+                    const loadedDays = subject.schedule_days || [];
+                    loadedDays.forEach(d => {
+                        try {
+                            if (d.startsWith('{')) {
+                                parsedSchedules.push(JSON.parse(d));
+                            } else {
+                                parsedSchedules.push({ day: d, start: subject.schedule_start_time || '', end: subject.schedule_end_time || '' });
+                            }
+                        } catch {
+                            parsedSchedules.push({ day: d, start: subject.schedule_start_time || '', end: subject.schedule_end_time || '' });
+                        }
+                    });
+                    setSchedules(parsedSchedules);
                 } catch (err: any) {
                     setError('Error al cargar datos del curso')
                     console.error(err)
@@ -77,14 +93,17 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
     }
 
     const handleDayToggle = (day: string) => {
-        setFormData(prev => {
-            const currentDays = prev.schedule_days || []
-            if (currentDays.includes(day)) {
-                return { ...prev, schedule_days: currentDays.filter(d => d !== day) }
+        setSchedules(prev => {
+            if (prev.some(s => s.day === day)) {
+                return prev.filter(s => s.day !== day)
             } else {
-                return { ...prev, schedule_days: [...currentDays, day] }
+                return [...prev, { day, start: '', end: '' }]
             }
         })
+    }
+
+    const handleScheduleTimeChange = (day: string, field: 'start' | 'end', value: string) => {
+        setSchedules(prev => prev.map(s => s.day === day ? { ...s, [field]: value } : s))
     }
 
     const handleSubmit = async () => {
@@ -100,7 +119,10 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
             const cleanData = {
                 ...formData,
                 visibility: formData.visibility as 'active' | 'hidden' | 'archived',
-                max_students: Number(formData.max_students)
+                max_students: Number(formData.max_students),
+                schedule_days: schedules.map(s => JSON.stringify(s)),
+                schedule_start_time: schedules.length > 0 ? schedules[0].start : '',
+                schedule_end_time: schedules.length > 0 ? schedules[0].end : ''
             }
 
             if (isEditing && courseId) {
@@ -245,45 +267,53 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
 
                             {/* Horarios */}
                             <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                                <label style={{ fontSize: '1rem', marginBottom: '0.8rem', color: '#1f295a', fontWeight: 'bold' }}>Días de Clase</label>
+                                <label style={{ fontSize: '1rem', marginBottom: '0.8rem', color: '#1f295a', fontWeight: 'bold' }}>Días de Clase y Horarios</label>
                                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-                                    {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => (
-                                        <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f3f4f6', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #d1d5db', cursor: 'pointer', color: '#1f295a' }}>
+                                    {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => {
+                                        const isSelected = schedules.some(s => s.day === day)
+                                        return (
+                                        <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: isSelected ? 'rgba(108, 92, 231, 0.1)' : '#f3f4f6', padding: '0.5rem 1rem', borderRadius: '8px', border: `1px solid ${isSelected ? '#6c5ce7' : '#d1d5db'}`, cursor: 'pointer', color: '#1f295a', transition: 'all 0.2s' }}>
                                             <input 
                                                 type="checkbox" 
-                                                checked={(formData.schedule_days || []).includes(day)}
+                                                checked={isSelected}
                                                 onChange={() => handleDayToggle(day)}
-                                                style={{ cursor: 'pointer' }}
+                                                style={{ cursor: 'pointer', accentColor: '#6c5ce7' }}
                                             />
                                             {day}
                                         </label>
-                                    ))}
+                                    )})}
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                                    <div>
-                                        <label style={{ fontSize: '1rem', marginBottom: '0.5rem', color: '#1f295a', fontWeight: 'bold' }}>Hora de Inicio</label>
-                                        <input
-                                            type="time"
-                                            name="schedule_start_time"
-                                            value={formData.schedule_start_time || ''}
-                                            onChange={handleChange}
-                                            className="modern-input"
-                                            style={{ padding: '1rem', width: '100%', background: '#f3f4f6', color: '#1f295a', border: '1px solid #d1d5db', boxSizing: 'border-box' }}
-                                        />
+                                {schedules.length > 0 && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                        <h4 style={{ margin: 0, color: '#1f295a', fontSize: '1.05rem', marginBottom: '0.5rem' }}>Configurar Horarios</h4>
+                                        {schedules.map(schedule => (
+                                            <div key={schedule.day} style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '1.5rem', alignItems: 'center', background: '#ffffff', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                <div style={{ fontWeight: 'bold', color: '#1f295a' }}>{schedule.day}</div>
+                                                <div>
+                                                    <label style={{ fontSize: '0.85rem', marginBottom: '0.3rem', color: '#64748b', display: 'block' }}>Hora de Inicio</label>
+                                                    <input
+                                                        type="time"
+                                                        value={schedule.start}
+                                                        onChange={(e) => handleScheduleTimeChange(schedule.day, 'start', e.target.value)}
+                                                        className="modern-input"
+                                                        style={{ padding: '0.75rem', width: '100%', background: '#f3f4f6', color: '#1f295a', border: '1px solid #d1d5db', borderRadius: '6px' }}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={{ fontSize: '0.85rem', marginBottom: '0.3rem', color: '#64748b', display: 'block' }}>Hora de Finalización</label>
+                                                    <input
+                                                        type="time"
+                                                        value={schedule.end}
+                                                        onChange={(e) => handleScheduleTimeChange(schedule.day, 'end', e.target.value)}
+                                                        className="modern-input"
+                                                        style={{ padding: '0.75rem', width: '100%', background: '#f3f4f6', color: '#1f295a', border: '1px solid #d1d5db', borderRadius: '6px' }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div>
-                                        <label style={{ fontSize: '1rem', marginBottom: '0.5rem', color: '#1f295a', fontWeight: 'bold' }}>Hora de Finalización</label>
-                                        <input
-                                            type="time"
-                                            name="schedule_end_time"
-                                            value={formData.schedule_end_time || ''}
-                                            onChange={handleChange}
-                                            className="modern-input"
-                                            style={{ padding: '1rem', width: '100%', background: '#f3f4f6', color: '#1f295a', border: '1px solid #d1d5db', boxSizing: 'border-box' }}
-                                        />
-                                    </div>
-                                </div>
+                                )}
                             </div>
 
                             {/* Settings */}

@@ -41,12 +41,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
                 ) : (
                   <>
                     Haz click para ver tus horarios de clase,<br />
-                     ¡Accede a tu agenda!
+                    ¡Accede a tu agenda!
                   </>
                 )}
               </p>
-              <button className="level-up-btn" onClick={() => navigate(isAdmin ? '/students' : userRole === 'professor' ? '/students' : '/schedule')}>
-                {isAdmin ? 'Ver alumnos' : userRole === 'professor' ? 'Ver mis alumnos' : 'Ver mi agenda'}
+              <button className="level-up-btn" onClick={() => navigate(isAdmin ? '/students' : userRole === 'professor' ? '/schedule' : '/schedule')}>
+                {isAdmin ? 'Ver alumnos' : userRole === 'professor' ? 'Ver mi agenda' : 'Ver mi agenda'}
               </button>
             </div>
           </div>
