@@ -459,7 +459,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                             <h1 style={{ margin: 0, fontSize: '2rem', color: 'white' }}>
                                 {subject?.name}
                             </h1>
-                            <p style={{ color: 'white', marginTop: '0.5rem', opacity: 0.8 }}>Contenido del Curso</p>
+                            <p style={{ color: 'white', marginTop: '0.5rem', opacity: 0.8 }}>Contenido de la Asignatura</p>
                         </div>
                         <div className="header-action-right" style={{ width: '150px', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                             <button
@@ -885,7 +885,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                         onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
                         onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                        <span>Visible para estudiantes</span>
+                        <span>Contenido para estudiantes</span>
                         <Toggle on={item.show_student!} color="#22c55e" />
                     </button>
 
@@ -896,7 +896,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                         onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
                         onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                        <span>Visible para profesores</span>
+                        <span>Contenido para profesores</span>
                         <Toggle on={item.show_teacher!} color="#8b5cf6" />
                     </button>
 

@@ -292,7 +292,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                     {/* COURSES LIST VIEW */}
                     <div className="courses-list-container">
                         <div className="courses-list-header">
-                            <div className="col-course">Curso</div>
+                            <div className="col-course">Asignatura</div>
                             <div className="col-code">Código</div>
                             <div className="col-students">Capacidad</div>
                             <div className="col-actions">Acciones</div>
