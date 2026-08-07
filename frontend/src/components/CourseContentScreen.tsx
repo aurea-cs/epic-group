@@ -459,7 +459,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                             <h1 style={{ margin: 0, fontSize: '2rem', color: 'white' }}>
                                 {subject?.name}
                             </h1>
-                            <p style={{ color: 'white', marginTop: '0.5rem', opacity: 0.8 }}>Contenido del Curso</p>
+                            <p style={{ color: 'white', marginTop: '0.5rem', opacity: 0.8 }}>Contenido de la Asignatura</p>
                         </div>
                         <div className="header-action-right" style={{ width: '150px', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                             <button
@@ -838,48 +838,48 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
             )}
 
             {openMenuItemId && menuPosition && createPortal(
-                <div
-                    ref={menuRef}
-                    style={{
-                        position: 'fixed',
-                        top: menuPosition.top,
-                        left: menuPosition.left,
-                        zIndex: 9999,
-                        background: '#ffffff',
-                        borderRadius: '8px',
-                        minWidth: '220px',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-                        overflow: 'hidden',
-                        border: '1px solid rgba(0,0,0,0.08)'
-                    }}
-                >
-                    {/* find the open item to read its current state */}
-                    {(() => {
-                        const item = modules.flatMap(m => m.items ?? []).find(i => i.id === openMenuItemId)
-                        if (!item) return null
-                        return (
-                            <>
-                                <button
-                                    onClick={() => { handleToggleStudentVisibility(item); setOpenMenuItemId(null); setMenuPosition(null) }}
-                                    disabled={visibilityLoading === item.id}
-                                    style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem' }}
-                                    onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
-                                    onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
-                                >
-                                    <span>Visible para estudiantes</span>
-                                    <Toggle on={item.show_student!} color="#22c55e" />
-                                </button>
+    <div
+        ref={menuRef}
+        style={{
+            position: 'fixed',
+            top: menuPosition.top,
+            left: menuPosition.left,
+            zIndex: 9999,
+            background: '#ffffff',
+            borderRadius: '8px',
+            minWidth: '220px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+            overflow: 'hidden',
+            border: '1px solid rgba(0,0,0,0.08)'
+        }}
+    >
+        {/* find the open item to read its current state */}
+        {(() => {
+            const item = modules.flatMap(m => m.items ?? []).find(i => i.id === openMenuItemId)
+            if (!item) return null
+            return (
+                <>
+                    <button
+                        onClick={() => { handleToggleStudentVisibility(item); setOpenMenuItemId(null); setMenuPosition(null) }}
+                        disabled={visibilityLoading === item.id}
+                        style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem' }}
+                        onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
+                        onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                        <span>Contenido para estudiantes</span>
+                        <Toggle on={item.show_student!} color="#22c55e" />
+                    </button>
 
-                                <button
-                                    onClick={() => { handleToggleProfessorVisibility(item); setOpenMenuItemId(null); setMenuPosition(null) }}
-                                    disabled={visibilityLoading === item.id}
-                                    style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem' }}
-                                    onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
-                                    onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
-                                >
-                                    <span>Visible para profesores</span>
-                                    <Toggle on={item.show_teacher!} color="#8b5cf6" />
-                                </button>
+                    <button
+                        onClick={() => { handleToggleProfessorVisibility(item); setOpenMenuItemId(null); setMenuPosition(null) }}
+                        disabled={visibilityLoading === item.id}
+                        style={{ width: '100%', padding: '0.65rem 0.9rem', background: 'transparent', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem' }}
+                        onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
+                        onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                        <span>Contenido para profesores</span>
+                        <Toggle on={item.show_teacher!} color="#8b5cf6" />
+                    </button>
 
                                 {item.content_url && (
                                     <>
