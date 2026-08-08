@@ -71,8 +71,6 @@ const UserActivityModal: React.FC<UserActivityModalProps> = ({ userId, userName,
         fetchActivity()
     }, [userId])
 
-    const maxDailySeconds = data?.daily.reduce((max, d) => Math.max(max, d.seconds), 0) || 1
-
     return (
         <div style={{
             position: 'fixed',
