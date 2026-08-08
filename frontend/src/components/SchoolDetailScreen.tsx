@@ -321,7 +321,14 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                     <div key={subject.id} className="course-list-row" onClick={() => openSubjectDetail(subject)}>
                                         <div className="col-course">
                                             <div className="course-icon-small">📚</div>
-                                            <span className="course-name">{subject.name}</span>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                                {subject.campo_formativo && (
+                                                    <span style={{ fontSize: '0.75rem', color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: 600 }}>
+                                                        {subject.campo_formativo}
+                                                    </span>
+                                                )}
+                                                <span className="course-name">{subject.name}</span>
+                                            </div>
                                         </div>
                                         <div className="col-code">
                                             {'-'}

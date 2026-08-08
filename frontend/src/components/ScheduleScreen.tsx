@@ -101,22 +101,42 @@ const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ user }) => {
   const classBlocks = useMemo<ClassBlock[]>(() => {
     const blocks: ClassBlock[] = []
     subjects.forEach(sub => {
-      const startMinutes = parseTimeToMinutes(sub.schedule_start_time)
-      const endMinutes = parseTimeToMinutes(sub.schedule_end_time)
-      if (startMinutes === null || !sub.schedule_days) return
+      if (!sub.schedule_days) return
 
-      const resolvedEnd = endMinutes !== null && endMinutes > startMinutes
-        ? endMinutes
-        : startMinutes + 60 // default to a 1h block if no/invalid end time
+      sub.schedule_days.forEach(dayItem => {
+        let dayName = ''
+        let startMinutes: number | null = null
+        let endMinutes: number | null = null
 
-      sub.schedule_days.forEach(day => {
-        if (!DAYS_ORDER.includes(day)) return
+        try {
+          if (dayItem.startsWith('{')) {
+            const parsed = JSON.parse(dayItem)
+            dayName = parsed.day
+            startMinutes = parseTimeToMinutes(parsed.start)
+            endMinutes = parseTimeToMinutes(parsed.end)
+          } else {
+            dayName = dayItem
+            startMinutes = parseTimeToMinutes(sub.schedule_start_time)
+            endMinutes = parseTimeToMinutes(sub.schedule_end_time)
+          }
+        } catch {
+          dayName = dayItem
+          startMinutes = parseTimeToMinutes(sub.schedule_start_time)
+          endMinutes = parseTimeToMinutes(sub.schedule_end_time)
+        }
+
+        if (startMinutes === null || !DAYS_ORDER.includes(dayName)) return
+
+        const resolvedEnd = endMinutes !== null && endMinutes > startMinutes
+          ? endMinutes
+          : startMinutes + 60 // default to a 1h block if no/invalid end time
+
         blocks.push({
-          id: `${sub.id}-${day}`,
+          id: `${sub.id}-${dayName}`,
           subjectId: sub.id,
           name: sub.name,
           shortName: sub.short_name,
-          day,
+          day: dayName,
           startMinutes,
           endMinutes: resolvedEnd,
           startLabel: formatMinutesLabel(startMinutes),

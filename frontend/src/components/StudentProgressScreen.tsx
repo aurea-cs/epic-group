@@ -2,8 +2,20 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import type { User } from '@supabase/supabase-js'
 import { getStudentProgress, type StudentData } from '../lib/api'
+import UserActivityModal from './UserActivityModal'
 
 const defaultAvatar = 'https://ui-avatars.com/api/?name=User&background=random'
+
+function formatTime(totalSeconds?: number): string {
+  if (!totalSeconds) return '0s'
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  
+  if (h > 0) return `${h}h ${m}m ${s}s`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
+}
 
 interface StudentProgressScreenProps {
     user: User
@@ -12,6 +24,7 @@ interface StudentProgressScreenProps {
 const StudentProgressScreen: React.FC<StudentProgressScreenProps> = ({ user }) => {
     const [dataLoading, setDataLoading] = useState(true)
     const [studentData, setStudentData] = useState<StudentData | null>(null)
+    const [showActivityModal, setShowActivityModal] = useState(false)
     const [profileDetails, setProfileDetails] = useState<{ centers: string, grades: string, subjects: string } | null>(null)
     const [error, setError] = useState<string | null>(null)
     const navigate = useNavigate()
@@ -51,7 +64,7 @@ const StudentProgressScreen: React.FC<StudentProgressScreenProps> = ({ user }) =
     }, [studentId, location.state, user.id])
 
     const handleBackToStudents = () => {
-        navigate('/alumnos')
+        navigate(-1)
     }
 
     if (dataLoading) {
@@ -133,9 +146,24 @@ const StudentProgressScreen: React.FC<StudentProgressScreenProps> = ({ user }) =
                                 <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.grades : 'Cargando...'}</div>
                             </div>
 
-                            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9', gridColumn: '1 / -1' }}>
+                            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
                                 <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Materias Generales</div>
                                 <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.subjects : 'Cargando...'}</div>
+                            </div>
+
+                            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Tiempo en Plataforma</div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ fontWeight: 'bold', color: '#334155' }}>⏱️ {formatTime(studentData.total_time_seconds)}</div>
+                                    <button 
+                                        onClick={() => setShowActivityModal(true)}
+                                        style={{ background: '#e2e8f0', color: '#334155', border: 'none', padding: '0.25rem 0.75rem', borderRadius: '16px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', transition: 'background 0.2s' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#cbd5e1'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = '#e2e8f0'}
+                                    >
+                                        Ver más
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -167,6 +195,14 @@ const StudentProgressScreen: React.FC<StudentProgressScreenProps> = ({ user }) =
 
                 </div>
             </div>
+
+            {showActivityModal && studentData && (
+                <UserActivityModal 
+                    userId={studentId || ''} 
+                    userName={studentData.name} 
+                    onClose={() => setShowActivityModal(false)} 
+                />
+            )}
         </div>
     )
 }

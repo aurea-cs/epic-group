@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { getCenterProfessors, assignProfessor, unassignProfessor } from '../lib/adminApi'
+import UserActivityModal from './UserActivityModal'
 import './HierarchyConfig.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -9,6 +10,7 @@ interface AssignedProfessor {
     email: string
     full_name: string | null
     avatar_url?: string | null
+    total_time_seconds?: number
 }
 
 interface PlatformProfessor {
@@ -30,6 +32,14 @@ interface Results {
     errors: number
     errorDetails: { email: string; error: string }[]
     processed: { email: string; status: 'success' | 'error'; message: string }[]
+}
+
+function formatTime(totalSeconds?: number): string {
+    if (!totalSeconds) return '0m'
+    const h = Math.floor(totalSeconds / 3600)
+    const m = Math.floor((totalSeconds % 3600) / 60)
+    if (h > 0) return `${h}h ${m}m`
+    return `${m}m`
 }
 
 interface TeacherManagementProps {
@@ -66,6 +76,9 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
     const [loadingAll, setLoadingAll] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [assigningId, setAssigningId] = useState<string | null>(null)
+
+    const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null)
+    const [selectedTeacherName, setSelectedTeacherName] = useState<string>('')
 
     // ── CSV import ─────────────────────────────────────────────────────
     const [importing, setImporting] = useState(false)
@@ -433,6 +446,11 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
                                 <th style={{ color: '#1f295a' }}>Nombre</th>
                                 <th style={{ color: '#1f295a' }}>Email</th>
                                 <th style={{ color: '#1f295a' }}>Acciones</th>
+                                <th>Avatar</th>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Tiempo</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -455,6 +473,22 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
                                     <td style={{ fontWeight: 500, color: '#1f295a' }}>{teacher.full_name || 'Profesor'}</td>
                                     <td style={{ color: '#4b5563' }}>{teacher.email}</td>
                                     <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span style={{ fontWeight: 'bold', color: '#334155' }}>⏱️ {formatTime(teacher.total_time_seconds)}</span>
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedTeacherId(teacher.id)
+                                                    setSelectedTeacherName(teacher.full_name || teacher.email)
+                                                }}
+                                                style={{ background: '#e2e8f0', color: '#334155', border: 'none', padding: '0.25rem 0.75rem', borderRadius: '16px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', transition: 'background 0.2s' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = '#cbd5e1'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = '#e2e8f0'}
+                                            >
+                                                Ver más
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <button
                                             onClick={() => handleUnassign(teacher)}
                                             className="action-btn delete"
@@ -465,11 +499,26 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
                                     </td>
                                 </tr>
                             ))}
+                            {!loadingAssigned && assignedTeachers.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#4b5563' }}>
+                                        No hay maestros asignados a este colegio.
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
             </div>
 
+
+            {selectedTeacherId && (
+                <UserActivityModal
+                    userId={selectedTeacherId}
+                    userName={selectedTeacherName}
+                    onClose={() => setSelectedTeacherId(null)}
+                />
+            )}
         </div>
     )
 }
