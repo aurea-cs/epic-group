@@ -711,6 +711,7 @@ app.get('/api/professors/:professorId/courses', async (req, res) => {
                     name, 
                     description, 
                     created_at,
+                    campo_formativo,
                     grades_levels (
                         id,
                         name,
@@ -734,6 +735,7 @@ app.get('/api/professors/:professorId/courses', async (req, res) => {
                 id: subject.id,
                 title: subject.name,
                 description: `${grade.name || 'Sin grado'}`,
+                campoFormativo: subject.campo_formativo || null,
                 completedSteps: Math.floor(Math.random() * 100), // Mock progress
                 totalSteps: 100,
                 gradeId: grade.id,

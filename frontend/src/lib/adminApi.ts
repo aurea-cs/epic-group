@@ -39,6 +39,7 @@ export interface Subject {
     schedule_days?: string[]
     schedule_start_time?: string
     schedule_end_time?: string
+    campo_formativo?: string
     created_at: string
     updated_at: string
 }

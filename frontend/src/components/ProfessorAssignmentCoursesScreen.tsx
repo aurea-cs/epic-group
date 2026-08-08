@@ -13,6 +13,7 @@ interface Course {
   title: string
   description: string
   centerName: string
+  campoFormativo?: string
 }
 
 const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScreenProps> = ({ user }) => {
@@ -79,7 +80,9 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
                 >
                   <div className="course-card__content">
                     <h3 className="course-card__title" style={{ color: '#1f295a', margin: '0 0 0.5rem 0', fontSize: '1.25rem' }}>{course.title}</h3>
-                    <p className="course-card__subtitle" style={{ color: '#6c5ce7', margin: '0 0 1rem 0', fontWeight: '500' }}>{course.description}</p>
+                    <p className="course-card__subtitle" style={{ color: '#6c5ce7', margin: '0 0 1rem 0', fontWeight: '500' }}>
+                      {course.description}{course.campoFormativo ? ` - ${course.campoFormativo}` : ''}
+                    </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(31, 41, 90, 0.6)', fontSize: '0.875rem' }}>
                       <span>📍</span>
                       <span>{course.centerName}</span>
