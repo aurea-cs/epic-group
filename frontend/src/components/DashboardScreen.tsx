@@ -2,6 +2,7 @@ import React from 'react'
 import { User } from '@supabase/supabase-js'
 import { useNavigate } from 'react-router-dom'
 import { getUserRole } from '../utils/getUserRole'
+import { useVrCode } from '../hooks/useVrCode'
 import './DashboardScreen.css'
 import astronautaImage from '../assets/astronauta_flotando.png'
 import elementoDecorativo1 from '../assets/E_elemento.png'
@@ -18,6 +19,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
 
   const userRole = getUserRole(user)
   const isAdmin = ['admin'].includes(userRole)
+  const { vrCode, openVrCode } = useVrCode(user)
 
   return (
     <div className="dashboard-screen">
@@ -45,8 +47,19 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
                   </>
                 )}
               </p>
-              <button className="level-up-btn" onClick={() => navigate(isAdmin ? '/students' : userRole === 'professor' ? '/schedule' : '/schedule')}>
-                {isAdmin ? 'Ver alumnos' : userRole === 'professor' ? 'Ver mi agenda' : 'Ver mi agenda'}
+              <button
+                className="level-up-btn"
+                onClick={() => {
+                  if (isAdmin) {
+                    navigate('/students')
+                  } else if (vrCode) {
+                    openVrCode()
+                  } else {
+                    navigate('/schedule')
+                  }
+                }}
+              >
+                {isAdmin ? 'Ver alumnos' : vrCode ? 'Campus VR' : 'Horario'}
               </button>
             </div>
           </div>

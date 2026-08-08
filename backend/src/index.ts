@@ -28,6 +28,43 @@ const upload = multer({
     },
 });
 
+// ============================================
+// USER CENTER ENDPOINT
+// ============================================
+
+// Get the educational center (and its vr_code) for a given user
+app.get('/api/users/:userId/center', async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // 1. Get the user's center_id from the users table
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('center_id')
+            .eq('id', userId)
+            .single();
+
+        if (userError) throw userError;
+        if (!userData?.center_id) {
+            return res.json({ vr_code: null });
+        }
+
+        // 2. Fetch the center to get its vr_code
+        const { data: center, error: centerError } = await supabase
+            .from('educational_centers')
+            .select('id, name, vr_code')
+            .eq('id', userData.center_id)
+            .single();
+
+        if (centerError) throw centerError;
+
+        res.json(center || { vr_code: null });
+    } catch (error: any) {
+        console.error('Error fetching user center:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Toggle item visibility for professors
 app.patch('/api/module-items-p/:itemId', async (req, res) => {
     try {
@@ -873,6 +910,18 @@ app.put('/api/admin/users/:id', async (req, res) => {
                         .from('center_professors')
                         .insert(rows);
                     if (insertError) throw insertError;
+                    // Update users.center_id to the last added center
+                    await supabase.from('users').update({ center_id: centersToAdd[centersToAdd.length - 1] }).eq('id', id);
+                } else if (centersToRemove.length > 0) {
+                    // Centers were only removed — revert to most recent remaining
+                    const { data: remaining } = await supabase
+                        .from('center_professors')
+                        .select('center_id, created_at')
+                        .eq('user_id', id)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    const latestCenterId = remaining && remaining.length > 0 ? remaining[0].center_id : null;
+                    await supabase.from('users').update({ center_id: latestCenterId }).eq('id', id);
                 }
             } else {
                 // ── STUDENT (default): reconcile enrollments table ───────────────
@@ -946,9 +995,21 @@ app.put('/api/admin/users/:id', async (req, res) => {
                                     .from('enrollments')
                                     .insert(rows);
                                 if (insertError) throw insertError;
+                                // Update users.center_id to the last added center
+                                await supabase.from('users').update({ center_id: centersToAdd[centersToAdd.length - 1] }).eq('id', id);
                             }
                         }
                     }
+                } else if (centersToRemove.length > 0) {
+                    // Centers were only removed — revert to most recent remaining
+                    const { data: remaining } = await supabase
+                        .from('enrollments')
+                        .select('center_id, created_at')
+                        .eq('student_id', id)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    const latestCenterId = remaining && remaining.length > 0 ? remaining[0].center_id : null;
+                    await supabase.from('users').update({ center_id: latestCenterId }).eq('id', id);
                 }
             }
         }
@@ -1225,7 +1286,7 @@ app.get('/api/admin/centers/:id', async (req, res) => {
 // Create educational center
 app.post('/api/admin/centers', async (req, res) => {
     try {
-        const { name, address, phone, email } = req.body;
+        const { name, address, phone, email, vr_code } = req.body;
 
         if (!name) {
             return res.status(400).json({ error: 'Name is required' });
@@ -1233,7 +1294,7 @@ app.post('/api/admin/centers', async (req, res) => {
 
         const { data, error } = await supabase
             .from('educational_centers')
-            .insert({ name, address, phone, email })
+            .insert({ name, address, phone, email, vr_code })
             .select()
             .single();
 
@@ -1249,11 +1310,11 @@ app.post('/api/admin/centers', async (req, res) => {
 app.put('/api/admin/centers/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, address, phone, email, is_active } = req.body;
+        const { name, address, phone, email, vr_code, is_active } = req.body;
 
         const { data, error } = await supabase
             .from('educational_centers')
-            .update({ name, address, phone, email, is_active })
+            .update({ name, address, phone, email, vr_code, is_active })
             .eq('id', id)
             .select()
             .single();
@@ -1326,6 +1387,12 @@ app.post('/api/admin/enrollments', async (req, res) => {
 
         if (error) throw error;
 
+        // 4. Update users.center_id to the most recently assigned center
+        await supabase
+            .from('users')
+            .update({ center_id })
+            .eq('id', student_id);
+
         res.status(201).json(data);
     } catch (error: any) {
         console.error('Error enrolling student:', error);
@@ -1388,6 +1455,17 @@ app.delete('/api/admin/grades/:gradeId/students/:studentId', async (req, res) =>
             .eq('student_id', studentId);
 
         if (error) throw error;
+
+        // Update users.center_id to the student's most recent remaining center (or null)
+        const { data: remaining } = await supabase
+            .from('enrollments')
+            .select('center_id, created_at')
+            .eq('student_id', studentId)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        const latestCenterId = remaining && remaining.length > 0 ? remaining[0].center_id : null;
+        await supabase.from('users').update({ center_id: latestCenterId }).eq('id', studentId);
 
         res.json({ message: 'Student removed from grade successfully' });
     } catch (error: any) {
@@ -1463,6 +1541,12 @@ app.post('/api/admin/centers/:centerId/professors', async (req, res) => {
             throw error;
         }
 
+        // Update users.center_id to the most recently assigned center
+        await supabase
+            .from('users')
+            .update({ center_id: centerId })
+            .eq('id', userId);
+
         res.status(201).json(data);
     } catch (error: any) {
         console.error('Error assigning professor:', error);
@@ -1513,6 +1597,17 @@ app.delete('/api/admin/centers/:centerId/professors/:userId', async (req, res) =
             .match({ center_id: centerId, user_id: userId });
 
         if (error) throw error;
+
+        // Update users.center_id to the professor's most recent remaining center (or null)
+        const { data: remaining } = await supabase
+            .from('center_professors')
+            .select('center_id, created_at')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        const latestCenterId = remaining && remaining.length > 0 ? remaining[0].center_id : null;
+        await supabase.from('users').update({ center_id: latestCenterId }).eq('id', userId);
 
         res.json({ message: 'Professor unassigned successfully' });
     } catch (error: any) {

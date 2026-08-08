@@ -7,6 +7,7 @@ import './ProfileScreen.css'
 import type { StudentData } from '../lib/api' // Import StudentData
 
 import { getUserRole } from '../utils/getUserRole' // Ensure this import exists or add it
+import { useVrCode } from '../hooks/useVrCode'
 
 interface ProfileScreenProps {
   user: User
@@ -21,6 +22,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
 
   const userRole = getUserRole(user)
   const isProfessor = userRole === 'professor' || userRole === 'admin' 
+  const { vrCode, openVrCode } = useVrCode(user)
 
   const getRoleDisplay = () => {
     const role = getUserRole(user)
@@ -134,9 +136,35 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
           <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1e293b', margin: 0 }}>{user.user_metadata?.full_name || user.email || 'Usuario'}</h2>
           <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>{user.email}</p>
           
-          <div style={{ background: '#eff6ff', color: '#2563eb', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '1.5rem', border: '1px solid #bfdbfe' }}>
+          <div style={{ background: '#eff6ff', color: '#2563eb', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: vrCode ? '1rem' : '1.5rem', border: '1px solid #bfdbfe' }}>
             Rol: {getRoleDisplay()}
           </div>
+
+          {vrCode && (
+            <button
+              onClick={openVrCode}
+              style={{
+                background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '0.5rem 1.25rem',
+                fontWeight: 'bold',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                boxShadow: '0 4px 12px rgba(124,58,237,0.3)',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
+              onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+            >
+              🚀 Campus VR
+            </button>
+          )}
         </div>
 
         {/* Right Column - Details & Activity */}

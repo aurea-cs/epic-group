@@ -44,7 +44,7 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
     // State for modals
     const [showCenterModal, setShowCenterModal] = useState(false)
     // State for forms
-    const [centerForm, setCenterForm] = useState({ name: '', address: '', phone: '', email: '' })
+    const [centerForm, setCenterForm] = useState({ name: '', address: '', phone: '', email: '', vr_code: '' })
     const [_gradeForm, _setGradeForm] = useState({ name: '', level: 0 })
     const [_subjectForm, _setSubjectForm] = useState({ name: '', description: '', hours_per_week: 0 })
 
@@ -96,7 +96,7 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
     // ========== CENTER FUNCTIONS ==========
 
     const handleCreateCenter = () => {
-        setCenterForm({ name: '', address: '', phone: '', email: '' })
+        setCenterForm({ name: '', address: '', phone: '', email: '', vr_code: '' })
         setEditingCenter(null)
         setShowCenterModal(true)
     }
@@ -107,6 +107,7 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
             address: center.address || '',
             phone: center.phone || '',
             email: center.email || '',
+            vr_code: center.vr_code || '',
         })
         setEditingCenter(center)
         setShowCenterModal(true)
@@ -285,6 +286,16 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                                         value={centerForm.email}
                                         onChange={(e) => setCenterForm({ ...centerForm, email: e.target.value })}
                                         placeholder="Ej: contacto@colegio.com"
+                                        className="modern-input"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Código VR</label>
+                                    <input
+                                        type="text"
+                                        value={centerForm.vr_code}
+                                        onChange={(e) => setCenterForm({ ...centerForm, vr_code: e.target.value })}
+                                        placeholder="Ej: https://itch.io..."
                                         className="modern-input"
                                     />
                                 </div>

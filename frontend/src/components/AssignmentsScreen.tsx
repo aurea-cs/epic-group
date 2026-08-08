@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { getStudentReadItems } from '../lib/api'
 import './AssignmentsScreen.css'
 import { getUserRole } from '../utils/getUserRole'
+import { useVrCode } from '../hooks/useVrCode'
 
 import planetasolito1 from '../assets/planetasolito1.png'
 import planetasolito2 from '../assets/planetasolito2.png'
@@ -18,6 +19,7 @@ interface AssignmentsScreenProps {
 const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
   const navigate = useNavigate()
   const userRole = getUserRole(user)
+  const { vrCode, openVrCode } = useVrCode(user)
 
   const [coursePlanets, setCoursePlanets] = useState<any[]>([])
 
@@ -254,7 +256,10 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
 
         {/* Botón START */}
         <div className="start-button-container">
-          <button className="start-button" onClick={handleStartCourse}>
+          <button
+            className="start-button"
+            onClick={vrCode ? openVrCode : handleStartCourse}
+          >
             CAMPUS VR
           </button>
         </div>

@@ -10,6 +10,7 @@ export interface EducationalCenter {
     address?: string
     phone?: string
     email?: string
+    vr_code?: string
     is_active: boolean
     created_at: string
     updated_at: string

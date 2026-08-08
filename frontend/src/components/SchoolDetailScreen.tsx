@@ -561,7 +561,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                 >
                                     <span className="selection-icon" style={{ fontSize: '2rem', filter: 'none' }}>👨‍🏫</span>
                                     <div>
-                                        <div className="selection-title" style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.25rem', color: '#ffffff' }}>Maestros</div>
+                                        <div className="selection-title" style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.25rem', color: '#ffffff' }}>Profesores</div>
                                         <div className="selection-desc" style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.9rem' }}>Gestionar docentes</div>
                                     </div>
                                 </button>
