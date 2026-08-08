@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { auth, supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { useLocation } from 'react-router-dom'
 
 interface ActivityTrackerProps {

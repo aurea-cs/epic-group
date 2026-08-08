@@ -7,11 +7,11 @@ import { getUserRole } from '../utils/getUserRole'
 import UserActivityModal from './UserActivityModal'
 
 function formatTime(totalSeconds?: number): string {
-    if (!totalSeconds) return '0m'
-    const h = Math.floor(totalSeconds / 3600)
-    const m = Math.floor((totalSeconds % 3600) / 60)
-    if (h > 0) return `${h}h ${m}m`
-    return `${m}m`
+  if (!totalSeconds) return '0m'
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
 }
 
 
@@ -222,16 +222,16 @@ const EditProfessorModal: React.FC<{ professor: Professor; allCenters: Center[];
             {allCenters.length === 0
               ? <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', margin: '6px 0 0' }}>No hay centros disponibles.</p>
               : <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem', maxHeight: '160px', overflowY: 'auto', paddingRight: '4px' }}>
-                  {allCenters.map(center => {
-                    const checked = selectedCenterIds.includes(center.id)
-                    return (
-                      <label key={center.id} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '8px 12px', background: checked ? 'rgba(192,132,252,0.15)' : 'rgba(255,255,255,0.04)', border: `1px solid ${checked ? 'rgba(192,132,252,0.4)' : 'rgba(255,255,255,0.1)'}`, borderRadius: '8px', cursor: 'pointer', color: checked ? '#e9d5ff' : 'rgba(255,255,255,0.6)', fontSize: '0.88rem', userSelect: 'none' }}>
-                        <input type="checkbox" checked={checked} onChange={() => toggleCenter(center.id)} style={{ accentColor: '#c084fc', width: '15px', height: '15px', cursor: 'pointer' }} />
-                        {center.name}
-                      </label>
-                    )
-                  })}
-                </div>
+                {allCenters.map(center => {
+                  const checked = selectedCenterIds.includes(center.id)
+                  return (
+                    <label key={center.id} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '8px 12px', background: checked ? 'rgba(192,132,252,0.15)' : 'rgba(255,255,255,0.04)', border: `1px solid ${checked ? 'rgba(192,132,252,0.4)' : 'rgba(255,255,255,0.1)'}`, borderRadius: '8px', cursor: 'pointer', color: checked ? '#e9d5ff' : 'rgba(255,255,255,0.6)', fontSize: '0.88rem', userSelect: 'none' }}>
+                      <input type="checkbox" checked={checked} onChange={() => toggleCenter(center.id)} style={{ accentColor: '#c084fc', width: '15px', height: '15px', cursor: 'pointer' }} />
+                      {center.name}
+                    </label>
+                  )
+                })}
+              </div>
             }
             <p style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.3)', margin: '6px 0 0' }}>Desmarcar un centro elimina las inscripciones del profesor en ese centro.</p>
           </div>
@@ -282,14 +282,13 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
   const [isDeleting, setIsDeleting] = useState(false)
   const [selectedProfessorId, setSelectedProfessorId] = useState<string | null>(null)
   const [selectedProfessorName, setSelectedProfessorName] = useState<string>('')
-
   const userRole = getUserRole(user)
   const isAdmin = userRole === 'admin'
 
   const fetchProfessors = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API}/api/admin/professors-list`)
+      const res = await fetch(`${API}/api/admin/professors`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setProfessors(Array.isArray(data) ? data : [])
@@ -449,27 +448,26 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
 
                       {/* Centers */}
                       <td style={tdStyle}>
-                          {professor.centers.length === 0 ? <span style={{ color: '#fbbf24', fontSize: '0.85rem' }}>⚠️ Sin inscripción</span> : (
-                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                              {professor.centers.map(c => (
-                                <span key={c.id} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '2px 8px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
-                                  {c.name}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </td>
-                        <td style={tdStyle}>
-                          <span style={{ fontWeight: 'bold', color: '#c084fc' }}>⏱️ {formatTime(professor.total_time_seconds)}</span>
-                        </td>
-                        <td style={tdStyle}>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <ActionButton label="Actividad" bg="rgba(192,132,252,0.15)" hoverBg="rgba(192,132,252,0.25)" textColor="#d8b4fe" border="1px solid rgba(192,132,252,0.3)" onClick={() => { setSelectedProfessorId(professor.id); setSelectedProfessorName(professor.name) }} />
-                            <ActionButton label="✏️ Editar" bg="rgba(255,255,255,0.05)" hoverBg="rgba(255,255,255,0.1)" textColor="#fff" border="1px solid rgba(255,255,255,0.15)" onClick={() => setEditingProfessor(professor)} />
-                            <ActionButton label="🗑️" bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => setDeletingProfessor(professor)} />
+                        {professor.centers.length === 0 ? <span style={{ color: '#fbbf24', fontSize: '0.85rem' }}>⚠️ Sin inscripción</span> : (
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {professor.centers.map(c => (
+                              <span key={c.id} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '2px 8px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
+                                {c.name}
+                              </span>
+                            ))}
                           </div>
-                        </td>
-                      )}
+                        )}
+                      </td>
+                      <td style={tdStyle}>
+                        <span style={{ fontWeight: 'bold', color: '#c084fc' }}>⏱️ {formatTime(professor.total_time_seconds)}</span>
+                      </td>
+                      <td style={tdStyle}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <ActionButton label="Actividad" bg="rgba(192,132,252,0.15)" hoverBg="rgba(192,132,252,0.25)" textColor="#d8b4fe" border="1px solid rgba(192,132,252,0.3)" onClick={() => { setSelectedProfessorId(professor.id); setSelectedProfessorName(professor.name) }} />
+                          <ActionButton label="✏️ Editar" bg="rgba(255,255,255,0.05)" hoverBg="rgba(255,255,255,0.1)" textColor="#fff" border="1px solid rgba(255,255,255,0.15)" onClick={() => setEditingProfessor(professor)} />
+                          <ActionButton label="🗑️" bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => setDeletingProfessor(professor)} />
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -480,6 +478,14 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
 
         <div style={{ height: '3rem' }} />
       </div>
+
+      {selectedProfessorId && (
+        <UserActivityModal
+          userId={selectedProfessorId}
+          userName={selectedProfessorName}
+          onClose={() => setSelectedProfessorId(null)}
+        />
+      )}
     </>
   )
 }

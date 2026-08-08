@@ -729,7 +729,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                 marginBottom: 0,
                                 textAlign: 'center'
                             }}>
-                                <h2 style={{ color: '#1f295a', fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>Gestión de Maestros</h2>
+                                <h2 style={{ color: '#1f295a', fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>Gestión de Profesores</h2>
                             </div>
                             <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto', padding: '2rem', background: 'transparent' }}>
                                 {centerId && <TeacherManagement centerId={centerId} centerName={center?.name} />}

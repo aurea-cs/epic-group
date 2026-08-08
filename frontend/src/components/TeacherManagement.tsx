@@ -1,8 +1,38 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { getCenterProfessors, assignProfessor, unassignProfessor } from '../lib/adminApi'
-import { PublicUser } from '../hooks/useUsers'
 import UserActivityModal from './UserActivityModal'
 import './HierarchyConfig.css'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface AssignedProfessor {
+    id: string
+    email: string
+    full_name: string | null
+    avatar_url?: string | null
+    total_time_seconds?: number
+}
+
+interface PlatformProfessor {
+    id: string
+    name: string
+    email: string
+    avatar_url?: string | null
+    centers: { id: string; name: string }[]
+}
+
+interface UserData {
+    email: string
+    password: string
+    full_name: string
+}
+
+interface Results {
+    success: number
+    errors: number
+    errorDetails: { email: string; error: string }[]
+    processed: { email: string; status: 'success' | 'error'; message: string }[]
+}
 
 function formatTime(totalSeconds?: number): string {
     if (!totalSeconds) return '0m'
@@ -17,163 +47,405 @@ interface TeacherManagementProps {
     centerName?: string
 }
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function initials(name: string | null | undefined, email: string): string {
+    const str = name || email || '?'
+    return str.substring(0, 2).toUpperCase()
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
-    const [assignedTeachers, setAssignedTeachers] = useState<PublicUser[]>([])
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-    const [createForm, setCreateForm] = useState({
-        fullName: '',
-        email: '',
-        password: ''
-    })
+
+    // ── Assigned professors ────────────────────────────────────────────
+    const [assignedTeachers, setAssignedTeachers] = useState<AssignedProfessor[]>([])
+    const [loadingAssigned, setLoadingAssigned] = useState(false)
+
+    // ── Tabs ───────────────────────────────────────────────────────────
+    const [activeTab, setActiveTab] = useState<'manual' | 'csv' | 'existing'>('manual')
+
+    // ── Manual creation ────────────────────────────────────────────────
+    const [createForm, setCreateForm] = useState({ fullName: '', email: '', password: 'ingles2025' })
+    const [creating, setCreating] = useState(false)
+
+    // ── Existing professors search ─────────────────────────────────────
+    const [allProfessors, setAllProfessors] = useState<PlatformProfessor[]>([])
+    const [loadingAll, setLoadingAll] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [assigningId, setAssigningId] = useState<string | null>(null)
+
     const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null)
     const [selectedTeacherName, setSelectedTeacherName] = useState<string>('')
 
-    useEffect(() => {
-        loadAssignedTeachers()
-    }, [centerId])
+    // ── CSV import ─────────────────────────────────────────────────────
+    const [importing, setImporting] = useState(false)
+    const [results, setResults] = useState<Results | null>(null)
+    const [parsing, setParsing] = useState(false)
 
-    const loadAssignedTeachers = async () => {
+    // ── Unassign ───────────────────────────────────────────────────────
+    const [unassigningId, setUnassigningId] = useState<string | null>(null)
+
+    // ── Error banner ───────────────────────────────────────────────────
+    const [error, setError] = useState<string | null>(null)
+
+    // ─── Fetch assigned professors for this center ─────────────────────
+    const fetchAssigned = useCallback(async () => {
+        setLoadingAssigned(true)
         try {
-            setLoading(true)
             const data = await getCenterProfessors(centerId)
             setAssignedTeachers(data)
         } catch (err: any) {
             setError(err.message || 'Error al cargar profesores asignados')
         } finally {
-            setLoading(false)
+            setLoadingAssigned(false)
         }
-    }
+    }, [centerId])
 
-    const handleUnassign = async (userId: string) => {
-        if (!confirm('¿Estás seguro de desasignar este profesor del colegio?')) return
+    useEffect(() => { fetchAssigned() }, [fetchAssigned])
 
-        try {
-            setLoading(true)
-            await unassignProfessor(centerId, userId)
-            await loadAssignedTeachers()
-        } catch (err: any) {
-            alert(err.message || 'Error al desasignar profesor')
-        } finally {
-            setLoading(false)
+    // ─── Fetch ALL platform professors when "existing" tab opens ───────
+    useEffect(() => {
+        if (activeTab !== 'existing') return
+        setAllProfessors([])
+        setSearchQuery('')
+        setLoadingAll(true)
+        fetch(`${API}/api/admin/professors`)
+            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
+            .then(data => setAllProfessors(Array.isArray(data) ? data : []))
+            .catch(err => setError(err.message || 'Error al cargar profesores'))
+            .finally(() => setLoadingAll(false))
+    }, [activeTab])
+
+    // ─── Create professor + assign to center ───────────────────────────
+    const createAndAssignProfessor = async (form: { fullName: string; email: string; password: string }) => {
+        const res = await fetch(`${API}/api/admin/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: form.email, password: form.password, fullName: form.fullName, role: 'professor' })
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Error creando profesor')
+        if (data.user?.id) {
+            await assignProfessor(centerId, data.user.id)
         }
+        return data.user
     }
 
     const handleCreateTeacher = async () => {
+        if (!createForm.fullName || !createForm.email || !createForm.password) {
+            setError('Todos los campos son requeridos.')
+            return
+        }
+        setCreating(true)
+        setError(null)
         try {
-            setLoading(true)
-
-            // Call Backend API to create user securely
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/users`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    email: createForm.email,
-                    password: createForm.password,
-                    fullName: createForm.fullName,
-                    role: 'professor'
-                })
-            })
-
-            const data = await response.json()
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Error creando maestro')
-            }
-
-            // After creation, assign to center
-            if (data.user && data.user.id) {
-                await assignProfessor(centerId, data.user.id)
-            }
-
-            // Reset and Refresh
-            setCreateForm({ fullName: '', email: '', password: '' })
-            await loadAssignedTeachers()
-            alert('Maestro creado y asignado exitosamente')
-
+            await createAndAssignProfessor(createForm)
+            setCreateForm({ fullName: '', email: '', password: 'ingles2025' })
+            alert('Profesor creado y asignado al centro exitosamente')
+            fetchAssigned()
         } catch (err: any) {
-            setError(err.message || 'Error al crear maestro')
+            setError(err.message || 'Error al crear profesor')
         } finally {
-            setLoading(false)
+            setCreating(false)
         }
     }
 
+    // ─── Assign an existing platform professor ─────────────────────────
+    const handleAssignExisting = async (prof: PlatformProfessor) => {
+        const alreadyAssigned = assignedTeachers.some(t => t.id === prof.id)
+        if (alreadyAssigned) {
+            alert(`${prof.name} ya está asignado a este centro.`)
+            return
+        }
+        setAssigningId(prof.id)
+        try {
+            await assignProfessor(centerId, prof.id)
+            alert(`${prof.name} asignado/a exitosamente a este centro.`)
+            fetchAssigned()
+        } catch (err: any) {
+            alert(err.message || 'Error al asignar profesor')
+        } finally {
+            setAssigningId(null)
+        }
+    }
+
+    // ─── Unassign professor from center ───────────────────────────────
+    const handleUnassign = async (teacher: AssignedProfessor) => {
+        if (!confirm(`¿Desasignar a ${teacher.full_name || teacher.email} de este centro?`)) return
+        setUnassigningId(teacher.id)
+        try {
+            await unassignProfessor(centerId, teacher.id)
+            setAssignedTeachers(prev => prev.filter(t => t.id !== teacher.id))
+        } catch (err: any) {
+            alert(err.message || 'Error al desasignar profesor')
+        } finally {
+            setUnassigningId(null)
+        }
+    }
+
+    // ─── CSV import ────────────────────────────────────────────────────
+    const importCsvProfessors = async (users: UserData[]) => {
+        setImporting(true)
+        setResults(null)
+        const res: Results = { success: 0, errors: 0, errorDetails: [], processed: [] }
+        for (const user of users) {
+            try {
+                await createAndAssignProfessor({ fullName: user.full_name, email: user.email, password: user.password })
+                res.success++
+                res.processed.push({ email: user.email, status: 'success', message: 'OK' })
+            } catch (error: any) {
+                res.errors++
+                res.errorDetails.push({ email: user.email, error: error.message })
+                res.processed.push({ email: user.email, status: 'error', message: error.message })
+            }
+            await new Promise(r => setTimeout(r, 100))
+        }
+        setResults(res)
+        setImporting(false)
+        fetchAssigned()
+    }
+
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (!file) return
+        setParsing(true)
+        const reader = new FileReader()
+        reader.onload = async (e) => {
+            const text = e.target?.result as string
+            if (!text) return
+            const lines = text.split(/\r\n|\n/)
+            const parsed: UserData[] = []
+            let start = 0
+            if (lines[0].toLowerCase().includes('email')) start = 1
+            for (let i = start; i < lines.length; i++) {
+                const line = lines[i].trim()
+                if (!line) continue
+                const parts = line.split(',')
+                if (parts.length >= 3) {
+                    parsed.push({ email: parts[0].trim(), password: parts[1]?.trim() || 'ingles2025', full_name: parts[2].trim() })
+                }
+            }
+            if (confirm(`Se encontraron ${parsed.length} profesores en el CSV. ¿Importar ahora?`)) {
+                await importCsvProfessors(parsed)
+            }
+            setParsing(false)
+            if (event.target) event.target.value = ''
+        }
+        reader.readAsText(file)
+    }
+
+    // ─── Filtered search results ───────────────────────────────────────
+    const filteredProfessors = searchQuery.trim().length < 1
+        ? allProfessors
+        : allProfessors.filter(p =>
+            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.email.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+
+    // ─── Render ────────────────────────────────────────────────────────
     return (
-        <div className="teacher-management">
+        <div className="hierarchy-config-modal-panel" style={{ marginTop: 0, color: '#1f295a' }}>
+
+            {/* Error Banner */}
             {error && (
-                <div className="alert-box error" style={{ position: 'relative' }}>
-                    {error}
-                    <button
-                        onClick={() => setError(null)}
-                        style={{ position: 'absolute', right: '10px', top: '10px', background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer' }}
-                    >
-                        ✕
-                    </button>
+                <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '10px 14px', color: '#dc2626', fontSize: '0.88rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>⚠️ {error}</span>
+                    <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: '1.1rem', lineHeight: 1 }}>×</button>
                 </div>
             )}
 
-            {/* CREATE FORM */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '2rem 0' }}>
-                <h4 style={{ color: '#1f295a', margin: '0 0 1.5rem 0', fontSize: '1.2rem', textAlign: 'center' }}>Registrar Nuevo Maestro</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', maxWidth: '400px' }}>
-                    <div className="form-group">
-                        <label style={{ color: '#1f295a', fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>Nombre Completo *</label>
-                        <input
-                            type="text"
-                            value={createForm.fullName}
-                            onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
-                            placeholder="Ej: Juan Pérez"
-                            className="modern-input"
-                            style={{ background: '#f8fafc', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label style={{ color: '#1f295a', fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>Correo Electrónico *</label>
-                        <input
-                            type="email"
-                            value={createForm.email}
-                            onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                            placeholder="ejemplo@escuela.com"
-                            className="modern-input"
-                            style={{ background: '#f8fafc', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label style={{ color: '#1f295a', fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>Contraseña *</label>
-                        <input
-                            type="text"
-                            value={createForm.password}
-                            onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                            placeholder="Contraseña segura"
-                            className="modern-input"
-                            style={{ background: '#f8fafc', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
-                        />
-                    </div>
-                    <button
-                        className="btn-save-modern"
-                        onClick={handleCreateTeacher}
-                        disabled={!createForm.fullName || !createForm.email || !createForm.password || loading}
-                        style={{ height: '46px', marginTop: '0.5rem', background: '#1f295a', color: '#ffffff' }}
-                    >
-                        {loading ? 'Creando...' : 'Crear y Asignar'}
-                    </button>
-                </div>
+            {/* ── Add Professor Tabs ── */}
+            <div className="admin-tabs">
+                <button className={`tab-button ${activeTab === 'manual' ? 'active' : ''}`} onClick={() => setActiveTab('manual')} style={{ color: activeTab === 'manual' ? '#ffffff' : '#1f295a' }}>
+                    👤 Crear Manualmente
+                </button>
+                <button className={`tab-button ${activeTab === 'csv' ? 'active' : ''}`} onClick={() => setActiveTab('csv')} style={{ color: activeTab === 'csv' ? '#ffffff' : '#1f295a' }}>
+                    📂 Importar desde CSV
+                </button>
+                <button className={`tab-button ${activeTab === 'existing' ? 'active' : ''}`} onClick={() => setActiveTab('existing')} style={{ color: activeTab === 'existing' ? '#ffffff' : '#1f295a' }}>
+                    🔍 Buscar Existente
+                </button>
             </div>
 
-            {/* List Section */}
-            <div className="assigned-list">
-                <h4 style={{ color: '#1f295a', marginBottom: '1rem', borderTop: '1px solid rgba(31,41,90,0.1)', paddingTop: '1rem' }}>
-                    Maestros Asignados ({assignedTeachers.length})
-                </h4>
+            {/* ── Manual Tab ── */}
+            {activeTab === 'manual' && (
+                <div className="form-grid">
+                    <h4 style={{ color: '#1f295a', margin: 0 }}>Registrar Nuevo Profesor</h4>
+                    <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr auto', alignItems: 'end' }}>
+                        <div className="form-group">
+                            <label style={{ color: '#1f295a', fontWeight: 'bold' }}>Nombre Completo *</label>
+                            <input
+                                type="text"
+                                value={createForm.fullName}
+                                onChange={e => setCreateForm({ ...createForm, fullName: e.target.value })}
+                                placeholder="Ej: Juan García"
+                                className="modern-input"
+                                style={{ background: '#f8fafc', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label style={{ color: '#1f295a', fontWeight: 'bold' }}>Correo Electrónico *</label>
+                            <input
+                                type="email"
+                                value={createForm.email}
+                                onChange={e => setCreateForm({ ...createForm, email: e.target.value })}
+                                placeholder="profesor@escuela.com"
+                                className="modern-input"
+                                style={{ background: '#f8fafc', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label style={{ color: '#1f295a', fontWeight: 'bold' }}>Contraseña *</label>
+                            <input
+                                type="text"
+                                value={createForm.password}
+                                onChange={e => setCreateForm({ ...createForm, password: e.target.value })}
+                                placeholder="Contraseña temporal"
+                                className="modern-input"
+                                style={{ background: '#f8fafc', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
+                            />
+                        </div>
+                        <button
+                            className="btn-save-modern"
+                            onClick={handleCreateTeacher}
+                            disabled={!createForm.fullName || !createForm.email || !createForm.password || creating}
+                            style={{ height: '46px', marginTop: 'auto', background: '#1f295a', color: '#ffffff' }}
+                        >
+                            {creating ? 'Creando...' : 'Crear Profesor'}
+                        </button>
+                    </div>
+                </div>
+            )}
 
-                {loading && <p style={{ color: '#4b5563' }}>Cargando...</p>}
+            {/* ── Existing Professor Tab ── */}
+            {activeTab === 'existing' && (
+                <div className="form-grid">
+                    <h4 style={{ color: '#1f295a', margin: 0 }}>Asignar Profesor Existente</h4>
+                    <input
+                        type="text"
+                        placeholder="Buscar por nombre o correo..."
+                        className="modern-input"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        style={{ marginBottom: '1rem', width: '100%', background: '#f8fafc', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
+                        autoFocus
+                    />
+                    <div className="users-table-container" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                        {loadingAll ? (
+                            <p style={{ color: '#1f295a', padding: '20px', textAlign: 'center' }}>Cargando profesores...</p>
+                        ) : (
+                            <table className="users-table">
+                                <thead>
+                                    <tr>
+                                        <th style={{ color: '#1f295a' }}>Nombre</th>
+                                        <th style={{ color: '#1f295a' }}>Email</th>
+                                        <th style={{ color: '#1f295a' }}>Centros</th>
+                                        <th style={{ color: '#1f295a' }}>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredProfessors.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: '#1f295a' }}>
+                                                {searchQuery ? 'Sin resultados para esa búsqueda.' : 'No hay profesores registrados en la plataforma.'}
+                                            </td>
+                                        </tr>
+                                    ) : filteredProfessors.map(prof => {
+                                        const alreadyHere = assignedTeachers.some(t => t.id === prof.id)
+                                        return (
+                                            <tr key={prof.id}>
+                                                <td style={{ color: '#1f295a', fontWeight: 500 }}>{prof.name}</td>
+                                                <td style={{ color: '#4b5563' }}>{prof.email}</td>
+                                                <td style={{ color: '#4b5563', fontSize: '0.82rem' }}>
+                                                    {prof.centers.length === 0
+                                                        ? <span style={{ color: '#9ca3af' }}>Sin centros</span>
+                                                        : prof.centers.map(c => c.name).join(', ')
+                                                    }
+                                                </td>
+                                                <td>
+                                                    {alreadyHere ? (
+                                                        <span style={{ color: '#10b981', fontSize: '0.82rem', fontWeight: 600 }}>✓ Asignado</span>
+                                                    ) : (
+                                                        <button
+                                                            className="btn-save-modern"
+                                                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: '#1f295a', color: '#ffffff' }}
+                                                            disabled={assigningId === prof.id}
+                                                            onClick={() => handleAssignExisting(prof)}
+                                                        >
+                                                            {assigningId === prof.id ? 'Asignando...' : 'Asignar'}
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                </div>
+            )}
 
-                <div className="users-table-container" style={{ maxHeight: '300px' }}>
+            {/* ── CSV Tab ── */}
+            {activeTab === 'csv' && (
+                <div className="csv-upload-subject">
+                    <h4 style={{ color: '#1f295a' }}>Subir Archivo CSV</h4>
+                    <div className="csv-helper-text" style={{ color: '#4b5563' }}>
+                        Formato requerido: <code>email, password, full_name</code>
+                    </div>
+                    <input
+                        type="file"
+                        accept=".csv"
+                        onChange={handleFileUpload}
+                        className="modern-input"
+                        style={{ maxWidth: '400px', margin: '0 auto', background: '#f8fafc', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
+                        disabled={parsing || importing}
+                    />
+                    {(parsing || importing) && (
+                        <p style={{ color: '#1f295a', textAlign: 'center', marginTop: '0.5rem', fontSize: '0.88rem' }}>
+                            {parsing ? 'Procesando archivo...' : `Importando profesores...`}
+                        </p>
+                    )}
+                </div>
+            )}
+
+            {/* ── Import Results ── */}
+            {results && (
+                <div className="results-section">
+                    <h3 style={{ color: '#1f295a' }}>📈 Resultados de Importación</h3>
+                    <div className="results-summary">
+                        <div className="result-item success"><span className="result-number">{results.success}</span><span className="result-label">Creados y Asignados</span></div>
+                        <div className="result-item error"><span className="result-number">{results.errors}</span><span className="result-label">Errores</span></div>
+                    </div>
+                    {results.errorDetails.length > 0 && (
+                        <div className="errors-details">
+                            <h4 style={{ color: '#1f295a' }}>❌ Errores Detallados:</h4>
+                            <div className="error-list">
+                                {results.errorDetails.map((e, i) => (
+                                    <div key={i} className="error-item" style={{ color: '#dc2626' }}><strong>{e.email}</strong>: {e.error}</div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ── Assigned Professors List ── */}
+            <div className="user-list-section">
+                <h3 style={{ color: '#1f295a', fontSize: '1.2rem', margin: '2rem 0 1rem' }}>
+                    📋 Profesores Asignados a este Centro ({loadingAssigned ? '...' : assignedTeachers.length})
+                </h3>
+                <div className="users-table-container">
                     <table className="users-table">
                         <thead>
                             <tr>
+                                <th style={{ color: '#1f295a', width: '52px' }}></th>
+                                <th style={{ color: '#1f295a' }}>Nombre</th>
+                                <th style={{ color: '#1f295a' }}>Email</th>
+                                <th style={{ color: '#1f295a' }}>Acciones</th>
                                 <th>Avatar</th>
                                 <th>Nombre</th>
                                 <th>Email</th>
@@ -182,30 +454,28 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {assignedTeachers.map(teacher => (
+                            {loadingAssigned ? (
+                                <tr><td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: '#1f295a' }}>Cargando...</td></tr>
+                            ) : assignedTeachers.length === 0 ? (
+                                <tr><td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: '#4b5563' }}>No hay profesores asignados a este centro.</td></tr>
+                            ) : assignedTeachers.map(teacher => (
                                 <tr key={teacher.id}>
-                                    <td style={{ width: '60px' }}>
+                                    <td style={{ width: '52px' }}>
                                         <div style={{
-                                            width: '36px',
-                                            height: '36px',
-                                            borderRadius: '50%',
-                                            background: '#c084fc',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontWeight: 'bold',
-                                            color: '#fff',
-                                            fontSize: '0.9rem'
+                                            width: '36px', height: '36px', borderRadius: '50%',
+                                            background: 'linear-gradient(135deg, #1f295a, #4c63b6)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontWeight: 'bold', color: '#fff', fontSize: '0.85rem'
                                         }}>
-                                            {(teacher.full_name || teacher.email || 'T').substring(0, 2).toUpperCase()}
+                                            {initials(teacher.full_name, teacher.email)}
                                         </div>
                                     </td>
-                                    <td style={{ fontWeight: '500', color: '#1f295a' }}>{teacher.full_name || 'Maestro'}</td>
+                                    <td style={{ fontWeight: 500, color: '#1f295a' }}>{teacher.full_name || 'Profesor'}</td>
                                     <td style={{ color: '#4b5563' }}>{teacher.email}</td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <span style={{ fontWeight: 'bold', color: '#334155' }}>⏱️ {formatTime(teacher.total_time_seconds)}</span>
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     setSelectedTeacherId(teacher.id)
                                                     setSelectedTeacherName(teacher.full_name || teacher.email)
@@ -220,15 +490,16 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
                                     </td>
                                     <td>
                                         <button
-                                            onClick={() => handleUnassign(teacher.id)}
+                                            onClick={() => handleUnassign(teacher)}
                                             className="action-btn delete"
+                                            disabled={unassigningId === teacher.id}
                                         >
-                                            Desasignar
+                                            {unassigningId === teacher.id ? '...' : 'Desasignar'}
                                         </button>
                                     </td>
                                 </tr>
                             ))}
-                            {!loading && assignedTeachers.length === 0 && (
+                            {!loadingAssigned && assignedTeachers.length === 0 && (
                                 <tr>
                                     <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#4b5563' }}>
                                         No hay maestros asignados a este colegio.
@@ -239,12 +510,13 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
                     </table>
                 </div>
             </div>
-            
+
+
             {selectedTeacherId && (
-                <UserActivityModal 
-                    userId={selectedTeacherId} 
-                    userName={selectedTeacherName} 
-                    onClose={() => setSelectedTeacherId(null)} 
+                <UserActivityModal
+                    userId={selectedTeacherId}
+                    userName={selectedTeacherName}
+                    onClose={() => setSelectedTeacherId(null)}
                 />
             )}
         </div>
