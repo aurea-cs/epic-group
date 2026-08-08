@@ -27,6 +27,7 @@ export interface StudentData {
         author: string
         date: string
     }>
+    total_time_seconds?: number
 }
 
 export interface Student {

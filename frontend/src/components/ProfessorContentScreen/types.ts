@@ -40,6 +40,7 @@ export interface Student {
   avatar_url?: string
   created_at?: string
   centers: Center[]
+  total_time_seconds?: number
 }
 
 export interface Center {

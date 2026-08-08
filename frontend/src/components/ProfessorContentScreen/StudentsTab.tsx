@@ -18,6 +18,17 @@ function avatarColor(name: string): string {
   return colors[Math.abs(h) % colors.length]
 }
 
+function formatTime(totalSeconds?: number): string {
+  if (!totalSeconds) return '0s'
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  
+  if (h > 0) return `${h}h ${m}m ${s}s`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
+}
+
 const StudentsTab: React.FC<StudentsTabProps> = ({ loading, students, onEdit, onDelete, hideActions }) => {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
@@ -69,6 +80,7 @@ const StudentsTab: React.FC<StudentsTabProps> = ({ loading, students, onEdit, on
                     <th style={thStyle}>Alumno</th>
                     <th style={thStyle}>Correo Electrónico</th>
                     <th style={thStyle}>Centros Inscritos</th>
+                    <th style={thStyle}>Tiempo</th>
                     {!hideActions && <th style={{ ...thStyle, textAlign: 'right' }}>Acciones</th>}
                   </tr>
                 </thead>
@@ -113,6 +125,13 @@ const StudentsTab: React.FC<StudentsTabProps> = ({ loading, students, onEdit, on
                               ))}
                             </div>
                         }
+                      </td>
+
+                      {/* Time */}
+                      <td style={tdStyle}>
+                        <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', fontWeight: 500 }}>
+                          ⏱️ {formatTime(student.total_time_seconds)}
+                        </span>
                       </td>
 
                       {/* Actions */}

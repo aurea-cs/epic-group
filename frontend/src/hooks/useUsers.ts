@@ -10,6 +10,7 @@ export interface PublicUser {
     avatar_url: string | null
     created_at: string
     updated_at: string
+    total_time_seconds?: number
 }
 
 // Hook para manejar usuarios sincronizados

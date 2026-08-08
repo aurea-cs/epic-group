@@ -360,6 +360,18 @@ app.get('/api/students/:studentId/progress', async (req, res) => {
             })
         }));
 
+        // 3.5 Fetch time
+        let totalTime = 0;
+        const { data: timeData, error: timeError } = await supabase
+            .from('student_time_view')
+            .select('total_time_seconds')
+            .eq('user_id', studentId)
+            .single();
+            
+        if (!timeError && timeData) {
+            totalTime = timeData.total_time_seconds;
+        }
+
         // 4. Return the combined payload
         res.json({
             id: user.id,
@@ -368,10 +380,58 @@ app.get('/api/students/:studentId/progress', async (req, res) => {
             avatar: user.avatar_url,
             courses,
             grades: [],
-            comments
+            comments,
+            total_time_seconds: totalTime
         });
     } catch (error: any) {
         console.error('Error fetching student progress:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/users/:userId/activity', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        // Fetch activity for the last 7 days
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const { data, error } = await supabase
+            .from('activity_logs')
+            .select('duration_seconds, created_at, path')
+            .eq('user_id', userId)
+            .gte('created_at', sevenDaysAgo.toISOString())
+            .order('created_at', { ascending: true });
+            
+        if (error) throw error;
+        
+        // Group by day
+        const dailyActivity: Record<string, number> = {};
+        const pathActivity: Record<string, number> = {};
+        
+        (data || []).forEach(log => {
+            const dateStr = new Date(log.created_at).toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' });
+            if (!dailyActivity[dateStr]) dailyActivity[dateStr] = 0;
+            dailyActivity[dateStr] += log.duration_seconds;
+            
+            const p = log.path || '/unknown';
+            if (!pathActivity[p]) pathActivity[p] = 0;
+            pathActivity[p] += log.duration_seconds;
+        });
+        
+        const dailyArray = Object.keys(dailyActivity).map(k => ({ date: k, seconds: dailyActivity[k] }));
+        const pathArray = Object.keys(pathActivity)
+            .map(k => ({ path: k, seconds: pathActivity[k] }))
+            .sort((a,b) => b.seconds - a.seconds)
+            .slice(0, 10);
+        
+        res.json({
+            daily: dailyArray,
+            sections: pathArray
+        });
+    } catch (error: any) {
+        console.error('Error fetching student activity:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -1329,8 +1389,22 @@ app.get('/api/admin/centers/:centerId/professors', async (req, res) => {
             throw usersError;
         }
 
-        console.log(`Found ${users?.length} users for center ${centerId}`);
-        res.json(users || []);
+        // Fetch time from view
+        const { data: timeData } = await supabase
+            .from('student_time_view')
+            .select('user_id, total_time_seconds')
+            .in('user_id', userIds);
+            
+        const timeMap = new Map();
+        (timeData || []).forEach(t => timeMap.set(t.user_id, t.total_time_seconds));
+
+        const usersWithTime = (users || []).map(u => ({
+            ...u,
+            total_time_seconds: timeMap.get(u.id) || 0
+        }));
+
+        console.log(`Found ${usersWithTime.length} users for center ${centerId}`);
+        res.json(usersWithTime);
     } catch (error: any) {
         console.error('Error fetching center professors FULL:', JSON.stringify(error, null, 2));
         res.status(500).json({ error: error.message, details: error });
@@ -1916,6 +1990,21 @@ app.get('/api/subjects/:subjectId/students', async (req, res) => {
             }
         });
 
+        // 5.5 Fetch time spent
+        const { data: timeData, error: timeError } = await supabase
+            .from('student_time_view')
+            .select('user_id, total_time_seconds')
+            .in('user_id', studentIds);
+            
+        if (timeError && timeError.code !== '42P01') {
+            console.warn('Error fetching time data:', timeError);
+        }
+        
+        const timeMap: Record<string, number> = {};
+        (timeData || []).forEach((t: any) => {
+            timeMap[t.user_id] = t.total_time_seconds;
+        });
+
         // 6. Combine
         const result = (students || []).map((s: any) => ({
             id: s.id,
@@ -1923,7 +2012,8 @@ app.get('/api/subjects/:subjectId/students', async (req, res) => {
             email: s.email,
             avatar_url: s.avatar_url,
             created_at: s.created_at,
-            centers: studentCentersMap[s.id] || []
+            centers: studentCentersMap[s.id] || [],
+            total_time_seconds: timeMap[s.id] || 0
         }));
 
         res.json(result);

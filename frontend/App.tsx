@@ -28,6 +28,8 @@ import StudentsAdminScreen from './src/components/StudentsAdminScreen'
 import ProfessorAssignmentCoursesScreen from './src/components/ProfessorAssignmentCoursesScreen'
 import ProfessorAssignmentContentScreen from './src/components/ProfessorAssignmentContentScreen'
 import PdfViewerPage from './src/components/PdfViewerPage'
+import ActivityTracker from './src/components/ActivityTracker'
+import { getUserRole } from './src/utils/getUserRole'
 // import LandingPage from './src/components/LandingPage'
 import './App.css'
 
@@ -102,8 +104,11 @@ function App() {
     )
   }
 
+  const userRole = getUserRole(user)
+
   return (
     <Router>
+      {user && <ActivityTracker role={userRole} />}
       <div className="App">
         <Routes>
           <Route
