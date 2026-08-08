@@ -122,30 +122,49 @@ const UserActivityModal: React.FC<UserActivityModalProps> = ({ userId, userName,
                                     <span>📅</span> Actividad Diaria
                                 </h3>
                                 
-                                {data.daily.length === 0 ? (
+                                {data.daily.length === 0 || data.daily.reduce((s, d) => s + d.seconds, 0) === 0 ? (
                                     <p style={{ color: '#94a3b8' }}>No hay actividad registrada en los últimos 7 días.</p>
                                 ) : (
-                                    <div style={{ display: 'flex', alignItems: 'flex-end', height: '200px', gap: '1rem', paddingBottom: '1rem', borderBottom: '2px solid #e2e8f0' }}>
-                                        {data.daily.map((day, idx) => {
-                                            const heightPercent = Math.max((day.seconds / maxDailySeconds) * 100, 2)
-                                            return (
-                                                <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <div style={{ 
-                                                        width: '100%', 
-                                                        height: `${heightPercent}%`, 
-                                                        background: 'linear-gradient(to top, #3b82f6, #60a5fa)',
-                                                        borderRadius: '6px 6px 0 0',
-                                                        position: 'relative',
-                                                        minHeight: '4px'
-                                                    }}>
-                                                        <div style={{ position: 'absolute', top: '-25px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold' }}>
-                                                            {formatTime(day.seconds)}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', paddingBottom: '1rem', borderBottom: '2px solid #e2e8f0' }}>
+                                        <div style={{
+                                            width: '200px',
+                                            height: '200px',
+                                            borderRadius: '50%',
+                                            background: `conic-gradient(${(() => {
+                                                const totalSeconds = data.daily.reduce((sum, d) => sum + d.seconds, 0);
+                                                let currentPercentage = 0;
+                                                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+                                                return data.daily.map((day, idx) => {
+                                                    const percent = (day.seconds / totalSeconds) * 100;
+                                                    const start = currentPercentage;
+                                                    const end = currentPercentage + percent;
+                                                    currentPercentage = end;
+                                                    return `${colors[idx % colors.length]} ${start}% ${end}%`;
+                                                }).join(', ');
+                                            })()})`,
+                                            flexShrink: 0,
+                                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                                        }} />
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
+                                            {data.daily.filter(d => d.seconds > 0).map((day, idx) => {
+                                                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+                                                const color = colors[data.daily.indexOf(day) % colors.length];
+                                                const totalSeconds = data.daily.reduce((sum, d) => sum + d.seconds, 0);
+                                                const percent = ((day.seconds / totalSeconds) * 100).toFixed(1);
+                                                return (
+                                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: color }} />
+                                                            <span style={{ color: '#475569', fontWeight: '500' }}>{day.date}</span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                            <span style={{ color: '#64748b', fontWeight: 'bold' }}>{formatTime(day.seconds)}</span>
+                                                            <span style={{ color: color, fontWeight: 'bold', width: '45px', textAlign: 'right' }}>{percent}%</span>
                                                         </div>
                                                     </div>
-                                                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 'bold' }}>{day.date}</div>
-                                                </div>
-                                            )
-                                        })}
+                                                )
+                                            })}
+                                        </div>
                                     </div>
                                 )}
                             </div>
