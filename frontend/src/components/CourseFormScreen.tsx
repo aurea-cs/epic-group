@@ -120,9 +120,9 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
                 ...formData,
                 visibility: formData.visibility as 'active' | 'hidden' | 'archived',
                 max_students: Number(formData.max_students),
-                schedule_days: schedules.map(s => JSON.stringify(s)),
-                schedule_start_time: schedules.length > 0 ? schedules[0].start : '',
-                schedule_end_time: schedules.length > 0 ? schedules[0].end : ''
+                schedule_days: schedules.length > 0 ? schedules.map(s => JSON.stringify(s)) : [],
+                schedule_start_time: (schedules.length > 0 && schedules[0].start) ? schedules[0].start : null,
+                schedule_end_time: (schedules.length > 0 && schedules[0].end) ? schedules[0].end : null
             }
 
             if (isEditing && courseId) {
@@ -314,35 +314,6 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
                                         ))}
                                     </div>
                                 )}
-                            </div>
-
-                            {/* Settings */}
-                            <div className="form-group">
-                                <label style={{ fontSize: '1rem', marginBottom: '0.5rem', color: '#1f295a', fontWeight: 'bold' }}>Visibilidad</label>
-                                <select
-                                    name="visibility"
-                                    value={formData.visibility}
-                                    onChange={handleChange}
-                                    className="modern-input"
-                                    style={{ padding: '1rem', background: '#f3f4f6', color: '#1f295a', border: '1px solid #d1d5db' }}
-                                >
-                                    <option value="active">Mostrar</option>
-                                    <option value="hidden">Ocultar</option>
-                                    <option value="archived">Archivado</option>
-                                </select>
-                            </div>
-
-                            <div className="form-group">
-                                <label style={{ fontSize: '1rem', marginBottom: '0.5rem', color: '#1f295a', fontWeight: 'bold' }}>Cantidad de Estudiantes</label>
-                                <input
-                                    type="number"
-                                    name="max_students"
-                                    value={formData.max_students}
-                                    onChange={handleChange}
-                                    className="modern-input"
-                                    style={{ padding: '1rem', background: '#f3f4f6', color: '#1f295a', border: '1px solid #d1d5db' }}
-                                    min="1"
-                                />
                             </div>
                         </div>
 

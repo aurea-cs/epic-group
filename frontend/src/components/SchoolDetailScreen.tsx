@@ -388,16 +388,6 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                         className="modern-input"
                                     />
                                 </div>
-                                <div className="form-group">
-                                    <label>Máximo de Alumnos</label>
-                                    <input
-                                        type="number"
-                                        value={subjectForm.max_students}
-                                        onChange={(e) => setSubjectForm({ ...subjectForm, max_students: parseInt(e.target.value) })}
-                                        placeholder="Ej: 30"
-                                        className="modern-input"
-                                    />
-                                </div>
                                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
                                     <label>Descripción</label>
                                     <textarea
@@ -426,18 +416,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                         className="modern-input"
                                     />
                                 </div>
-                                <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                                    <label>Visibilidad</label>
-                                    <select
-                                        value={subjectForm.visibility}
-                                        onChange={(e) => setSubjectForm({ ...subjectForm, visibility: e.target.value })}
-                                        className="modern-input"
-                                    >
-                                        <option value="active">Mostrar</option>
-                                        <option value="hidden">Ocultar</option>
-                                        <option value="archived">Archivar</option>
-                                    </select>
-                                </div>
+                                
                             </div>
                             <div className="modal-actions">
                                 <button className="btn-cancel-modern" onClick={() => setShowSubjectModal(false)}>
