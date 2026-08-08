@@ -28,6 +28,7 @@ import StudentsAdminScreen from './src/components/StudentsAdminScreen'
 import ProfessorAssignmentCoursesScreen from './src/components/ProfessorAssignmentCoursesScreen'
 import ProfessorAssignmentContentScreen from './src/components/ProfessorAssignmentContentScreen'
 import PdfViewerPage from './src/components/PdfViewerPage'
+import ProfessorsAdminScreen from './src/components/ProfessorsAdminScreen'
 // import LandingPage from './src/components/LandingPage'
 import './App.css'
 
@@ -120,6 +121,7 @@ function App() {
                     <Route path="/course/:courseId" element={<CourseDetailScreen user={user} />} />
                     <Route path="/progress" element={<ProgressScreen user={user} />} />
                     <Route path="/students" element={<StudentsAdminScreen user={user} />} />
+                    <Route path="/professors" element={<ProfessorsAdminScreen user={user} />} />
                     <Route path="/schedule" element={<ScheduleScreen user={user} />} />
                     <Route path="/calendar" element={<CalendarScreen user={user} />} />
                     <Route path="/alumnos" element={<StudentsScreen user={user} />} />
