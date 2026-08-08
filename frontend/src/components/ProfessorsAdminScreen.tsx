@@ -189,7 +189,7 @@ const EditProfessorModal: React.FC<{ professor: Professor; allCenters: Center[];
     if (!form.fullName || !form.email) { setError('Nombre y correo son requeridos.'); return }
     setSubmitting(true); setError('')
     try {
-      const res = await fetch(`${API}/api/admin/professors/${professor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fullName: form.fullName, email: form.email, centerIds: selectedCenterIds }) })
+      const res = await fetch(`${API}/api/admin/users/${professor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fullName: form.fullName, email: form.email, centerIds: selectedCenterIds }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al actualizar profesor')
       onSuccess(); onClose()
