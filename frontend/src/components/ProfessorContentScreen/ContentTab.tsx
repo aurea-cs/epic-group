@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { tdStyle, EyeToggle } from '../general/SharedUI'
-import { ITEM_TYPE_ICON, type ModuleWithItems } from './types'
+import { ITEM_TYPE_ICON, type ModuleWithItems, type ModuleItem } from './types'
 
 interface ContentTabProps {
     loading: boolean
@@ -9,6 +10,7 @@ interface ContentTabProps {
     onToggleItemVisibility: (itemId: string) => void
     onBulkDelete?: (itemIds: string[]) => void
     onBulkEditVisibility?: (itemIds: string[], visible: boolean) => void
+    courseId?: string
 }
 
 const ContentTab: React.FC<ContentTabProps> = ({ 
@@ -17,9 +19,26 @@ const ContentTab: React.FC<ContentTabProps> = ({
     itemVisibility, 
     onToggleItemVisibility,
     onBulkDelete,
-    onBulkEditVisibility
+    onBulkEditVisibility,
+    courseId
 }) => {
+    const navigate = useNavigate()
     const [selectedIds, setSelectedIds] = useState<string[]>([])
+    const [hoveredId, setHoveredId] = useState<string | null>(null)
+
+    const handleItemClick = (item: ModuleItem, moduleId: string) => {
+        const url = item.content_url
+        if (!url) return
+
+        if (item.type === 'pdf') {
+            navigate(
+                `/course/${courseId || 'unknown'}/module/${moduleId}/pdf?url=${encodeURIComponent(url)}`
+            )
+        } else {
+            // video, link, or anything else — open in a new tab
+            window.open(url, '_blank', 'noopener,noreferrer')
+        }
+    }
 
     const toggleSelection = (id: string) => {
         setSelectedIds(prev => 
@@ -145,18 +164,36 @@ const ContentTab: React.FC<ContentTabProps> = ({
                                         {items.length === 0 ? (
                                             <tr><td style={tdStyle} colSpan={3}>Este tema todavía no tiene contenido.</td></tr>
                                         ) : (
-                                            items.map(item => (
-                                                <tr key={item.id} 
-                                                    style={{ 
+                                            items.map(item => {
+                                                const isHovered = hoveredId === item.id
+                                                const isSelected = selectedIds.includes(item.id)
+                                                const isClickable = !!item.content_url
+
+                                                return (
+                                                <tr
+                                                    key={item.id}
+                                                    onMouseEnter={() => setHoveredId(item.id)}
+                                                    onMouseLeave={() => setHoveredId(null)}
+                                                    onClick={(e) => {
+                                                        // Don't trigger row click if the user clicked the checkbox or eye toggle
+                                                        if ((e.target as HTMLElement).closest('input, button')) return
+                                                        handleItemClick(item, m.id)
+                                                    }}
+                                                    style={{
                                                         borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                                        background: selectedIds.includes(item.id) ? 'rgba(168, 85, 247, 0.1)' : 'transparent',
-                                                        transition: 'background 0.2s'
+                                                        background: isSelected
+                                                            ? 'rgba(168, 85, 247, 0.15)'
+                                                            : isHovered
+                                                            ? 'rgba(168, 85, 247, 0.07)'
+                                                            : 'transparent',
+                                                        transition: 'background 0.18s',
+                                                        cursor: isClickable ? 'pointer' : 'default',
                                                     }}
                                                 >
                                                     <td style={{ ...tdStyle, width: '40px', textAlign: 'center' }}>
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={selectedIds.includes(item.id)}
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
                                                             onChange={() => toggleSelection(item.id)}
                                                             style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#a855f7' }}
                                                         />
@@ -165,7 +202,14 @@ const ContentTab: React.FC<ContentTabProps> = ({
                                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                                                             <span style={{ fontSize: '1.1rem' }}>{ITEM_TYPE_ICON[item.type] || '📎'}</span>
                                                             <div>
-                                                                <div style={{ fontWeight: 600 }}>{item.title}</div>
+                                                                <div style={{
+                                                                    fontWeight: 600,
+                                                                    color: isHovered && isClickable ? '#c084fc' : undefined,
+                                                                    textDecoration: isHovered && isClickable ? 'underline' : 'none',
+                                                                    transition: 'color 0.15s',
+                                                                }}>
+                                                                    {item.title}
+                                                                </div>
                                                                 {item.description && (
                                                                     <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{item.description}</div>
                                                                 )}
@@ -176,7 +220,8 @@ const ContentTab: React.FC<ContentTabProps> = ({
                                                         <EyeToggle checked={!!itemVisibility[item.id]} onChange={() => onToggleItemVisibility(item.id)} />
                                                     </td>
                                                 </tr>
-                                            ))
+                                                )
+                                            })
                                         )}
                                     </tbody>
                                 </table>

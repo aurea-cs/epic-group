@@ -532,6 +532,7 @@ const loadStudents = useCallback(async () => {
                     onToggleItemVisibility={handleToggleItemVisibility}
                     onBulkDelete={handleBulkDelete}
                     onBulkEditVisibility={handleBulkEditVisibility}
+                    courseId={courseId}
                 />
             )}
 
