@@ -29,14 +29,13 @@ const AssignmentsTab: React.FC<AssignmentsTabProps> = ({ loading, assignments, m
                             <th style={thStyle}>Vence</th>
                             <th style={thStyle}>Puntaje</th>
                             <th style={thStyle}>Estado</th>
-                            <th style={{ ...thStyle, textAlign: 'right' }}>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td style={tdStyle} colSpan={6}>Cargando tareas…</td></tr>
+                            <tr><td style={tdStyle} colSpan={5}>Cargando tareas…</td></tr>
                         ) : assignments.length === 0 ? (
-                            <tr><td style={tdStyle} colSpan={6}>Todavía no has creado ninguna tarea.</td></tr>
+                            <tr><td style={tdStyle} colSpan={5}>Todavía no has creado ninguna tarea.</td></tr>
                         ) : (
                             assignments.map(a => (
                                 <tr key={a.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -45,22 +44,6 @@ const AssignmentsTab: React.FC<AssignmentsTabProps> = ({ loading, assignments, m
                                     <td style={tdStyle}>{formatDateTime(a.due_at)}</td>
                                     <td style={tdStyle}>{a.max_score ?? '—'}</td>
                                     <td style={tdStyle}><StatusPill value={a.status} /></td>
-                                    <td style={{ ...tdStyle, textAlign: 'right' }}>
-                                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                            <ActionButton
-                                                label="Editar"
-                                                bg="rgba(255,255,255,0.06)" hoverBg="rgba(255,255,255,0.12)"
-                                                textColor="#e5e7eb" border="1px solid rgba(255,255,255,0.12)"
-                                                onClick={() => onEdit(a)}
-                                            />
-                                            <ActionButton
-                                                label="Eliminar"
-                                                bg="rgba(248,113,113,0.12)" hoverBg="rgba(248,113,113,0.22)"
-                                                textColor="#fca5a5" border="1px solid rgba(248,113,113,0.3)"
-                                                onClick={() => onDelete(a.id)}
-                                            />
-                                        </div>
-                                    </td>
                                 </tr>
                             ))
                         )}

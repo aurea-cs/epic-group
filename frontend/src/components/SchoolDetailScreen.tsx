@@ -18,7 +18,7 @@ import {
 import StudentManagement from './StudentManagement'
 import TeacherManagement from './TeacherManagement'
 import ContentManagement from './ContentManagement'
-import './HierarchyConfig.css' 
+import './HierarchyConfig.css'
 import ConfirmModal from './general/ConfirmModal'
 
 interface SchoolDetailScreenProps {
@@ -28,7 +28,7 @@ interface SchoolDetailScreenProps {
 const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
     const { centerId } = useParams<{ centerId: string }>()
     const navigate = useNavigate()
-    
+
     // State for confirming deletion
     const [confirmDeleteGrade, setConfirmDeleteGrade] = useState<GradeLevel | null>(null)
     const [confirmDeleteSubject, setConfirmDeleteSubject] = useState<Subject | null>(null)
@@ -81,7 +81,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
 
     // State for editing
     const [editingGrade, setEditingGrade] = useState<GradeLevel | null>(null)
-    const [editingSubject, ] = useState<Subject | null>(null)
+    const [editingSubject,] = useState<Subject | null>(null)
 
     // Load center and grades on mount
     useEffect(() => {
@@ -237,7 +237,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
 
     return (
         <div className='course-content-screen'>
-            
+
             <div className="hierarchy-config" style={{ marginTop: '0px', padding: '2rem 4rem' }}>
                 {/* MAIN HEADER */}
                 <div className="modern-header-row">
@@ -274,12 +274,12 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
 
 
                 <div className="hierarchy-container" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-                    
+
                     {/* FILTER BAR */}
                     <div className="filter-bar-modern">
                         <div className="filter-group">
                             <label>Grado</label>
-                            <select 
+                            <select
                                 className="modern-select"
                                 value={selectedGrade?.id || ''}
                                 onChange={(e) => {
@@ -294,12 +294,12 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                     </option>
                                 ))}
                             </select>
-                            <button style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer' }} onClick={() => { if (selectedGrade) setConfirmDeleteGrade(selectedGrade)}}> 🗑️ </button>
+                            <button style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer' }} onClick={() => { if (selectedGrade) setConfirmDeleteGrade(selectedGrade) }}> 🗑️ </button>
                         </div>
                         <div className="filter-actions">
-                            
+
                         </div>
-                        
+
                     </div>
 
                     {/* COURSES LIST VIEW */}
@@ -416,7 +416,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                         className="modern-input"
                                     />
                                 </div>
-                                
+
                             </div>
                             <div className="modal-actions">
                                 <button className="btn-cancel-modern" onClick={() => setShowSubjectModal(false)}>
@@ -610,18 +610,18 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                     </select>
                                 </div>
                                 <div className="form-group">
-                                            <label style={{ color: '#1f295a', fontWeight: 'bold' }}>{label}</label>
-                                            <select
-                                                value={gradeForm.level || ''}
-                                                onChange={(e) => setGradeForm({ ...gradeForm, level: parseInt(e.target.value) })}
-                                                className="modern-input"
-                                                style={{ background: '#f8fafc', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
-                                            >
-                                                <option value="">Seleccione un {label.toLowerCase()}...</option>
-                                                {options.map(num => (
-                                                    <option key={num} value={num}>{num}</option>
-                                                ))}
-                                            </select>
+                                    <label style={{ color: '#1f295a', fontWeight: 'bold' }}>{label}</label>
+                                    <select
+                                        value={gradeForm.level || ''}
+                                        onChange={(e) => setGradeForm({ ...gradeForm, level: parseInt(e.target.value) })}
+                                        className="modern-input"
+                                        style={{ background: '#f8fafc', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
+                                    >
+                                        <option value="">Seleccione un {label.toLowerCase()}...</option>
+                                        {options.map(num => (
+                                            <option key={num} value={num}>{num}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                             <div className="modal-actions">
@@ -652,11 +652,11 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                 maxHeight: '90vh',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                background: '#e7e5e9ff',
-                                color: '#1f295a',
+                                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+                                color: '#fff',
                                 borderRadius: '24px',
-                                border: '1px solid rgba(0, 0, 0, 0.1)',
-                                boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+                                border: '1px solid rgba(192,132,252,0.25)',
+                                boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255, 255, 255, 0.1)',
                                 padding: '0'
                             }}
                             onClick={(e) => e.stopPropagation()}
@@ -669,7 +669,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                 marginBottom: 0,
                                 textAlign: 'center'
                             }}>
-                                <h2 style={{ color: '#1f295a', fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>Gestión de Alumnos</h2>
+                                <h2 style={{ color: '#c084fc', fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>Gestión de Alumnos</h2>
                             </div>
                             <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto', padding: '2rem', background: 'transparent' }}>
                                 <StudentManagement centerId={center?.id} centerName={center?.name} gradeId={selectedGrade?.id} />
@@ -678,7 +678,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                 <button
                                     className="btn-cancel-modern"
                                     onClick={() => setShowStudentModal(false)}
-                                    style={{ padding: '1rem', fontSize: '1rem', background: '#e2e8f0', color: '#1f295a', maxWidth: '200px' }}
+                                    style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.9rem', width: '100%', maxWidth: '200px' }}
                                 >
                                     Cerrar
                                 </button>
@@ -698,11 +698,11 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                 maxHeight: '90vh',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                background: '#ffffff',
-                                color: '#1f295a',
+                                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+                                color: '#fff',
                                 borderRadius: '24px',
-                                border: '1px solid rgba(0, 0, 0, 0.1)',
-                                boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+                                border: '1px solid rgba(192,132,252,0.25)',
+                                boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(192,132,252,0.1)',
                                 padding: '0'
                             }}
                             onClick={(e) => e.stopPropagation()}
@@ -715,7 +715,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                 marginBottom: 0,
                                 textAlign: 'center'
                             }}>
-                                <h2 style={{ color: '#1f295a', fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>Gestión de Profesores</h2>
+                                <h2 style={{ color: '#c084fc', fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>Gestión de Profesores</h2>
                             </div>
                             <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto', padding: '2rem', background: 'transparent' }}>
                                 {centerId && <TeacherManagement centerId={centerId} centerName={center?.name} />}
@@ -724,7 +724,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                 <button
                                     className="btn-cancel-modern"
                                     onClick={() => setShowTeacherModal(false)}
-                                    style={{ padding: '1rem', fontSize: '1rem', background: '#e2e8f0', color: '#1f295a', maxWidth: '200px' }}
+                                    style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.9rem', width: '100%', maxWidth: '200px' }}
                                 >
                                     Cerrar
                                 </button>

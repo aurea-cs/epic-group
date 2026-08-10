@@ -67,6 +67,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     const [showItemModal, setShowItemModal] = useState(false)
     const [editingModule, setEditingModule] = useState<CourseModule | null>(null)
     const [activeModuleId, setActiveModuleId] = useState<string | null>(null)
+    const [savingItem, setSavingItem] = useState(false)
 
     // Visibility state
     const [visibilityLoading, setVisibilityLoading] = useState<string | null>(null)
@@ -145,6 +146,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
 
     const handleSaveEditItem = async () => {
         if (!editingItem) return
+        setSavingItem(true)
         try {
             await updateModuleItem(editingItem.id, {
                 title: editItemForm.title,
@@ -157,6 +159,8 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
             setEditingItem(null)
         } catch (err: any) {
             alert(err.message || 'Error al guardar cambios')
+        } finally {
+            setSavingItem(false)
         }
     }
 
@@ -404,6 +408,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
 
     const handleSaveItem = async () => {
         if (!activeModuleId) return
+        setSavingItem(true)
         try {
             if (itemForm.type === 'pdf' && selectedFile) {
                 await uploadModuleItem(activeModuleId, selectedFile, {
@@ -422,6 +427,8 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
             setShowItemModal(false)
         } catch (err: any) {
             alert(err.message || 'Error al guardar ítem')
+        } finally {
+            setSavingItem(false)
         }
     }
 
@@ -830,8 +837,10 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                             </div>
                         </div>
                         <div className="modal-actions">
-                            <button className="btn-cancel-modern" onClick={() => setShowItemModal(false)}>Cancelar</button>
-                            <button className="btn-save-modern" onClick={handleSaveItem}>Guardar</button>
+                            <button className="btn-cancel-modern" onClick={() => setShowItemModal(false)} disabled={savingItem}>Cancelar</button>
+                            <button className="btn-save-modern" onClick={handleSaveItem} disabled={savingItem} style={{ background: savingItem ? 'rgba(192,132,252,0.35)' : '', boxShadow: savingItem ? 'none' : '' }}>
+                                {savingItem ? 'Guardando...' : 'Guardar'}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -960,8 +969,13 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                             </div>
                         </div>
                         <div className="modal-actions">
-                            <button className="btn-cancel-modern" onClick={() => setShowEditItemModal(false)}>Cancelar</button>
-                            <button className="btn-save-modern" onClick={handleSaveEditItem}>Guardar</button>
+                            <button className="btn-cancel-modern" onClick={() => {
+                                setShowEditItemModal(false)
+                                setEditingItem(null)
+                            }} disabled={savingItem}>Cancelar</button>
+                            <button className="btn-save-modern" onClick={handleSaveEditItem} disabled={savingItem} style={{ background: savingItem ? 'rgba(192,132,252,0.35)' : '', boxShadow: savingItem ? 'none' : '' }}>
+                                {savingItem ? 'Guardando...' : 'Guardar'}
+                            </button>
                         </div>
                     </div>
                 </div>

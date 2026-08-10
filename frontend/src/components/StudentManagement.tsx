@@ -489,40 +489,42 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
                 />
             )}
 
-            <div className="hierarchy-config-modal-panel" style={{ marginTop: 0, color: '#842fa0ff' }}>
+            <div className="hierarchy-config-modal-panel" style={{ marginTop: 0, color: '#fff' }}>
 
-                {/* ── Add Student Tabs ── */}
-                <div className="admin-tabs">
-                    <button className={`tab-button ${activeTab === 'manual' ? 'active' : ''}`} onClick={() => setActiveTab('manual')} style={{ color: activeTab === 'manual' ? '#ffffff' : '#842fa0ff' }}>
-                        👤 Crear Manualmente
-                    </button>
-                    <button className={`tab-button ${activeTab === 'csv' ? 'active' : ''}`} onClick={() => setActiveTab('csv')} style={{ color: activeTab === 'csv' ? '#ffffff' : '#842fa0ff' }}>
-                        📂 Importar desde CSV
-                    </button>
-                    <button className={`tab-button ${activeTab === 'existing' ? 'active' : ''}`} onClick={() => setActiveTab('existing')} style={{ color: activeTab === 'existing' ? '#ffffff' : '#842fa0ff' }}>
-                        🔍 Buscar Existente
-                    </button>
+                {/* ── Tabs ── */}
+                <div className="admin-tabs" style={{ background: 'transparent' }}>
+                    <div className="tabs-container">
+                        <button className={`tab-button ${activeTab === 'manual' ? 'active' : ''}`} onClick={() => setActiveTab('manual')} style={{ color: activeTab === 'manual' ? '#fff' : 'rgba(255,255,255,0.6)' }}>
+                            👤 Crear Manualmente
+                        </button>
+                        <button className={`tab-button ${activeTab === 'csv' ? 'active' : ''}`} onClick={() => setActiveTab('csv')} style={{ color: activeTab === 'csv' ? '#fff' : 'rgba(255,255,255,0.6)' }}>
+                            📂 Importar desde CSV
+                        </button>
+                        <button className={`tab-button ${activeTab === 'existing' ? 'active' : ''}`} onClick={() => setActiveTab('existing')} style={{ color: activeTab === 'existing' ? '#fff' : 'rgba(255,255,255,0.6)' }}>
+                            🔍 Buscar Existente
+                        </button>
+                    </div>
                 </div>
 
                 {/* ── Manual Tab ── */}
                 {activeTab === 'manual' && (
                     <div className="form-grid">
-                        <h4 style={{ color: '#842fa0ff', margin: 0 }}>Registrar Nuevo Alumno</h4>
-                        <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr auto', alignItems: 'end' }}>
+                        <h4 style={{ color: '#ffffff', margin: 0, textAlign: 'center' }}>Registrar Nuevo Alumno</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '400px', margin: '1rem auto 0 auto', width: '100%' }}>
                             <div className="form-group">
-                                <label style={{ color: '#842fa0ff', fontWeight: 'bold' }}>Nombre Completo *</label>
-                                <input type="text" value={createForm.fullName} onChange={e => setCreateForm({ ...createForm, fullName: e.target.value })} placeholder="Ej: Juanito Pérez" className="modern-input" style={{ background: '#f8fafc', color: '#842fa0ff', border: '1px solid rgba(31, 41, 90, 0.2)' }} />
+                                <label style={{ color: 'rgba(255, 255, 255, 1)', fontWeight: 'bold' }}>Nombre Completo *</label>
+                                <input type="text" value={createForm.fullName} onChange={e => setCreateForm({ ...createForm, fullName: e.target.value })} placeholder="Ej: Juanito Pérez" className="modern-input" style={{ background: 'rgba(255,255,255,0.07)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }} />
                             </div>
                             <div className="form-group">
-                                <label style={{ color: '#842fa0ff', fontWeight: 'bold' }}>Correo Electrónico *</label>
-                                <input type="email" value={createForm.email} onChange={e => setCreateForm({ ...createForm, email: e.target.value })} placeholder="juanito@escuela.com" className="modern-input" style={{ background: '#f8fafc', color: '#842fa0ff', border: '1px solid rgba(31, 41, 90, 0.2)' }} />
+                                <label style={{ color: 'rgba(255, 255, 255, 1)', fontWeight: 'bold' }}>Correo Electrónico *</label>
+                                <input type="email" value={createForm.email} onChange={e => setCreateForm({ ...createForm, email: e.target.value })} placeholder="juanito@escuela.com" className="modern-input" style={{ background: 'rgba(255,255,255,0.07)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }} />
                             </div>
                             <div className="form-group">
-                                <label style={{ color: '#842fa0ff', fontWeight: 'bold' }}>Contraseña *</label>
-                                <input type="text" value={createForm.password} onChange={e => setCreateForm({ ...createForm, password: e.target.value })} placeholder="Contraseña" className="modern-input" style={{ background: '#f8fafc', color: '#842fa0ff', border: '1px solid rgba(31, 41, 90, 0.2)' }} />
+                                <label style={{ color: 'rgba(255, 255, 255, 1)', fontWeight: 'bold' }}>Contraseña *</label>
+                                <input type="text" value={createForm.password} onChange={e => setCreateForm({ ...createForm, password: e.target.value })} placeholder="Contraseña" className="modern-input" style={{ background: 'rgba(255,255,255,0.07)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }} />
                             </div>
-                            <button className="btn-save-modern" onClick={handleCreateStudent} disabled={!createForm.fullName || !createForm.email || !createForm.password || creating} style={{ height: '46px', marginTop: 'auto', background: '#842fa0ff', color: '#ffffff' }}>
-                                {creating ? 'Creando...' : 'Crear Alumno'}
+                            <button className="btn-save-modern" onClick={handleCreateStudent} disabled={!createForm.fullName || !createForm.email || !createForm.password || creating} style={{ height: '46px', marginTop: 'auto', background: (!createForm.fullName || !createForm.email || !createForm.password || creating) ? 'rgba(192,132,252,0.35)' : 'linear-gradient(135deg, #a855f7, #7c3aed)', color: '#fff', border: 'none', boxShadow: (!createForm.fullName || !createForm.email || !createForm.password || creating) ? 'none' : '0 4px 15px rgba(168,85,247,0.35)' }}>
+                                {creating ? 'Creando...' : '✓ Crear Alumno'}
                             </button>
                         </div>
                     </div>
@@ -531,39 +533,39 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
                 {/* ── Existing Student Tab ── */}
                 {activeTab === 'existing' && (
                     <div className="form-grid">
-                        <h4 style={{ color: '#842fa0ff', margin: 0 }}>Agregar Alumno Existente</h4>
+                        <h4 style={{ color: '#ffffff', margin: 0, textAlign: 'center' }}>Agregar Alumno Existente</h4>
                         <input
                             type="text"
                             placeholder="Buscar por nombre o correo..."
                             className="modern-input"
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            style={{ marginBottom: '1rem', width: '100%', background: '#f8fafc', color: '#842fa0ff', border: '1px solid rgba(31, 41, 90, 0.2)' }}
+                            style={{ marginBottom: '1rem', width: '100%', background: 'rgba(255,255,255,0.07)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }}
                             autoFocus
                         />
                         <div className="users-table-container" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                             {loadingAll ? (
-                                <p style={{ color: '#842fa0ff', padding: '20px', textAlign: 'center' }}>Cargando alumnos...</p>
+                                <p style={{ color: 'rgba(255,255,255,0.7)', padding: '20px', textAlign: 'center' }}>Cargando alumnos...</p>
                             ) : (
                                 <table className="users-table">
                                     <thead>
-                                        <tr><th style={{ color: '#842fa0ff' }}>Nombre</th><th style={{ color: '#842fa0ff' }}>Email</th><th style={{ color: '#842fa0ff' }}>Acción</th></tr>
+                                        <tr><th style={{ color: '#c084fc' }}>Nombre</th><th style={{ color: '#c084fc' }}>Email</th><th style={{ color: '#c084fc' }}>Acción</th></tr>
                                     </thead>
                                     <tbody>
                                         {filteredStudents.length === 0 ? (
                                             <tr>
-                                                <td colSpan={3} style={{ padding: '20px', textAlign: 'center', color: '#842fa0ff' }}>
+                                                <td colSpan={3} style={{ padding: '20px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>
                                                     {searchQuery ? 'Sin resultados para esa búsqueda.' : 'No hay alumnos registrados en la plataforma.'}
                                                 </td>
                                             </tr>
                                         ) : filteredStudents.map(student => (
                                             <tr key={student.id}>
-                                                <td style={{ color: '#842fa0ff' }}>{student.name}</td>
-                                                <td style={{ color: '#842fa0ff' }}>{student.email}</td>
+                                                <td style={{ color: 'rgba(255,255,255,0.9)' }}>{student.name}</td>
+                                                <td style={{ color: 'rgba(255,255,255,0.6)' }}>{student.email}</td>
                                                 <td>
                                                     <button
                                                         className="btn-save-modern"
-                                                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: '#842fa0ff', color: '#ffffff' }}
+                                                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: '#ffffff', border: 'none' }}
                                                         disabled={enrollingId === student.id}
                                                         onClick={() => handleEnrollExisting(student)}
                                                     >
@@ -582,9 +584,9 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
                 {/* ── CSV Tab ── */}
                 {activeTab === 'csv' && (
                     <div className="csv-upload-subject">
-                        <h4 style={{ color: '#842fa0ff' }}>Subir Archivo CSV</h4>
-                        <div className="csv-helper-text" style={{ color: '#4b5563' }}>Formato requerido: <code>email, password, full_name, cohort</code></div>
-                        <input type="file" accept=".csv" onChange={handleFileUpload} className="modern-input" style={{ maxWidth: '400px', margin: '0 auto', background: '#f8fafc', color: '#842fa0ff', border: '1px solid rgba(31, 41, 90, 0.2)' }} disabled={parsing || loading} />
+                        <h4 style={{ color: '#ffffff', textAlign: 'center' }}>Subir Archivo CSV</h4>
+                        <div className="csv-helper-text" style={{ color: 'rgba(255,255,255,0.6)' }}>Formato requerido: <code style={{ color: '#a855f7', background: 'rgba(168,85,247,0.1)' }}>email, password, full_name, cohort</code></div>
+                        <input type="file" accept=".csv" onChange={handleFileUpload} className="modern-input" style={{ maxWidth: '400px', margin: '0 auto', background: 'rgba(255,255,255,0.07)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }} disabled={parsing || loading} />
                     </div>
                 )}
 
