@@ -121,8 +121,8 @@ const CourseFormScreen: React.FC<CourseFormScreenProps> = () => {
                 visibility: formData.visibility as 'active' | 'hidden' | 'archived',
                 max_students: Number(formData.max_students),
                 schedule_days: schedules.length > 0 ? schedules.map(s => JSON.stringify(s)) : [],
-                schedule_start_time: (schedules.length > 0 && schedules[0].start) ? schedules[0].start : null,
-                schedule_end_time: (schedules.length > 0 && schedules[0].end) ? schedules[0].end : null
+                schedule_start_time: (schedules.length > 0 && schedules[0].start) ? schedules[0].start : undefined,
+                schedule_end_time: (schedules.length > 0 && schedules[0].end) ? schedules[0].end : undefined
             }
 
             if (isEditing && courseId) {
