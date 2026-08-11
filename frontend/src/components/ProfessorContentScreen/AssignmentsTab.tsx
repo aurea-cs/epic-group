@@ -1,6 +1,6 @@
 import React from 'react'
 import type { Assignment, ModuleWithItems } from './types'
-import { ActionButton, StatusPill, tdStyle, thStyle } from '../general/SharedUI'
+import { StatusPill, tdStyle, thStyle } from '../general/SharedUI'
 interface AssignmentsTabProps {
     loading: boolean
     assignments: Assignment[]
@@ -15,7 +15,7 @@ const formatDateTime = (iso: string | null) => {
     return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-const AssignmentsTab: React.FC<AssignmentsTabProps> = ({ loading, assignments, modules, onEdit, onDelete }) => {
+const AssignmentsTab: React.FC<AssignmentsTabProps> = ({ loading, assignments, modules }) => {
     const moduleNameById = (id: string | null) => modules.find(m => m.id === id)?.title || '—'
 
     return (
