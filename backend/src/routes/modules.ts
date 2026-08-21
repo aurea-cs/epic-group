@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { supabase, upload } from '../lib/supabase';
+import { processPdfIntoPages } from '../services/pdf_processing';
 
 const router = Router();
 
@@ -220,18 +221,23 @@ router.post('/modules/:moduleId/items/upload', upload.single('file'), async (req
                 description,
                 content_url: filePath,
                 order_index: order_index || 999,
-                is_visible: true
+                is_visible: true,
+                processing_status: 'pending'
             })
             .select()
             .single();
 
         if (error) {
-            // Cleanup file if DB insert fails
             await supabase.storage.from('grade-content').remove([filePath]);
             throw error;
         }
 
         res.status(201).json(data);
+
+        processPdfIntoPages(data.id, filePath).catch(err => {
+            console.error(`Background PDF processing failed for item ${data.id}:`, err);
+        });
+
     } catch (error: any) {
         console.error('Error uploading module item:', error);
         res.status(500).json({ error: error.message });
@@ -273,6 +279,67 @@ router.delete('/items/:id', async (req, res) => {
         res.json({ message: 'Item deleted successfully' });
     } catch (error: any) {
         console.error('Error deleting item:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// BOOK PAGES (interactive PDF rendering)
+// ============================================
+
+// Get rendered pages for an item, with signed URLs. Also reports processing
+// status so the frontend can poll this one endpoint while the PDF is still
+// being rasterized in the background.
+router.get('/modules/items/:itemId/pages', async (req, res) => {
+    try {
+        const { itemId } = req.params;
+
+        const { data: item, error: itemError } = await supabase
+            .from('module_items')
+            .select('id, processing_status, processing_error, total_pages')
+            .eq('id', itemId)
+            .single();
+
+        if (itemError) throw itemError;
+
+        if (item.processing_status !== 'ready') {
+            return res.json({
+                processing_status: item.processing_status,
+                processing_error: item.processing_error,
+                pages: []
+            });
+        }
+
+        const { data: pages, error: pagesError } = await supabase
+            .from('book_pages')
+            .select('*')
+            .eq('module_item_id', itemId)
+            .order('page_number');
+
+        if (pagesError) throw pagesError;
+
+        const signedPages = await Promise.all(
+            (pages || []).map(async (page) => {
+                const { data: urlData, error: signError } = await supabase.storage
+                    .from('grade-content')
+                    .createSignedUrl(page.image_path, 3600);
+
+                if (signError) {
+                    console.error(`Failed to sign URL for page ${page.id}:`, signError);
+                    return { ...page, image_url: null };
+                }
+
+                return { ...page, image_url: urlData.signedUrl };
+            })
+        );
+
+        res.json({
+            processing_status: item.processing_status,
+            total_pages: item.total_pages,
+            pages: signedPages
+        });
+    } catch (error: any) {
+        console.error('Error fetching book pages:', error);
         res.status(500).json({ error: error.message });
     }
 });

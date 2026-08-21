@@ -15,6 +15,7 @@ src/
     ├── grades.ts             (grades CRUD, enrollments, grade content upload/download)
     ├── subjects.ts           (subjects CRUD, professor assignments, student list, visibility)
     ├── modules.ts            (modules CRUD, items CRUD, VR codes, PDF URL signing)
+    ├── module_items.ts       (module items PATCH visibility)
     ├── assignments.ts        (assignments CRUD, submissions, calendar events, calendar/schedule views)
     ├── admin.ts              (admin user CRUD, student/professor listings, tutor creation)
     └── upload.ts             (image upload)
