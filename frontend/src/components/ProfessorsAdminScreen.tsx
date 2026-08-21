@@ -313,7 +313,7 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
     if (!deletingProfessor) return
     setIsDeleting(true)
     try {
-      const res = await fetch(`${API}/api/admin/professors/${deletingProfessor.id}`, { method: 'DELETE' })
+      const res = await fetch(`${API}/api/admin/users/${deletingProfessor.id}`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al eliminar')
       setProfessors(prev => prev.filter(s => s.id !== deletingProfessor.id))

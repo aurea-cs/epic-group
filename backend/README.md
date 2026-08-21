@@ -1,5 +1,25 @@
 # 🚀 EPICGROUP LAB - Backend API
 
+src/
+├── index.ts                  
+├── lib/
+│   └── supabase.ts           (Supabase client + multer configs)
+├── middleware/
+│   └── errorHandler.ts       (global error handler)
+└── routes/
+    ├── users.ts              (center lookup, activity, profile-details, student listing)
+    ├── students.ts           (courses, progress, read-items, comments, student list)
+    ├── comments.ts           (PUT/DELETE comments)
+    ├── professors.ts         (courses, grades-summary, centers, tutor courses)
+    ├── centers.ts            (centers CRUD, professor assignments, hierarchy)
+    ├── grades.ts             (grades CRUD, enrollments, grade content upload/download)
+    ├── subjects.ts           (subjects CRUD, professor assignments, student list, visibility)
+    ├── modules.ts            (modules CRUD, items CRUD, VR codes, PDF URL signing)
+    ├── assignments.ts        (assignments CRUD, submissions, calendar events, calendar/schedule views)
+    ├── admin.ts              (admin user CRUD, student/professor listings, tutor creation)
+    └── upload.ts             (image upload)
+
+
 > [!NOTE]
 > Este directorio contiene el código fuente de la API Backend del proyecto EPICGROUP LAB, encargada de servir los datos dinámicos, procesar las estadísticas de estudiantes y actuar como puente de seguridad hacia la base de datos de Supabase.
 
