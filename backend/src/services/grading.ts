@@ -32,6 +32,23 @@ export function gradeResponse(type: string, config: any, response: any): boolean
             return order.every((id, i) => id === correctOrder[i]);
         }
 
+        case 'checkbox':
+            if (typeof response?.checked !== 'boolean') return null;
+            if (typeof config?.correct !== 'boolean') return null;
+            return response.checked === config.correct;
+
+        case 'dropdown': {
+            const selected = response?.selected ?? (typeof response?.selected_index === 'number' ? config?.options?.[response.selected_index] : null);
+            if (typeof selected !== 'string' || !selected) return null;
+            if (typeof config?.correct_value === 'string') {
+                return selected.trim().toLowerCase() === config.correct_value.trim().toLowerCase();
+            }
+            if (typeof config?.correct_index === 'number') {
+                return response?.selected_index === config.correct_index;
+            }
+            return null;
+        }
+
         default:
             return null;
     }

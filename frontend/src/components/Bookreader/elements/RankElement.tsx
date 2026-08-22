@@ -1,3 +1,5 @@
+// IMPORTANT NOT TESTED IN PDF - NOT WORKING PROPERLY
+
 import React, { useState } from 'react'
 import { RankConfig, SavedResponse } from '../types.ts'
 

@@ -1,8 +1,10 @@
-export type ElementType = 'true_false' | 'multiple_choice' | 'open_ended' | 'connect' | 'rank' 
+export type ElementType = 'true_false' | 'multiple_choice' | 'open_ended' | 'connect' | 'rank' | 'checkbox' | 'dropdown' 
 
 export interface TrueFalseConfig {
-    prompt: string
+    prompt?: string
     correct: boolean
+    compact?: boolean
+    labels?: [string, string] // e.g. ["V", "F"] or ["Verdadero", "Falso"]
 }
 
 export interface MultipleChoiceConfig {
@@ -40,7 +42,20 @@ export interface RankConfig {
     correct_order: string[]
 }
 
-export type ElementConfig = TrueFalseConfig | MultipleChoiceConfig | OpenEndedConfig | ConnectConfig | RankConfig 
+export interface CheckboxConfig {
+    label?: string
+    correct?: boolean
+}
+
+export interface DropdownConfig {
+    prompt?: string
+    placeholder?: string
+    options: string[]
+    correct_value?: string
+    correct_index?: number
+}
+
+export type ElementConfig = TrueFalseConfig | MultipleChoiceConfig | OpenEndedConfig | ConnectConfig | RankConfig | CheckboxConfig | DropdownConfig 
 
 export interface SavedResponse {
     response: any

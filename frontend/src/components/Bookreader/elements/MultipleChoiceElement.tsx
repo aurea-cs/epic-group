@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { MultipleChoiceConfig, SavedResponse } from '../types.ts'
 
 interface Props {
@@ -13,6 +13,20 @@ interface Props {
 const MultipleChoiceElement: React.FC<Props> = ({ config, savedResponse, onAnswer }) => {
     const [selectedIndex, setSelectedIndex] = useState<number | null>(savedResponse?.response?.selected_index ?? null)
     const [isCorrect, setIsCorrect] = useState<boolean | null>(savedResponse?.is_correct ?? null)
+    
+    const containerRef = useRef<HTMLDivElement>(null)
+    const [containerWidth, setContainerWidth] = useState<number>(0)
+
+    useEffect(() => {
+        if (!containerRef.current) return
+        const observer = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                setContainerWidth(entry.contentRect.width)
+            }
+        })
+        observer.observe(containerRef.current)
+        return () => observer.disconnect()
+    }, [])
 
     const handleClick = (index: number) => {
         setSelectedIndex(index)
@@ -43,25 +57,55 @@ const MultipleChoiceElement: React.FC<Props> = ({ config, savedResponse, onAnswe
         )
     }
 
+    // Determine smart column width based on option text length and container width
+    const maxOptionChars = Math.max(...(config.options || []).map(o => (o ? o.length : 1)), 1)
+    // Approximate minimum pixels required per column (short labels need ~50px, longer text needs more)
+    const minColWidth = Math.max(55, Math.min(140, maxOptionChars * 7.5))
+
     return (
-        <div style={{
-            background: 'rgba(255,255,255,0.92)', borderRadius: '8px', padding: '10px',
-            display: 'flex', flexDirection: 'column', gap: '6px', height: '100%', boxSizing: 'border-box',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.2)', overflow: 'auto',
-        }}>
-            {config.prompt && <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600 }}>{config.prompt}</p>}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div
+            ref={containerRef}
+            style={{
+                background: 'rgba(255,255,255,0.92)',
+                borderRadius: '8px',
+                padding: '4px 6px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                height: '100%',
+                boxSizing: 'border-box',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                overflow: 'auto',
+            }}
+        >
+            {config.prompt && <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 600, color: '#374151' }}>{config.prompt}</p>}
+            
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: containerWidth > 0 
+                    ? `repeat(auto-fit, minmax(${minColWidth}px, 1fr))`
+                    : '1fr',
+                gap: '4px',
+                width: '100%',
+            }}>
                 {config.options.map((option, index) => (
                     <button
                         key={index}
                         onClick={() => handleClick(index)}
                         style={{
-                            textAlign: 'left', padding: '6px 8px', borderRadius: '6px', border: '1px solid #ccc',
-                            cursor: 'pointer', fontSize: '0.8rem',
+                            textAlign: 'left',
+                            padding: '3px 6px',
+                            borderRadius: '5px',
+                            border: '1px solid #d1d5db',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            lineHeight: 1.2,
+                            wordBreak: 'break-word',
                             background: selectedIndex === index
                                 ? (isCorrect === null ? '#e0e7ff' : isCorrect ? '#bbf7d0' : '#fecaca')
                                 : 'white',
-                            fontWeight: selectedIndex === index ? 600 : 400,
+                            fontWeight: selectedIndex === index ? 700 : 400,
+                            transition: 'background 0.15s',
                         }}
                     >
                         {option}

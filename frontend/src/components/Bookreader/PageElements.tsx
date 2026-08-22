@@ -5,6 +5,8 @@ import MultipleChoiceElement from './elements/MultipleChoiceElement'
 import OpenEndedElement from './elements/OpenEndedElement'
 import ConnectElement from './elements/ConnectElement'
 import RankElement from './elements/RankElement'
+import CheckboxElement from './elements/CheckboxElement'
+import DropdownElement from './elements/DropdownElement'
 
 interface PageElementsProps {
     elements: PageElement[]
@@ -48,6 +50,10 @@ function renderElement(el: PageElement, handleAnswer: (response: any) => void) {
             return <ConnectElement config={el.config as any} savedResponse={el.saved_response} onAnswer={handleAnswer} />
         case 'rank':
             return <RankElement config={el.config as any} savedResponse={el.saved_response} onAnswer={handleAnswer} />
+        case 'checkbox':
+            return <CheckboxElement config={el.config as any} savedResponse={el.saved_response} onAnswer={handleAnswer} />
+        case 'dropdown':
+            return <DropdownElement config={el.config as any} savedResponse={el.saved_response} onAnswer={handleAnswer} />
         default:
             return null
     }

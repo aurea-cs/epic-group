@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Selector de coordenadas — elementos interactivos</title>
+
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f4f4f5;
+            color: #27272a;
+        }
+
+        h1 {
+            font-size: 16px;
+            margin: 0 0 4px;
+        }
+
+        p.hint {
+            font-size: 12px;
+            color: #71717a;
+            margin: 0 0 16px;
+        }
+
+        .layout {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .stage-wrap {
+            flex: 1;
+            min-width: 320px;
+        }
+
+        #url-input {
+            width: 100%;
+            padding: 8px;
+            font-size: 13px;
+            border: 1px solid #d4d4d8;
+            border-radius: 6px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        #stage {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+            border: 1px solid #d4d4d8;
+            background:
+                repeating-conic-gradient(
+                    #eee 0% 25%,
+                    #fff 0% 50%
+                ) 0 0 / 16px 16px;
+            cursor: crosshair;
+            user-select: none;
+        }
+
+        #stage img {
+            display: block;
+            max-width: 100%;
+            pointer-events: none;
+        }
+
+        .box {
+            position: absolute;
+            border: 2px solid #6366f1;
+            background: rgba(99, 102, 241, 0.15);
+            box-sizing: border-box;
+        }
+
+        .box.selected {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.15);
+        }
+
+        .box-label {
+            position: absolute;
+            top: -18px;
+            left: 0;
+            font-size: 10px;
+            background: #27272a;
+            color: white;
+            padding: 1px 5px;
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+
+        .panel {
+            width: 340px;
+            max-width: 100%;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e4e4e7;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .card h2 {
+            font-size: 13px;
+            margin: 0 0 8px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            color: #52525b;
+            margin: 8px 0 2px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 6px;
+            font-size: 12px;
+            border: 1px solid #d4d4d8;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 90px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+
+        button {
+            cursor: pointer;
+            font-size: 12px;
+            padding: 7px 12px;
+            border-radius: 6px;
+            border: 1px solid #d4d4d8;
+            background: #fafafa;
+        }
+
+        button.primary {
+            background: #27272a;
+            color: white;
+            border-color: #27272a;
+        }
+
+        .row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .row > * {
+            flex: 1;
+        }
+
+        #coords {
+            font-size: 11px;
+            font-family: monospace;
+            background: #f4f4f5;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        #elements-list {
+            max-height: 240px;
+            overflow: auto;
+        }
+
+        .element-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            padding: 4px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .element-row button {
+            padding: 2px 6px;
+            font-size: 10px;
+        }
+
+        #output,
+        #sql-output {
+            width: 100%;
+            min-height: 160px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+
+        .muted {
+            color: #a1a1aa;
+            font-size: 11px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Selector de coordenadas para elementos interactivos</h1>
+
+    <p class="hint">
+        Pega la URL firmada de la imagen, dibuja un recuadro y genera JSON o SQL.
+    </p>
+
+    <div class="layout">
+
+        <!-- IMAGE AREA -->
+        <div class="stage-wrap">
+
+            <input
+                type="text"
+                id="url-input"
+                placeholder="Pega aquí la URL firmada de la imagen de la página..."
+            >
+
+            <div id="stage">
+
+                <img
+                    id="page-img"
+                    src=""
+                    alt=""
+                    style="display:none"
+                >
+
+                <p
+                    id="placeholder"
+                    class="muted"
+                    style="padding: 60px; margin:0;"
+                >
+                    Pega una URL de imagen arriba para empezar.
+                </p>
+
+            </div>
+        </div>
+
+        <!-- CONTROL PANEL -->
+        <div class="panel">
+
+            <!-- COORDINATES -->
+            <div class="card">
+
+                <h2>Coordenadas del recuadro actual</h2>
+
+                <div id="coords">
+                    Dibuja un recuadro sobre la imagen.
+                </div>
+
+            </div>
+
+
+            <!-- NEW ELEMENT -->
+            <div class="card">
+
+                <h2>Nuevo elemento</h2>
+
+                <label>Número de página (page_number)</label>
+
+                <input
+                    type="number"
+                    id="page-number"
+                    placeholder="Ej. 6"
+                >
+
+                <label>Book Page ID (UUID)</label>
+
+                <input
+                    type="text"
+                    id="book-page-id"
+                    placeholder="Ej. 6166385c-3fc7-49c9-8f57-21da967e284f"
+                >
+
+                <label>Tipo</label>
+
+                <select id="el-type">
+                    <option value="true_false">true_false</option>
+                    <option value="multiple_choice">multiple_choice</option>
+                    <option value="open_ended">open_ended</option>
+                    <option value="connect">connect</option>
+                    <option value="rank">rank</option>
+                    <option value="checkbox">checkbox</option>
+                    <option value="dropdown">dropdown</option>
+                </select>
+
+                <label>Config (JSON)</label>
+
+                <textarea id="el-config"></textarea>
+
+                <div class="row" style="margin-top: 8px;">
+                    <button
+                        class="primary"
+                        id="add-element"
+                    >
+                        Agregar elemento
+                    </button>
+                </div>
+
+            </div>
+
+
+            <!-- ELEMENT LIST -->
+            <div class="card">
+
+                <h2>
+                    Elementos agregados
+                    (<span id="el-count">0</span>)
+                </h2>
+
+                <div id="elements-list">
+                    <p class="muted">Ninguno todavía.</p>
+                </div>
+
+            </div>
+
+
+            <!-- JSON OUTPUT -->
+            <div class="card">
+
+                <h2>JSON final</h2>
+
+                <p class="hint" style="margin-bottom:6px;">
+                    Cuerpo listo para tu endpoint.
+                </p>
+
+                <textarea
+                    id="output"
+                    readonly
+                ></textarea>
+
+                <div class="row" style="margin-top: 8px;">
+
+                    <button id="copy-btn">
+                        Copiar JSON
+                    </button>
+
+                    <button id="clear-btn">
+                        Vaciar lista
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- SQL OUTPUT -->
+            <div class="card">
+
+                <h2>SQL final</h2>
+
+                <p class="hint" style="margin-bottom:6px;">
+                    INSERT listo para ejecutar en PostgreSQL/Supabase.
+                </p>
+
+                <textarea
+                    id="sql-output"
+                    readonly
+                ></textarea>
+
+                <div class="row" style="margin-top: 8px;">
+
+                    <button id="copy-sql-btn">
+                        Copiar SQL
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <script>
+
+        const stage = document.getElementById('stage');
+        const img = document.getElementById('page-img');
+        const placeholder = document.getElementById('placeholder');
+
+        const urlInput = document.getElementById('url-input');
+        const coordsDisplay = document.getElementById('coords');
+
+        const configTextarea = document.getElementById('el-config');
+        const typeSelect = document.getElementById('el-type');
+
+
+        // DEFAULT CONFIGS FOR EACH ELEMENT TYPE
+        const CONFIG_TEMPLATES = {
+
+            true_false: {
+                prompt: '',
+                correct: true,
+                labels: ['V', 'F']
+            },
+
+            multiple_choice: {
+                prompt: '',
+                options: [
+                    'Opción A',
+                    'Opción B'
+                ],
+                correct_index: 0
+            },
+
+            open_ended: {
+                prompt: '',
+                placeholder: 'Escribe tu respuesta...'
+            },
+
+            connect: {
+                prompt: '',
+
+                points: [
+                    {
+                        id: 'a1',
+                        x: 0.2,
+                        y: 0.3,
+                        label: '1'
+                    },
+                    {
+                        id: 'a2',
+                        x: 0.6,
+                        y: 0.3,
+                        label: '2'
+                    },
+                    {
+                        id: 'b1',
+                        x: 0.2,
+                        y: 0.7,
+                        label: 'A'
+                    },
+                    {
+                        id: 'b2',
+                        x: 0.6,
+                        y: 0.7,
+                        label: 'B'
+                    }
+                ],
+
+                correct_pairs: [
+                    ['a1', 'b2'],
+                    ['a2', 'b1']
+                ]
+            },
+
+            rank: {
+                prompt: '',
+
+                items: [
+                    {
+                        id: 'i1',
+                        label: 'Primero'
+                    },
+                    {
+                        id: 'i2',
+                        label: 'Segundo'
+                    }
+                ],
+
+                correct_order: [
+                    'i1',
+                    'i2'
+                ]
+            },
+
+            checkbox: {
+                correct: true,
+                label: ''
+            },
+
+            dropdown: {
+                placeholder: '-- Elije --',
+                options: ['Palabra A', 'Palabra B', 'Palabra C'],
+                correct_value: 'Palabra A'
+            }
+        };
+
+
+        // UPDATE CONFIG TEMPLATE WHEN TYPE CHANGES
+        function refreshTemplate() {
+
+            configTextarea.value = JSON.stringify(
+                CONFIG_TEMPLATES[typeSelect.value],
+                null,
+                2
+            );
+
+        }
+
+
+        typeSelect.addEventListener(
+            'change',
+            refreshTemplate
+        );
+
+
+        refreshTemplate();
+
+
+        // LOAD IMAGE
+        urlInput.addEventListener('input', () => {
+
+            const url = urlInput.value.trim();
+
+            if (!url) return;
+
+            img.src = url;
+            img.style.display = 'block';
+
+            placeholder.style.display = 'none';
+
+        });
+
+
+        // DRAWING STATE
+        let currentBox = null;
+        let dragStart = null;
+        let lastFraction = null;
+
+
+        // START DRAWING
+        stage.addEventListener('mousedown', (e) => {
+
+            if (img.style.display === 'none') return;
+
+            const rect = stage.getBoundingClientRect();
+
+            dragStart = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+
+
+            if (currentBox) {
+                currentBox.remove();
+            }
+
+
+            currentBox = document.createElement('div');
+
+            currentBox.className = 'box';
+
+            stage.appendChild(currentBox);
+
+        });
+
+
+        // DRAW BOX
+        stage.addEventListener('mousemove', (e) => {
+
+            if (!dragStart || !currentBox) return;
+
+
+            const rect = stage.getBoundingClientRect();
+
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+
+            const left = Math.min(
+                dragStart.x,
+                x
+            );
+
+            const top = Math.min(
+                dragStart.y,
+                y
+            );
+
+            const width = Math.abs(
+                x - dragStart.x
+            );
+
+            const height = Math.abs(
+                y - dragStart.y
+            );
+
+
+            currentBox.style.left = left + 'px';
+            currentBox.style.top = top + 'px';
+
+            currentBox.style.width = width + 'px';
+            currentBox.style.height = height + 'px';
+
+
+            const stageW = stage.clientWidth;
+            const stageH = stage.clientHeight;
+
+
+            lastFraction = {
+
+                x: +(
+                    left / stageW
+                ).toFixed(4),
+
+                y: +(
+                    top / stageH
+                ).toFixed(4),
+
+                width: +(
+                    width / stageW
+                ).toFixed(4),
+
+                height: +(
+                    height / stageH
+                ).toFixed(4)
+
+            };
+
+
+            coordsDisplay.textContent =
+                JSON.stringify(
+                    lastFraction,
+                    null,
+                    2
+                );
+
+        });
+
+
+        // STOP DRAWING
+        window.addEventListener(
+            'mouseup',
+            () => {
+                dragStart = null;
+            }
+        );
+
+
+        // ALL ADDED ELEMENTS
+        let elements = [];
+
+
+        // ADD ELEMENT
+        document
+            .getElementById('add-element')
+            .addEventListener('click', () => {
+
+
+                if (!lastFraction) {
+
+                    alert(
+                        'Dibuja un recuadro sobre la imagen primero.'
+                    );
+
+                    return;
+                }
+
+
+                const pageNumber = parseInt(
+                    document
+                        .getElementById('page-number')
+                        .value,
+                    10
+                );
+
+
+                if (!pageNumber) {
+
+                    alert(
+                        'Ingresa el número de página.'
+                    );
+
+                    return;
+                }
+
+
+                const bookPageId = document
+                    .getElementById('book-page-id')
+                    .value
+                    .trim();
+
+
+                if (!bookPageId) {
+
+                    alert(
+                        'Ingresa el Book Page ID.'
+                    );
+
+                    return;
+                }
+
+
+                let config;
+
+
+                try {
+
+                    config = JSON.parse(
+                        configTextarea.value
+                    );
+
+                } catch (err) {
+
+                    alert(
+                        'El JSON de config no es válido: ' +
+                        err.message
+                    );
+
+                    return;
+                }
+
+
+                elements.push({
+
+                    book_page_id: bookPageId,
+
+                    page_number: pageNumber,
+
+                    type: typeSelect.value,
+
+                    x: lastFraction.x,
+
+                    y: lastFraction.y,
+
+                    width: lastFraction.width,
+
+                    height: lastFraction.height,
+
+                    config,
+
+                    order_index: elements.length
+
+                });
+
+
+                renderElementsList();
+
+                renderOutput();
+
+            });
+
+
+        // RENDER ELEMENT LIST
+        function renderElementsList() {
+
+            const container =
+                document.getElementById(
+                    'elements-list'
+                );
+
+
+            document.getElementById(
+                'el-count'
+            ).textContent = elements.length;
+
+
+            if (elements.length === 0) {
+
+                container.innerHTML =
+                    '<p class="muted">Ninguno todavía.</p>';
+
+                return;
+            }
+
+
+            container.innerHTML = '';
+
+
+            elements.forEach(
+                (el, i) => {
+
+                    const row =
+                        document.createElement('div');
+
+
+                    row.className =
+                        'element-row';
+
+
+                    row.innerHTML = `
+                        <span>
+                            p.${el.page_number}
+                            — ${el.type}
+                        </span>
+                    `;
+
+
+                    const removeBtn =
+                        document.createElement('button');
+
+
+                    removeBtn.textContent =
+                        'Quitar';
+
+
+                    removeBtn.onclick = () => {
+
+                        elements.splice(
+                            i,
+                            1
+                        );
+
+                        // RECALCULATE ORDER INDEXES
+                        elements.forEach(
+                            (element, index) => {
+                                element.order_index =
+                                    index;
+                            }
+                        );
+
+                        renderElementsList();
+
+                        renderOutput();
+
+                    };
+
+
+                    row.appendChild(
+                        removeBtn
+                    );
+
+
+                    container.appendChild(
+                        row
+                    );
+
+                }
+            );
+
+        }
+
+
+        // RENDER JSON
+        function renderOutput() {
+
+            document
+                .getElementById('output')
+                .value = JSON.stringify(
+                    { elements },
+                    null,
+                    2
+                );
+
+
+            renderSqlOutput();
+
+        }
+
+
+        // ESCAPE SINGLE QUOTES FOR SQL
+        function escapeSqlString(value) {
+
+            return value.replace(
+                /'/g,
+                "''"
+            );
+
+        }
+
+
+        // GENERATE SQL INSERT
+        function renderSqlOutput() {
+
+            const sqlOutput =
+                document.getElementById(
+                    'sql-output'
+                );
+
+
+            if (elements.length === 0) {
+
+                sqlOutput.value = '';
+
+                return;
+            }
+
+
+            const values = elements
+                .map(el => {
+
+
+                    const configJson =
+                        escapeSqlString(
+                            JSON.stringify(
+                                el.config,
+                                null,
+                                2
+                            )
+                        );
+
+
+                    return `(
+    '${el.book_page_id}',
+    '${el.type}',
+    ${el.x},
+    ${el.y},
+    ${el.width},
+    ${el.height},
+    '${configJson}'::jsonb,
+    ${el.order_index}
+)`;
+
+                })
+                .join(',\n');
+
+
+            sqlOutput.value = `INSERT INTO page_elements (
+    book_page_id,
+    type,
+    x,
+    y,
+    width,
+    height,
+    config,
+    order_index
+)
+VALUES
+${values};`;
+
+        }
+
+
+        // COPY JSON
+        document
+            .getElementById('copy-btn')
+            .addEventListener(
+                'click',
+                async () => {
+
+                    const output =
+                        document.getElementById(
+                            'output'
+                        );
+
+
+                    try {
+
+                        await navigator.clipboard.writeText(
+                            output.value
+                        );
+
+                    } catch {
+
+                        output.select();
+
+                        document.execCommand(
+                            'copy'
+                        );
+
+                    }
+
+                }
+            );
+
+
+        // COPY SQL
+        document
+            .getElementById('copy-sql-btn')
+            .addEventListener(
+                'click',
+                async () => {
+
+                    const sqlOutput =
+                        document.getElementById(
+                            'sql-output'
+                        );
+
+
+                    try {
+
+                        await navigator.clipboard.writeText(
+                            sqlOutput.value
+                        );
+
+                    } catch {
+
+                        sqlOutput.select();
+
+                        document.execCommand(
+                            'copy'
+                        );
+
+                    }
+
+                }
+            );
+
+
+        // CLEAR ALL ELEMENTS
+        document
+            .getElementById('clear-btn')
+            .addEventListener(
+                'click',
+                () => {
+
+                    elements = [];
+
+                    renderElementsList();
+
+                    renderOutput();
+
+                }
+            );
+
+    </script>
+
+</body>
+</html>

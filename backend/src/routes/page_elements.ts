@@ -4,7 +4,7 @@ import { gradeResponse } from '../services/grading';
 
 const router = Router();
 
-const VALID_TYPES = ['true_false', 'multiple_choice', 'open_ended', 'connect', 'rank'];
+const VALID_TYPES = ['true_false', 'multiple_choice', 'open_ended', 'connect', 'rank', 'checkbox', 'dropdown'];
 
 // ============================================
 // ADMIN — bulk-author all elements for a book from a JSON payload.
