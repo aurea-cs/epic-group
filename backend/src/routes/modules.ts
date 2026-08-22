@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { supabase, upload } from '../lib/supabase';
 import { processPdfIntoPages } from '../services/pdf_processing';
 
@@ -196,47 +197,99 @@ router.post('/modules/:moduleId/items/upload', upload.single('file'), async (req
             return res.status(400).json({ error: 'No file provided' });
         }
 
-        // Generate file path
-        const timestamp = Date.now();
-        const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const filePath = `modules/${moduleId}/${timestamp}_${sanitizedFileName}`;
+        // Compute SHA-256 hash of file buffer for deduplication
+        const fileHash = crypto.createHash('sha256').update(file.buffer).digest('hex');
 
-        // Upload to Storage
-        const { error: uploadError } = await supabase.storage
-            .from('grade-content')
-            .upload(filePath, file.buffer, {
-                contentType: file.mimetype,
-                upsert: false
-            });
+        // Check if an existing content_asset with this hash already exists
+        const { data: existingAsset } = await supabase
+            .from('content_assets')
+            .select('id, file_path, processing_status, processing_error, total_pages')
+            .eq('file_hash', fileHash)
+            .maybeSingle();
 
-        if (uploadError) throw uploadError;
+        let assetId: string | null = null;
+        let filePath: string;
+        let isNewAsset = false;
+        let assetStatus = 'pending';
+        let assetError: string | null = null;
+        let assetPages = 0;
 
-        // Create DB record
+        if (existingAsset) {
+            assetId = existingAsset.id;
+            filePath = existingAsset.file_path;
+            assetStatus = existingAsset.processing_status || 'ready';
+            assetError = existingAsset.processing_error || null;
+            assetPages = existingAsset.total_pages || 0;
+        } else {
+            isNewAsset = true;
+            const timestamp = Date.now();
+            const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+            filePath = `modules/${moduleId}/${timestamp}_${sanitizedFileName}`;
+
+            // Upload to Storage
+            const { error: uploadError } = await supabase.storage
+                .from('grade-content')
+                .upload(filePath, file.buffer, {
+                    contentType: file.mimetype,
+                    upsert: false
+                });
+
+            if (uploadError) throw uploadError;
+
+            // Create content_assets record
+            const { data: newAsset, error: assetInsertError } = await supabase
+                .from('content_assets')
+                .insert({
+                    file_path: filePath,
+                    file_hash: fileHash,
+                    processing_status: 'pending'
+                })
+                .select()
+                .maybeSingle();
+
+            if (!assetInsertError && newAsset) {
+                assetId = newAsset.id;
+            }
+        }
+
+        // Create DB record for module_item
+        const itemPayload: any = {
+            module_id: moduleId,
+            type: 'pdf',
+            title: title || file.originalname,
+            description,
+            content_url: filePath,
+            order_index: order_index || 999,
+            is_visible: true,
+            processing_status: assetStatus,
+            processing_error: assetError,
+            total_pages: assetPages
+        };
+        if (assetId) itemPayload.content_asset_id = assetId;
+
         const { data, error } = await supabase
             .from('module_items')
-            .insert({
-                module_id: moduleId,
-                type: 'pdf',
-                title: title || file.originalname,
-                description,
-                content_url: filePath,
-                order_index: order_index || 999,
-                is_visible: true,
-                processing_status: 'pending'
-            })
+            .insert(itemPayload)
             .select()
             .single();
 
         if (error) {
-            await supabase.storage.from('grade-content').remove([filePath]);
+            if (isNewAsset) {
+                await supabase.storage.from('grade-content').remove([filePath]);
+                if (assetId) await supabase.from('content_assets').delete().eq('id', assetId);
+            }
             throw error;
         }
 
         res.status(201).json(data);
 
-        processPdfIntoPages(data.id, filePath).catch(err => {
-            console.error(`Background PDF processing failed for item ${data.id}:`, err);
-        });
+        // Process PDF asynchronously if this is a new asset
+        if (isNewAsset) {
+            const targetId = assetId || data.id;
+            processPdfIntoPages(targetId, filePath).catch(err => {
+                console.error(`Background PDF processing failed for asset ${targetId}:`, err);
+            });
+        }
 
     } catch (error: any) {
         console.error('Error uploading module item:', error);
@@ -265,17 +318,123 @@ router.put('/items/:id', async (req, res) => {
     }
 });
 
-// Delete item
+// Delete item (with reference counting for shared content assets)
 router.delete('/items/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        const { error } = await supabase
+        // 1. Fetch item to check its content_asset_id and content_url
+        const { data: item, error: fetchError } = await supabase
+            .from('module_items')
+            .select('id, content_asset_id, content_url')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (fetchError) throw fetchError;
+        if (!item) {
+            return res.json({ message: 'Item already deleted' });
+        }
+
+        const contentUrl = item.content_url;
+        let assetId = item.content_asset_id;
+
+        // Fallback: If content_asset_id was null, match asset by file_path in content_assets
+        if (!assetId && contentUrl) {
+            const { data: matchedAsset } = await supabase
+                .from('content_assets')
+                .select('id')
+                .eq('file_path', contentUrl)
+                .maybeSingle();
+            if (matchedAsset) {
+                assetId = matchedAsset.id;
+            }
+        }
+
+        // 2. Delete the module_item row
+        const { error: deleteError } = await supabase
             .from('module_items')
             .delete()
             .eq('id', id);
 
-        if (error) throw error;
+        if (deleteError) throw deleteError;
+
+        // 3. Reference-counted cleanup
+        let remainingAssetCount = 0;
+        if (assetId) {
+            const { count } = await supabase
+                .from('module_items')
+                .select('id', { count: 'exact', head: true })
+                .eq('content_asset_id', assetId);
+            remainingAssetCount = count || 0;
+        }
+
+        let remainingUrlCount = 0;
+        if (contentUrl) {
+            const { count } = await supabase
+                .from('module_items')
+                .select('id', { count: 'exact', head: true })
+                .eq('content_url', contentUrl);
+            remainingUrlCount = count || 0;
+        }
+
+        // If no other module_item points to this asset or URL, purge storage & content_assets
+        if (remainingAssetCount === 0 && remainingUrlCount === 0) {
+            let filePath = contentUrl;
+            if (assetId) {
+                const { data: asset } = await supabase
+                    .from('content_assets')
+                    .select('file_path')
+                    .eq('id', assetId)
+                    .maybeSingle();
+                if (asset?.file_path) filePath = asset.file_path;
+            }
+
+            // a) Remove original PDF file from Storage
+            if (filePath) {
+                console.log(`[DELETE] Purging PDF from storage: ${filePath}`);
+                const { error: storageErr } = await supabase.storage
+                    .from('grade-content')
+                    .remove([filePath]);
+                if (storageErr) console.error('[DELETE] Failed to remove PDF file from storage:', storageErr);
+            }
+
+            // b) Remove page webp images from Storage
+            const purgeDir = assetId || id;
+            const { data: pageFiles } = await supabase.storage
+                .from('grade-content')
+                .list(`modules/pages/${purgeDir}`);
+
+            if (pageFiles && pageFiles.length > 0) {
+                const pathsToRemove = pageFiles.map(f => `modules/pages/${purgeDir}/${f.name}`);
+                console.log(`[DELETE] Purging ${pathsToRemove.length} page images from storage in modules/pages/${purgeDir}`);
+                const { error: pagesStorageErr } = await supabase.storage
+                    .from('grade-content')
+                    .remove(pathsToRemove);
+                if (pagesStorageErr) console.error('[DELETE] Failed to remove page images from storage:', pagesStorageErr);
+            }
+
+            // c) Delete book_pages database rows
+            if (assetId) {
+                await supabase.from('book_pages').delete().eq('content_asset_id', assetId);
+            }
+            await supabase.from('book_pages').delete().eq('content_asset_id', id);
+
+            // d) Delete content_assets database row
+            if (assetId) {
+                console.log(`[DELETE] Deleting content_assets record: ${assetId}`);
+                const { error: assetDelErr } = await supabase
+                    .from('content_assets')
+                    .delete()
+                    .eq('id', assetId);
+                if (assetDelErr) console.error('[DELETE] Failed to delete content_assets record:', assetDelErr);
+            }
+            if (contentUrl) {
+                await supabase.from('content_assets').delete().eq('file_path', contentUrl);
+            }
+        } else {
+            console.log(`[DELETE] Asset ${assetId} still referenced by ${remainingAssetCount} items — keeping storage files intact.`);
+        }
+
         res.json({ message: 'Item deleted successfully' });
     } catch (error: any) {
         console.error('Error deleting item:', error);
@@ -287,16 +446,14 @@ router.delete('/items/:id', async (req, res) => {
 // BOOK PAGES (interactive PDF rendering)
 // ============================================
 
-// Get rendered pages for an item, with signed URLs. Also reports processing
-// status so the frontend can poll this one endpoint while the PDF is still
-// being rasterized in the background.
+// Get rendered pages for an item, with signed URLs.
 router.get('/modules/items/:itemId/pages', async (req, res) => {
     try {
         const { itemId } = req.params;
 
         const { data: item, error: itemError } = await supabase
             .from('module_items')
-            .select('id, processing_status, processing_error, total_pages')
+            .select('id, content_asset_id, processing_status, processing_error, total_pages')
             .eq('id', itemId)
             .single();
 
@@ -310,10 +467,12 @@ router.get('/modules/items/:itemId/pages', async (req, res) => {
             });
         }
 
+        const targetAssetId = item.content_asset_id || itemId;
+
         const { data: pages, error: pagesError } = await supabase
             .from('book_pages')
             .select('*')
-            .eq('module_item_id', itemId)
+            .eq('content_asset_id', targetAssetId)
             .order('page_number');
 
         if (pagesError) throw pagesError;

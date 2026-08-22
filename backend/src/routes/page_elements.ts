@@ -28,10 +28,18 @@ router.put('/modules/items/:itemId/elements', async (req, res) => {
             return res.status(400).json({ error: '"elements" must be an array' });
         }
 
+        const { data: item } = await supabase
+            .from('module_items')
+            .select('content_asset_id')
+            .eq('id', itemId)
+            .maybeSingle();
+
+        const assetId = item?.content_asset_id || itemId;
+
         const { data: bookPages, error: pagesError } = await supabase
             .from('book_pages')
             .select('id, page_number')
-            .eq('module_item_id', itemId);
+            .eq('content_asset_id', assetId);
 
         if (pagesError) throw pagesError;
         if (!bookPages || bookPages.length === 0) {
@@ -120,10 +128,18 @@ router.get('/modules/items/:itemId/elements', async (req, res) => {
         const { itemId } = req.params;
         const studentId = req.query.student_id as string | undefined;
 
+        const { data: item } = await supabase
+            .from('module_items')
+            .select('content_asset_id')
+            .eq('id', itemId)
+            .maybeSingle();
+
+        const assetId = item?.content_asset_id || itemId;
+
         const { data: bookPages, error: bpError } = await supabase
             .from('book_pages')
             .select('id')
-            .eq('module_item_id', itemId);
+            .eq('content_asset_id', assetId);
 
         if (bpError) throw bpError;
         const bookPageIds = (bookPages || []).map(p => p.id);
@@ -229,12 +245,20 @@ router.post('/modules/items/:itemId/pages/:pageNumber/submit', async (req, res) 
             return res.status(400).json({ error: 'student_id is required' });
         }
 
+        const { data: item } = await supabase
+            .from('module_items')
+            .select('content_asset_id')
+            .eq('id', itemId)
+            .maybeSingle();
+
+        const assetId = item?.content_asset_id || itemId;
+
         const { data: bookPage, error: bpError } = await supabase
             .from('book_pages')
             .select('id')
-            .eq('module_item_id', itemId)
+            .eq('content_asset_id', assetId)
             .eq('page_number', parseInt(pageNumber, 10))
-            .single();
+            .maybeSingle();
 
         if (bpError || !bookPage) {
             return res.status(404).json({ error: 'Page not found' });

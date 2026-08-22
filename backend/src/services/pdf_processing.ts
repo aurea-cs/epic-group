@@ -29,13 +29,13 @@ interface ProcessResult {
  *   apt-get install -y poppler-utils
  */
 export async function processPdfIntoPages(
-  moduleItemId: string,
+  contentAssetId: string,
   storagePath: string
 ): Promise<ProcessResult> {
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), `pdf-${moduleItemId}-`));
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), `pdf-${contentAssetId}-`));
  
   try {
-    await setStatus(moduleItemId, 'processing');
+    await setStatus(contentAssetId, 'processing');
  
     // 1. Download the source PDF locally — pdftoppm needs a filesystem path.
     const { data: fileData, error: downloadError } = await supabase.storage
@@ -66,8 +66,8 @@ export async function processPdfIntoPages(
       throw new Error('pdftoppm produced no output pages');
     }
  
-    // Wipe any pages left over from a previous failed/partial run for this item.
-    await supabase.from('book_pages').delete().eq('module_item_id', moduleItemId);
+    // Wipe any pages left over from a previous failed/partial run for this asset.
+    await supabase.from('book_pages').delete().eq('content_asset_id', contentAssetId);
  
     let logicalPageNumber = 1;
  
@@ -93,7 +93,7 @@ export async function processPdfIntoPages(
           .webp({ quality: 82 })
           .toBuffer();
  
-        const destPath = `modules/pages/${moduleItemId}/${String(logicalPageNumber).padStart(3, '0')}.webp`;
+        const destPath = `modules/pages/${contentAssetId}/${String(logicalPageNumber).padStart(3, '0')}.webp`;
  
         const { error: uploadError } = await supabase.storage
           .from(BUCKET)
@@ -104,7 +104,7 @@ export async function processPdfIntoPages(
         }
  
         const { error: insertError } = await supabase.from('book_pages').insert({
-          module_item_id: moduleItemId,
+          content_asset_id: contentAssetId,
           page_number: logicalPageNumber,
           source_pdf_page: sourcePdfPage,
           side: half.side,
@@ -123,24 +123,31 @@ export async function processPdfIntoPages(
  
     const totalPages = logicalPageNumber - 1;
  
-    await supabase
-      .from('module_items')
-      .update({ processing_status: 'ready', processing_error: null, total_pages: totalPages })
-      .eq('id', moduleItemId);
+    await setStatus(contentAssetId, 'ready', undefined, totalPages);
  
     return { totalPages };
   } catch (error: any) {
-    console.error(`PDF processing failed for module_item ${moduleItemId}:`, error);
-    await setStatus(moduleItemId, 'failed', error.message);
+    console.error(`PDF processing failed for content asset ${contentAssetId}:`, error);
+    await setStatus(contentAssetId, 'failed', error.message);
     throw error;
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true });
   }
 }
  
-async function setStatus(moduleItemId: string, status: string, error?: string) {
+async function setStatus(assetId: string, status: string, error?: string, totalPages?: number) {
+  const updateData: any = { processing_status: status, processing_error: error || null };
+  if (totalPages !== undefined) updateData.total_pages = totalPages;
+ 
+  // Update content_assets table if it exists
+  await supabase
+    .from('content_assets')
+    .update(updateData)
+    .eq('id', assetId);
+ 
+  // Sync matching module_items (by content_asset_id or id)
   await supabase
     .from('module_items')
-    .update({ processing_status: status, processing_error: error || null })
-    .eq('id', moduleItemId);
+    .update(updateData)
+    .or(`content_asset_id.eq.${assetId},id.eq.${assetId}`);
 }
