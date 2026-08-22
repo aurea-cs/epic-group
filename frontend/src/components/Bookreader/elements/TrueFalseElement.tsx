@@ -9,12 +9,10 @@ interface Props {
 
 const TrueFalseElement: React.FC<Props> = ({ config, savedResponse, onAnswer }) => {
     const [selected, setSelected] = useState<boolean | null>(savedResponse?.response?.value ?? null)
-    const [isCorrect, setIsCorrect] = useState<boolean | null>(savedResponse?.is_correct ?? null)
+    const isCorrect = savedResponse?.is_correct ?? null
 
     const handleClick = (value: boolean) => {
         setSelected(value)
-        const correctState = value === config.correct
-        setIsCorrect(correctState)
         onAnswer({ value })
     }
 

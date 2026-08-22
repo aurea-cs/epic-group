@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import ReactDOM from 'react-dom'
 import { OpenEndedConfig, SavedResponse } from '../types'
 
@@ -12,7 +12,6 @@ const OpenEndedElement: React.FC<Props> = ({ config, savedResponse, onAnswer }) 
     const [text, setText] = useState<string>(savedResponse?.response?.text ?? '')
     const [draftText, setDraftText] = useState<string>(savedResponse?.response?.text ?? '')
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const lastTapRef = useRef<number>(0)
 
     const handleOpenModal = () => {
         setDraftText(text)
@@ -23,14 +22,6 @@ const OpenEndedElement: React.FC<Props> = ({ config, savedResponse, onAnswer }) 
         setText(draftText)
         onAnswer({ text: draftText })
         setIsModalOpen(false)
-    }
-
-    const handleTouchStart = () => {
-        const now = Date.now()
-        if (now - lastTapRef.current < 300) {
-            handleOpenModal()
-        }
-        lastTapRef.current = now
     }
 
     const modalContent = isModalOpen ? (
@@ -141,9 +132,8 @@ const OpenEndedElement: React.FC<Props> = ({ config, savedResponse, onAnswer }) 
     return (
         <>
             <div
-                onDoubleClick={handleOpenModal}
-                onTouchStart={handleTouchStart}
-                title="Haz doble clic o doble toque para responder"
+                onClick={handleOpenModal}
+                title="Haz clic para responder"
                 style={{
                     width: '100%',
                     height: '100%',
@@ -184,7 +174,7 @@ const OpenEndedElement: React.FC<Props> = ({ config, savedResponse, onAnswer }) 
                     </p>
                 ) : (
                     <span style={{ fontSize: '0.7rem', color: '#9ca3af', lineHeight: 1.2 }}>
-                        {config.placeholder || 'Doble clic para responder...'}
+                        {config.placeholder || 'Clic para responder...'}
                     </span>
                 )}
             </div>

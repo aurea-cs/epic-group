@@ -11,22 +11,11 @@ const CheckboxElement: React.FC<Props> = ({ config, savedResponse, onAnswer }) =
     const [checked, setChecked] = useState<boolean>(
         savedResponse?.response?.checked ?? false
     )
-    const [isCorrect, setIsCorrect] = useState<boolean | null>(
-        savedResponse?.is_correct ?? null
-    )
+    const isCorrect = savedResponse?.is_correct ?? null
 
     const handleClick = () => {
         const nextChecked = !checked
         setChecked(nextChecked)
-        
-        let correctState: boolean | null = null
-        if (typeof config.correct === 'boolean') {
-            correctState = nextChecked === config.correct
-            setIsCorrect(correctState)
-        } else {
-            setIsCorrect(null)
-        }
-
         onAnswer({ checked: nextChecked })
     }
 

@@ -87,6 +87,29 @@ router.put('/modules/items/:itemId/elements', async (req, res) => {
     }
 });
 
+function sanitizeConfigForStudent(type: string, config: any): any {
+    if (!config || typeof config !== 'object') return {};
+    const sanitized = { ...config };
+    delete sanitized.correct;
+    delete sanitized.correct_index;
+    delete sanitized.correct_pairs;
+    delete sanitized.correct_order;
+    delete sanitized.correct_value;
+
+    if (type === 'checkbox' && Array.isArray(sanitized.options)) {
+        sanitized.options = sanitized.options.map((opt: any) => {
+            if (typeof opt === 'object' && opt !== null) {
+                const copy = { ...opt };
+                delete copy.correct;
+                return copy;
+            }
+            return opt;
+        });
+    }
+
+    return sanitized;
+}
+
 // ============================================
 // Fetch all elements for an item, with page_number attached and (if
 // student_id is given) that student's own saved responses merged in so
@@ -136,7 +159,7 @@ router.get('/modules/items/:itemId/elements', async (req, res) => {
             y: e.y,
             width: e.width,
             height: e.height,
-            config: e.config,
+            config: sanitizeConfigForStudent(e.type, e.config),
             order_index: e.order_index,
             page_number: e.book_page?.page_number,
             saved_response: responsesByElement[e.id] || null
@@ -150,13 +173,7 @@ router.get('/modules/items/:itemId/elements', async (req, res) => {
 });
 
 // ============================================
-// Student submits/updates an answer for one element. Upserts so re-answering
-// just overwrites the previous response instead of erroring.
-//
-// NOTE: student_id is taken from the request body here, which is only OK
-// for local testing. Once real auth is wired up, replace this with the
-// authenticated user's id from your auth middleware (e.g. req.user.id) —
-// otherwise any client can submit answers as any student_id.
+// Student submits/updates an answer for one element.
 // ============================================
 router.post('/elements/:elementId/response', async (req, res) => {
     try {
@@ -196,6 +213,73 @@ router.post('/elements/:elementId/response', async (req, res) => {
         res.json(data);
     } catch (error: any) {
         console.error('Error saving element response:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// Bulk Submit / Grade Page Elements
+// ============================================
+router.post('/modules/items/:itemId/pages/:pageNumber/submit', async (req, res) => {
+    try {
+        const { itemId, pageNumber } = req.params;
+        const { student_id, responses } = req.body;
+
+        if (!student_id) {
+            return res.status(400).json({ error: 'student_id is required' });
+        }
+
+        const { data: bookPage, error: bpError } = await supabase
+            .from('book_pages')
+            .select('id')
+            .eq('module_item_id', itemId)
+            .eq('page_number', parseInt(pageNumber, 10))
+            .single();
+
+        if (bpError || !bookPage) {
+            return res.status(404).json({ error: 'Page not found' });
+        }
+
+        const { data: elements, error: elError } = await supabase
+            .from('page_elements')
+            .select('id, type, config')
+            .eq('book_page_id', bookPage.id);
+
+        if (elError) throw elError;
+
+        const results = [];
+        const upsertRows = [];
+
+        for (const el of (elements || [])) {
+            const userResponse = responses?.[el.id];
+            if (userResponse !== undefined) {
+                const isCorrect = gradeResponse(el.type, el.config, userResponse);
+                upsertRows.push({
+                    element_id: el.id,
+                    student_id,
+                    response: userResponse,
+                    is_correct: isCorrect,
+                    updated_at: new Date().toISOString()
+                });
+                results.push({
+                    element_id: el.id,
+                    is_correct: isCorrect,
+                    response: userResponse
+                });
+            }
+        }
+
+        if (upsertRows.length > 0) {
+            const { error: upsertError } = await supabase
+                .from('element_responses')
+                .upsert(upsertRows, { onConflict: 'element_id,student_id' });
+
+            if (upsertError) throw upsertError;
+        }
+
+        res.json({ results });
+    } catch (error: any) {
+        console.error('Error submitting page responses:', error);
         res.status(500).json({ error: error.message });
     }
 });

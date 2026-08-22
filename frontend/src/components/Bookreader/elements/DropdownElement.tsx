@@ -9,21 +9,12 @@ interface Props {
 
 const DropdownElement: React.FC<Props> = ({ config, savedResponse, onAnswer }) => {
     const [selected, setSelected] = useState<string>(savedResponse?.response?.selected ?? '')
-    const [isCorrect, setIsCorrect] = useState<boolean | null>(savedResponse?.is_correct ?? null)
+    const isCorrect = savedResponse?.is_correct ?? null
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const val = e.target.value
         const selectedIdx = config.options.indexOf(val)
         setSelected(val)
-
-        let correctState: boolean | null = null
-        if (typeof config.correct_value === 'string') {
-            correctState = val.trim().toLowerCase() === config.correct_value.trim().toLowerCase()
-        } else if (typeof config.correct_index === 'number') {
-            correctState = selectedIdx === config.correct_index
-        }
-
-        setIsCorrect(correctState)
         onAnswer({ selected: val, selected_index: selectedIdx })
     }
 

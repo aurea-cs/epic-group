@@ -12,7 +12,7 @@ interface Props {
 
 const MultipleChoiceElement: React.FC<Props> = ({ config, savedResponse, onAnswer }) => {
     const [selectedIndex, setSelectedIndex] = useState<number | null>(savedResponse?.response?.selected_index ?? null)
-    const [isCorrect, setIsCorrect] = useState<boolean | null>(savedResponse?.is_correct ?? null)
+    const isCorrect = savedResponse?.is_correct ?? null
     
     const containerRef = useRef<HTMLDivElement>(null)
     const [containerWidth, setContainerWidth] = useState<number>(0)
@@ -30,7 +30,6 @@ const MultipleChoiceElement: React.FC<Props> = ({ config, savedResponse, onAnswe
 
     const handleClick = (index: number) => {
         setSelectedIndex(index)
-        setIsCorrect(index === config.correct_index)
         onAnswer({ selected_index: index })
     }
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { getModuleItemPages, BookPageData } from './Bookpages.ts'
-import { getPageElements, submitElementResponse } from './PageElements.ts'
+import { getPageElements, submitElementResponse, submitPageResponses } from './PageElements.ts'
 import { PageElement } from './types'
 import PageElements from './PageElements.tsx'
 
@@ -123,14 +123,97 @@ const BookViewer: React.FC<BookViewerProps> = ({ itemId, studentId, onClose }) =
     }, [itemId, studentId, status])
 
     const handleAnswer = useCallback((elementId: string, response: any) => {
+        // Update local React state immediately so navigating pages preserves answers in memory.
+        // Reset is_correct to null so correctness colors are only shown after clicking "Comprobar respuestas".
+        setElementsByPage(prev => {
+            const next = { ...prev }
+            for (const pageNum in next) {
+                const pageElements = next[pageNum]
+                const elIdx = pageElements.findIndex(e => e.id === elementId)
+                if (elIdx !== -1) {
+                    const updatedElements = [...pageElements]
+                    const currentEl = updatedElements[elIdx]
+                    updatedElements[elIdx] = {
+                        ...currentEl,
+                        saved_response: {
+                            response,
+                            is_correct: null
+                        }
+                    }
+                    next[pageNum] = updatedElements
+                    break
+                }
+            }
+            return next
+        })
+
         if (!studentId) {
             console.warn('No studentId provided to BookViewer — response not saved.')
             return
         }
+
+        // Save answer draft in background
         submitElementResponse(elementId, studentId, response).catch(err => {
             console.error('Error saving response:', err)
         })
     }, [studentId])
+
+    const [isSubmittingPage, setIsSubmittingPage] = useState<Record<number, boolean>>({})
+
+    const handleSubmitPage = useCallback(async (pageNumber: number) => {
+        if (!studentId) {
+            alert('Debes iniciar sesión para comprobar tus respuestas.')
+            return
+        }
+
+        const pageElements = elementsByPage[pageNumber] || []
+        if (pageElements.length === 0) return
+
+        const responses: Record<string, any> = {}
+        for (const el of pageElements) {
+            if (el.saved_response?.response !== undefined) {
+                responses[el.id] = el.saved_response.response
+            }
+        }
+
+        if (Object.keys(responses).length === 0) {
+            alert('Responde al menos un ejercicio antes de comprobar.')
+            return
+        }
+
+        setIsSubmittingPage(prev => ({ ...prev, [pageNumber]: true }))
+
+        try {
+            const { results } = await submitPageResponses(itemId, pageNumber, studentId, responses)
+            const resultsByElId = new Map(results.map(r => [r.element_id, r]))
+
+            setElementsByPage(prev => {
+                const next = { ...prev }
+                const currentElements = next[pageNumber]
+                if (currentElements) {
+                    next[pageNumber] = currentElements.map(el => {
+                        const graded = resultsByElId.get(el.id)
+                        if (graded) {
+                            return {
+                                ...el,
+                                saved_response: {
+                                    response: graded.response,
+                                    is_correct: graded.is_correct
+                                }
+                            }
+                        }
+                        return el
+                    })
+                }
+                return next
+            })
+        } catch (err) {
+            console.error('Error submitting page responses:', err)
+            alert('Ocurrió un error al comprobar las respuestas.')
+        } finally {
+            setIsSubmittingPage(prev => ({ ...prev, [pageNumber]: false }))
+        }
+    }, [itemId, studentId, elementsByPage])
 
     // Whenever layout mode changes (mobile <-> spread), re-align currentIndex
     // so a spread always starts on an even page.
@@ -268,10 +351,38 @@ const BookViewer: React.FC<BookViewerProps> = ({ itemId, studentId, onClose }) =
                                             />
                                         )}
                                         {isMounted(index) && elementsByPage[page.page_number] && (
-                                            <PageElements
-                                                elements={elementsByPage[page.page_number]}
-                                                onAnswer={handleAnswer}
-                                            />
+                                            <>
+                                                <PageElements
+                                                    elements={elementsByPage[page.page_number]}
+                                                    onAnswer={handleAnswer}
+                                                />
+                                                {elementsByPage[page.page_number].length > 0 && (
+                                                    <button
+                                                        onClick={() => handleSubmitPage(page.page_number)}
+                                                        disabled={isSubmittingPage[page.page_number]}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            bottom: '10px',
+                                                            right: '10px',
+                                                            background: '#2563eb',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            padding: '6px 12px',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 600,
+                                                            cursor: isSubmittingPage[page.page_number] ? 'default' : 'pointer',
+                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                                            zIndex: 20,
+                                                            pointerEvents: 'auto',
+                                                            opacity: isSubmittingPage[page.page_number] ? 0.7 : 1,
+                                                            transition: 'background 0.2s',
+                                                        }}
+                                                    >
+                                                        {isSubmittingPage[page.page_number] ? 'Comprobando...' : 'Comprobar respuestas'}
+                                                    </button>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 )
@@ -322,5 +433,6 @@ function navButtonStyle(side: 'left' | 'right', disabled: boolean): React.CSSPro
         zIndex: 5,
     }
 }
+
 
 export default BookViewer
