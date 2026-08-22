@@ -16,6 +16,7 @@ import modulesRouter from './routes/modules';
 import assignmentsRouter from './routes/assignments';
 import adminRouter from './routes/admin';
 import uploadRouter from './routes/upload';
+import pageElementsRouter from './routes/page_elements';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -39,6 +40,10 @@ app.use('/api', moduleItemsRouter);
 // Admin - Modules + Items + VR Codes
 app.use('/api/admin', modulesRouter);
 app.use('/api', modulesRouter);
+
+// Page Elements (interactive layer on book pages)
+app.use('/api/admin', pageElementsRouter);
+app.use('/api', pageElementsRouter);
 
 // Admin - User management (students, professors, tutors, user CRUD)
 app.use('/api/admin', adminRouter);

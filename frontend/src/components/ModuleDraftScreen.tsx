@@ -15,7 +15,7 @@ interface ModuleDraftScreenProps {
   user: User
 }
 
-const ContentCard = ({ item, index, onViewPdf, userId }: { item: ModuleItem, index: number, onViewPdf: (url: string) => void, userId: string }) => {
+const ContentCard = ({ item, index, onViewPdf, userId }: { item: ModuleItem, index: number, onViewPdf: (item: ModuleItem) => void, userId: string }) => {
   return (
     <div 
       className="hoverable-card"
@@ -31,7 +31,7 @@ const ContentCard = ({ item, index, onViewPdf, userId }: { item: ModuleItem, ind
             markItemAsRead(userId, item.id).catch(console.error);
             
             if (item.type === 'pdf') {
-              onViewPdf(item.content_url);
+              onViewPdf(item);
             } else {
               window.open(item.content_url, '_blank', 'noopener,noreferrer');
             }
@@ -177,12 +177,12 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
   )
 }
 
-const ResourceCard = ({ item, onViewPdf }: { item: ModuleItem, index: number, onViewPdf: (url: string) => void }) => {
+const ResourceCard = ({ item, onViewPdf }: { item: ModuleItem, index: number, onViewPdf: (item: ModuleItem) => void }) => {
   const handleClick = () => {
     if (item.content_url) {
       if (item.type === 'video') { window.open(item.content_url, '_blank') }
       else {
-        onViewPdf(item.content_url!)
+        onViewPdf(item)
       }
     }
   }
@@ -288,10 +288,12 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
 
   const userRole = getUserRole(user)
 
-  const handleViewPdf = (url: string) => {
-    navigate(
-      `/course/${courseId}/module/${moduleId}/pdf?url=${encodeURIComponent(url)}`
-    )
+  const handleViewItem = (item: ModuleItem) => {
+      if (item.type === 'pdf' && item.processing_status === 'ready') {
+          navigate(`/course/${courseId}/module/${moduleId}/book/${item.id}`)
+      } else {
+          navigate(`/course/${courseId}/module/${moduleId}/pdf?url=${encodeURIComponent(item.content_url!)}`)
+      }
   }
 
   useEffect(() => {
@@ -383,7 +385,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
           }}>
             {contenidos.length > 0 ? (
               contenidos.map((item, idx) => (
-                <ContentCard key={item.id} item={item} index={idx} onViewPdf={handleViewPdf} userId={user.id} />
+                <ContentCard key={item.id} item={item} index={idx} onViewPdf={handleViewItem} userId={user.id} />
               ))
             ) : (
               <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
@@ -412,7 +414,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
             }}>
               {recursos.length > 0 ? (
                 recursos.map((item, idx) => (
-                  <ResourceCard key={item.id} item={item} index={idx} onViewPdf={handleViewPdf} />
+                  <ResourceCard key={item.id} item={item} index={idx} onViewPdf={handleViewItem} />
                 ))
               ) : (
                 <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>

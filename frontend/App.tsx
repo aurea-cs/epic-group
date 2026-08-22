@@ -31,6 +31,7 @@ import PdfViewerPage from './src/components/PdfViewerPage'
 import ActivityTracker from './src/components/ActivityTracker'
 import { getUserRole } from './src/utils/getUserRole'
 import ProfessorsAdminScreen from './src/components/ProfessorsAdminScreen'
+import BookViewerPage from './src/components/Bookreader/BookViewerPage'
 // import LandingPage from './src/components/LandingPage'
 import './App.css'
 
@@ -151,6 +152,7 @@ function App() {
               )
             }
           />
+          <Route path="/course/:courseId/module/:moduleId/book/:itemId" element={<BookViewerPage />} />
           <Route path="/course/:courseId/module/:moduleId/pdf" element={<PdfViewerPage />} />
           <Route
             path="/course-map"

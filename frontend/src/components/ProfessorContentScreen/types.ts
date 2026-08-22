@@ -63,6 +63,8 @@ export interface ModuleItem {
     show_student?: boolean | null
     show_teacher?: boolean | null
     image_url?: string | null
+    processing_status?: 'pending' | 'processing' | 'ready' | 'failed'
+    total_pages?: number
 }
 
 export interface SubmissionFile {
