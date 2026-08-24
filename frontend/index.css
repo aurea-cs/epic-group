@@ -146,3 +146,32 @@ body::before {
     font-size: 12px;
   }
 }
+
+
+/* Fix react-pdf interactive forms visibility and z-index */
+.react-pdf__Page__textContent {
+  z-index: 1 !important;
+}
+.react-pdf__Page__annotations {
+  z-index: 2 !important;
+}
+.react-pdf__Page__annotations section {
+  pointer-events: auto !important;
+}
+.react-pdf__Page__annotations input,
+.react-pdf__Page__annotations textarea,
+.react-pdf__Page__annotations select {
+  background-color: rgba(139, 92, 246, 0.15) !important;
+  border: 1px solid rgba(139, 92, 246, 0.5) !important;
+  color: black !important;
+  pointer-events: auto !important;
+  cursor: text !important;
+}
+.react-pdf__Page__annotations input:focus,
+.react-pdf__Page__annotations textarea:focus,
+.react-pdf__Page__annotations select:focus {
+  background-color: rgba(139, 92, 246, 0.25) !important;
+  border: 2px solid #8b5cf6 !important;
+  outline: none !important;
+}
+
