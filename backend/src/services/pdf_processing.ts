@@ -22,8 +22,10 @@ interface ProcessResult {
  * Converts a PDF (already stored at `storagePath`) into individual page
  * images and writes rows to `book_pages`.
  *
- * Each PDF page is rasterized once, then split exactly down the middle into
- * a left half and a right half, which become two consecutive logical pages.
+ * The PDF pages are already provided page-by-page. Each PDF page is rasterized
+ * as a single full image without splitting down the middle, while still being
+ * registered with alternating sides ('left' for odd pages, 'right' for even pages)
+ * to remain fully compatible with the client page viewer.
  *
  * Requires poppler-utils (`pdftoppm`) to be installed on the host/container:
  *   apt-get install -y poppler-utils
@@ -69,10 +71,10 @@ export async function processPdfIntoPages(
     // Wipe any pages left over from a previous failed/partial run for this asset.
     await supabase.from('book_pages').delete().eq('content_asset_id', contentAssetId);
  
-    let logicalPageNumber = 1;
- 
     for (let i = 0; i < files.length; i++) {
       const sourcePdfPage = i + 1;
+      const logicalPageNumber = i + 1;
+      const side: 'left' | 'right' = i % 2 === 0 ? 'left' : 'right';
       const fullImagePath = path.join(tmpDir, files[i]);
       const metadata = await sharp(fullImagePath).metadata();
  
@@ -80,48 +82,36 @@ export async function processPdfIntoPages(
         throw new Error(`Could not read dimensions for ${files[i]}`);
       }
  
-      const midpoint = Math.floor(metadata.width / 2);
+      const pageBuffer = await sharp(fullImagePath)
+        .webp({ quality: 82 })
+        .toBuffer();
  
-      const halves: Array<{ side: 'left' | 'right'; left: number; width: number }> = [
-        { side: 'left', left: 0, width: midpoint },
-        { side: 'right', left: midpoint, width: metadata.width - midpoint }
-      ];
+      const destPath = `modules/pages/${contentAssetId}/${String(logicalPageNumber).padStart(3, '0')}.webp`;
  
-      for (const half of halves) {
-        const halfBuffer = await sharp(fullImagePath)
-          .extract({ left: half.left, top: 0, width: half.width, height: metadata.height })
-          .webp({ quality: 82 })
-          .toBuffer();
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(destPath, pageBuffer, { contentType: 'image/webp', upsert: true });
  
-        const destPath = `modules/pages/${contentAssetId}/${String(logicalPageNumber).padStart(3, '0')}.webp`;
+      if (uploadError) {
+        throw new Error(`Failed to upload page ${logicalPageNumber}: ${uploadError.message}`);
+      }
  
-        const { error: uploadError } = await supabase.storage
-          .from(BUCKET)
-          .upload(destPath, halfBuffer, { contentType: 'image/webp', upsert: true });
+      const { error: insertError } = await supabase.from('book_pages').insert({
+        content_asset_id: contentAssetId,
+        page_number: logicalPageNumber,
+        source_pdf_page: sourcePdfPage,
+        side,
+        image_path: destPath,
+        width: metadata.width,
+        height: metadata.height
+      });
  
-        if (uploadError) {
-          throw new Error(`Failed to upload page ${logicalPageNumber}: ${uploadError.message}`);
-        }
- 
-        const { error: insertError } = await supabase.from('book_pages').insert({
-          content_asset_id: contentAssetId,
-          page_number: logicalPageNumber,
-          source_pdf_page: sourcePdfPage,
-          side: half.side,
-          image_path: destPath,
-          width: half.width,
-          height: metadata.height
-        });
- 
-        if (insertError) {
-          throw new Error(`Failed to insert book_page row: ${insertError.message}`);
-        }
- 
-        logicalPageNumber++;
+      if (insertError) {
+        throw new Error(`Failed to insert book_page row: ${insertError.message}`);
       }
     }
  
-    const totalPages = logicalPageNumber - 1;
+    const totalPages = files.length;
  
     await setStatus(contentAssetId, 'ready', undefined, totalPages);
  
