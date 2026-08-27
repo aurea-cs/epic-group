@@ -17,16 +17,22 @@ const PdfViewerPage: React.FC = () => {
 
     const handleSave = async (blob: Blob) => {
         try {
-            // For now, we will just download it to prove it works since we don't have the user's specific submission endpoint yet.
-            // If they don't want downloads, we can just log it or upload it to a temp bucket.
-            console.log('PDF Blob generated:', blob.size, 'bytes');
-            alert('¡Respuestas procesadas correctamente y el PDF fue generado! (Simulación de guardado)');
-            
-            // To test it actually filled it:
+            console.log('PDF Blob generated successfully:', blob.size, 'bytes');
+
+            // Trigger instant download of the filled PDF file with drawings
             const objectUrl = URL.createObjectURL(blob);
-            window.open(objectUrl, '_blank');
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = 'documento_con_respuestas.pdf';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(objectUrl);
+
+            alert('¡El documento con tus respuestas y dibujos se ha guardado y descargado con éxito!');
         } catch (error) {
             console.error('Save error', error)
+            alert('Error al descargar el PDF.');
         }
     }
 
