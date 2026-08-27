@@ -7,11 +7,13 @@ import { getUserRole } from '../utils/getUserRole'
 import UserActivityModal from './UserActivityModal'
 
 function formatTime(totalSeconds?: number): string {
-  if (!totalSeconds) return '0m'
+  if (!totalSeconds) return '0m 0s'
   const h = Math.floor(totalSeconds / 3600)
   const m = Math.floor((totalSeconds % 3600) / 60)
-  if (h > 0) return `${h}h ${m}m`
-  return `${m}m`
+  const s = Math.floor(totalSeconds % 60)
+  if (h > 0) return `${h}h ${m}m ${s}s`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
 }
 
 
@@ -414,7 +416,8 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
                     <Th>Profesor</Th>
                     <Th>Correo Electrónico</Th>
                     <Th>Centros Inscritos</Th>
-                    {isAdmin && <Th align="right">Acciones</Th>}
+                    <Th>Tiempo en plataforma</Th>
+                    {isAdmin && <Th>Acciones</Th>}
                   </tr>
                 </thead>
                 <tbody>

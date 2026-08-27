@@ -1289,6 +1289,17 @@ app.get('/api/admin/professors', async (req, res) => {
             }
         });
 
+        // 4.5 Fetch time from view
+        const { data: timeData } = await supabase
+            .from('student_time_view')
+            .select('user_id, total_time_seconds')
+            .in('user_id', professorIds);
+            
+        const timeMap: Record<string, number> = {};
+        (timeData || []).forEach(t => {
+            timeMap[t.user_id] = t.total_time_seconds;
+        });
+
         // 5. Format response
         const formatted = professors.map(p => ({
             id: p.id,
@@ -1296,7 +1307,8 @@ app.get('/api/admin/professors', async (req, res) => {
             email: p.email,
             avatar_url: p.avatar_url,
             created_at: p.created_at,
-            centers: professorCentersMap[p.id] || []
+            centers: professorCentersMap[p.id] || [],
+            total_time_seconds: timeMap[p.id] || 0
         }));
 
         res.json(formatted);
