@@ -163,20 +163,42 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave })
         if (!name || /draw_|draw_box_|sig_/i.test(name)) return
 
         try {
-          const field = form.getField(name)
-          if (!field) return
-
           if (element instanceof HTMLInputElement) {
-            if (element.type === 'checkbox' || element.type === 'radio') {
+            if (element.type === 'checkbox') {
+              try {
+                const checkBox = form.getCheckBox(name)
+                if (element.checked) {
+                  checkBox.check()
+                } else {
+                  checkBox.uncheck()
+                }
+              } catch (e) {
+                console.warn(`Could not set checkbox ${name}`, e)
+              }
+            } else if (element.type === 'radio') {
               if (element.checked) {
-                try { form.getCheckBox(name).check() } catch (e) {}
-                try { form.getRadioGroup(name).select(element.value) } catch (e) {}
+                try {
+                  const radioGroup = form.getRadioGroup(name)
+                  radioGroup.select(element.value)
+                } catch (e) {
+                  try {
+                    const radioGroup = form.getRadioGroup(name)
+                    const options = radioGroup.getOptions()
+                    if (options.length > 0) {
+                      radioGroup.select(options[0])
+                    }
+                  } catch (err) {}
+                }
               }
             } else {
-              try { form.getTextField(name).setText(element.value) } catch (e) {}
+              try {
+                form.getTextField(name).setText(element.value || '')
+              } catch (e) {}
             }
           } else if (element instanceof HTMLTextAreaElement) {
-            try { form.getTextField(name).setText(element.value) } catch (e) {}
+            try {
+              form.getTextField(name).setText(element.value || '')
+            } catch (e) {}
           }
         } catch (err) {
           console.warn(`Could not set field ${name}`, err)
@@ -245,6 +267,13 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave })
         } catch (err) {
           console.warn(`Could not embed drawing for field ${name}`, err)
         }
+      }
+
+      // 3. Flatten the entire PDF form so text, checkboxes, and drawings become static and uneditable
+      try {
+        form.flatten()
+      } catch (flattenErr) {
+        console.warn('Could not flatten PDF form fields:', flattenErr)
       }
 
       const pdfBytes = await pdfDoc.save()
