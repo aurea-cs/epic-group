@@ -29,8 +29,277 @@ const upload = multer({
 });
 
 // ============================================
-// USER CENTER ENDPOINT
+// USER ENDPOINT
 // ============================================
+
+// Update user profile info and center associations (works for both students and professors)
+app.put('/api/users/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { fullName, email, centerIds } = req.body;
+
+        if (!fullName || !email) {
+            return res.status(400).json({ error: 'Full name and email are required' });
+        }
+
+        // 1. Update auth email if changed
+        const { error: authError } = await supabase.auth.admin.updateUserById(id, {
+            email,
+            user_metadata: { full_name: fullName }
+        });
+        if (authError) throw authError;
+
+        // 2. Update users table and get the user's role
+        const { data: updatedUser, error: profileError } = await supabase
+            .from('users')
+            .update({
+                full_name: fullName,
+                email,
+                firstname: fullName.split(' ')[0],
+                lastname: fullName.split(' ').slice(1).join(' ')
+            })
+            .eq('id', id)
+            .select('role')
+            .single();
+
+        if (profileError) throw profileError;
+
+        const userRole = updatedUser?.role;
+
+        // 3. Reconcile center associations based on role
+        if (Array.isArray(centerIds)) {
+            if (userRole === 'professor') {
+                // ── PROFESSOR: reconcile center_professors table ──────────────────
+                const { data: currentLinks, error: currentLinksError } = await supabase
+                    .from('center_professors')
+                    .select('center_id')
+                    .eq('user_id', id);
+
+                if (currentLinksError) throw currentLinksError;
+
+                const currentCenterIds = (currentLinks || []).map((l: any) => l.center_id) as string[];
+
+                // Centers to REMOVE
+                const centersToRemove = currentCenterIds.filter(cId => !centerIds.includes(cId));
+                if (centersToRemove.length > 0) {
+                    const { error: deleteError } = await supabase
+                        .from('center_professors')
+                        .delete()
+                        .eq('user_id', id)
+                        .in('center_id', centersToRemove);
+                    if (deleteError) throw deleteError;
+                }
+
+                // Centers to ADD
+                const centersToAdd = (centerIds as string[]).filter(cId => !currentCenterIds.includes(cId));
+                if (centersToAdd.length > 0) {
+                    const rows = centersToAdd.map(cId => ({ center_id: cId, user_id: id }));
+                    const { error: insertError } = await supabase
+                        .from('center_professors')
+                        .insert(rows);
+                    if (insertError) throw insertError;
+                    // Update users.center_id to the last added center
+                    await supabase.from('users').update({ center_id: centersToAdd[centersToAdd.length - 1] }).eq('id', id);
+                } else if (centersToRemove.length > 0) {
+                    // Centers were only removed — revert to most recent remaining
+                    const { data: remaining } = await supabase
+                        .from('center_professors')
+                        .select('center_id, created_at')
+                        .eq('user_id', id)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    const latestCenterId = remaining && remaining.length > 0 ? remaining[0].center_id : null;
+                    await supabase.from('users').update({ center_id: latestCenterId }).eq('id', id);
+                }
+            } else {
+                // ── STUDENT (default): reconcile enrollments table ───────────────
+                const { data: currentEnrollments, error: currentEnrollmentsError } = await supabase
+                    .from('enrollments')
+                    .select('center_id')
+                    .eq('student_id', id);
+
+                if (currentEnrollmentsError) throw currentEnrollmentsError;
+
+                const currentCenterIds = [...new Set((currentEnrollments || []).map((e: any) => e.center_id).filter(Boolean))] as string[];
+
+                // Centers to REMOVE
+                const centersToRemove = currentCenterIds.filter(cId => !centerIds.includes(cId));
+                if (centersToRemove.length > 0) {
+                    const { error: deleteError } = await supabase
+                        .from('enrollments')
+                        .delete()
+                        .eq('student_id', id)
+                        .in('center_id', centersToRemove);
+                    if (deleteError) throw deleteError;
+                }
+
+                // Centers to ADD
+                const centersToAdd = (centerIds as string[]).filter(cId => !currentCenterIds.includes(cId));
+                if (centersToAdd.length > 0) {
+                    const { data: grades, error: gradesError } = await supabase
+                        .from('grades_levels')
+                        .select('id, center_id')
+                        .in('center_id', centersToAdd);
+
+                    if (gradesError) throw gradesError;
+
+                    if (grades && grades.length > 0) {
+                        const gradeIds = grades.map((g: any) => g.id);
+
+                        const { data: subjects, error: subjectsError } = await supabase
+                            .from('subjects')
+                            .select('id, grade_id')
+                            .in('grade_id', gradeIds);
+
+                        if (subjectsError) throw subjectsError;
+
+                        if (subjects && subjects.length > 0) {
+                            const { data: existingEnrollments } = await supabase
+                                .from('enrollments')
+                                .select('subject_id')
+                                .eq('student_id', id);
+
+                            const enrolledSubjectIds = new Set(
+                                (existingEnrollments || []).map((e: any) => e.subject_id)
+                            );
+
+                            const now = new Date().toISOString();
+                            const rows = subjects
+                                .filter((s: any) => !enrolledSubjectIds.has(s.id))
+                                .map((s: any) => {
+                                    const grade = grades.find((g: any) => g.id === s.grade_id)!;
+                                    return {
+                                        student_id: id,
+                                        subject_id: s.id,
+                                        grade_id: s.grade_id,
+                                        center_id: grade.center_id,
+                                        status: 'active',
+                                        created_at: now,
+                                    };
+                                });
+
+                            if (rows.length > 0) {
+                                const { error: insertError } = await supabase
+                                    .from('enrollments')
+                                    .insert(rows);
+                                if (insertError) throw insertError;
+                                // Update users.center_id to the last added center
+                                await supabase.from('users').update({ center_id: centersToAdd[centersToAdd.length - 1] }).eq('id', id);
+                            }
+                        }
+                    }
+                } else if (centersToRemove.length > 0) {
+                    // Centers were only removed — revert to most recent remaining
+                    const { data: remaining } = await supabase
+                        .from('enrollments')
+                        .select('center_id, created_at')
+                        .eq('student_id', id)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    const latestCenterId = remaining && remaining.length > 0 ? remaining[0].center_id : null;
+                    await supabase.from('users').update({ center_id: latestCenterId }).eq('id', id);
+                }
+            }
+        }
+
+        res.json({ message: 'User updated successfully' });
+    } catch (error: any) {
+        console.error('Error updating user:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete a user (removes from auth and all DB tables — handles both students and professors)
+app.delete('/api/users/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Student-specific cleanup
+        await supabase.from('enrollments').delete().eq('student_id', id);
+        await supabase.from('student_tutors').delete().eq('student_id', id);
+        await supabase.from('student_comments').delete().eq('student_id', id);
+
+        // Professor-specific cleanup
+        await supabase.from('center_professors').delete().eq('user_id', id);
+        await supabase.from('student_comments').delete().eq('professor_id', id);
+
+        // Delete user profile
+        await supabase.from('users').delete().eq('id', id);
+
+        // Delete from auth
+        const { error: authDeleteError } = await supabase.auth.admin.deleteUser(id);
+        if (authDeleteError) throw authDeleteError;
+
+        res.json({ message: 'User deleted successfully' });
+    } catch (error: any) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+// Create new user (Admin, Teacher, Student)
+app.post('/api/users', async (req, res) => {
+    try {
+        const { email, password, fullName, role } = req.body;
+
+        if (!email || !password || !fullName || !role) {
+            return res.status(400).json({ error: 'Email, password, full name, and role are required' });
+        }
+
+        // 1. Create user in Supabase Auth
+        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name: fullName }
+        });
+
+        if (authError) throw authError;
+
+        if (!authUser.user) {
+            throw new Error('Failed to create user object');
+        }
+
+        // 2. Create profile in 'users' table with role
+        // Note: The 'users' table in public schema is usually synchronized with auth.users via triggers.
+        // If we need to set specific fields like 'role' which might not be in the trigger, we should update it.
+        // First, let's try to upsert to ensure it exists and has the role.
+
+        const { error: profileError } = await supabase
+            .from('users')
+            .upsert({
+                id: authUser.user.id,
+                email: email,
+                full_name: fullName,
+                role: role, // Assuming 'role' column exists in public.users
+                // Default fields if needed
+                firstname: fullName.split(' ')[0],
+                lastname: fullName.split(' ').slice(1).join(' ')
+            });
+
+        if (profileError) {
+            // If profile creation fails, we might want to delete the auth user to keep consistency,
+            // but for now let's just throw error.
+            console.error('Error creating profile:', profileError);
+            throw profileError;
+        }
+
+        res.status(201).json({
+            message: 'User created successfully',
+            user: {
+                id: authUser.user.id,
+                email,
+                fullName,
+                role
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Error creating user:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // Get the educational center (and its vr_code) for a given user
 app.get('/api/users/:userId/center', async (req, res) => {
@@ -65,7 +334,153 @@ app.get('/api/users/:userId/center', async (req, res) => {
     }
 });
 
-// Toggle item visibility for professors
+app.get('/api/users/:userId/activity', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        // Fetch activity for the last 7 days
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const { data, error } = await supabase
+            .from('activity_logs')
+            .select('duration_seconds, created_at, path')
+            .eq('user_id', userId)
+            .gte('created_at', sevenDaysAgo.toISOString())
+            .order('created_at', { ascending: true });
+            
+        if (error) throw error;
+        
+        // Group by day
+        const dailyActivity: Record<string, number> = {};
+        const pathActivity: Record<string, number> = {};
+        
+        (data || []).forEach(log => {
+            const dateStr = new Date(log.created_at).toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' });
+            if (!dailyActivity[dateStr]) dailyActivity[dateStr] = 0;
+            dailyActivity[dateStr] += log.duration_seconds;
+            
+            const p = log.path || '/unknown';
+            if (!pathActivity[p]) pathActivity[p] = 0;
+            pathActivity[p] += log.duration_seconds;
+        });
+        
+        const dailyArray = Object.keys(dailyActivity).map(k => ({ date: k, seconds: dailyActivity[k] }));
+        const pathArray = Object.keys(pathActivity)
+            .map(k => ({ path: k, seconds: pathActivity[k] }))
+            .sort((a,b) => b.seconds - a.seconds)
+            .slice(0, 10);
+        
+        res.json({
+            daily: dailyArray,
+            sections: pathArray
+        });
+    } catch (error: any) {
+        console.error('Error fetching student activity:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get aggregated profile details (centers, grades, subjects)
+app.get('/api/users/:userId/profile-details', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { role } = req.query;
+
+        if (role === 'admin') {
+            return res.json({ centers: 'N/A', grades: 'N/A', subjects: 'N/A' });
+        }
+
+        let centerNames: string[] = [];
+        let gradeNames: string[] = [];
+        let subjectNames: string[] = [];
+
+        if (role === 'professor') {
+            const { data: profSubjects, error } = await supabase
+                .from('professor_subjects')
+                .select(`
+                    subjects (
+                        name,
+                        grades_levels (
+                            name,
+                            educational_centers (name)
+                        )
+                    )
+                `)
+                .eq('professor_id', userId);
+            
+            if (error) throw error;
+
+            profSubjects?.forEach(ps => {
+                const sub: any = ps.subjects;
+                if (sub) {
+                    subjectNames.push(sub.name);
+                    if (sub.grades_levels) {
+                        gradeNames.push(sub.grades_levels.name);
+                        if (sub.grades_levels.educational_centers) {
+                            centerNames.push(sub.grades_levels.educational_centers.name);
+                        }
+                    }
+                }
+            });
+        } else if (role === 'tutor' || role === 'student') {
+            let targetStudentIds = [userId];
+
+            if (role === 'tutor') {
+                const { data: studentTutors, error: tutorError } = await supabase
+                    .from('student_tutors')
+                    .select('student_id')
+                    .eq('tutor_id', userId);
+                if (tutorError) throw tutorError;
+                targetStudentIds = studentTutors?.map(st => st.student_id) || [];
+            }
+
+            if (targetStudentIds.length > 0) {
+                const { data: enrollments, error: enrollError } = await supabase
+                    .from('enrollments')
+                    .select(`
+                        subjects (name),
+                        grades_levels (name, educational_centers (name))
+                    `)
+                    .in('student_id', targetStudentIds);
+                
+                if (enrollError) throw enrollError;
+
+                enrollments?.forEach(en => {
+                    const sub: any = en.subjects;
+                    const grade: any = en.grades_levels;
+                    if (sub) subjectNames.push(sub.name);
+                    if (grade) {
+                        gradeNames.push(grade.name);
+                        if (grade.educational_centers) {
+                            centerNames.push(grade.educational_centers.name);
+                        }
+                    }
+                });
+            }
+        }
+
+        // Deduplicate
+        const uniqueCenters = [...new Set(centerNames)].filter(Boolean);
+        const uniqueGrades = [...new Set(gradeNames)].filter(Boolean);
+        const uniqueSubjects = [...new Set(subjectNames)].filter(Boolean);
+
+        res.json({
+            centers: uniqueCenters.length > 0 ? uniqueCenters.join(', ') : 'N/A',
+            grades: uniqueGrades.length > 0 ? uniqueGrades.join(', ') : 'N/A',
+            subjects: uniqueSubjects.length > 0 ? uniqueSubjects.join(', ') : 'N/A'
+        });
+
+    } catch (error: any) {
+        console.error('Error fetching profile details:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ===========================================
+// MODULE ITEMS VISIBILITY
+// ===========================================
+
 app.patch('/api/module-items-p/:itemId', async (req, res) => {
     try {
         const { itemId } = req.params;
@@ -120,7 +535,7 @@ app.patch('/api/module-items/:itemId', async (req, res) => {
 // ===========================================
 
 // Get tutors linked to a student
-app.get('/api/admin/students/:studentId/tutors', async (req, res) => {
+app.get('/api/students/:studentId/tutors', async (req, res) => {
     try {
         const { studentId } = req.params;
 
@@ -155,11 +570,69 @@ app.get('/api/admin/students/:studentId/tutors', async (req, res) => {
     }
 });
 
-// ============================================
-// STUDENT PROGRESS ENDPOINTS
-// ============================================
 
-// Get student courses (subjects enrolled)
+// Create a tutor account and link it to a student
+app.post('/api/students/:studentId/tutor', async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { email, password, fullName } = req.body;
+
+        if (!email || !password || !fullName) {
+            return res.status(400).json({ error: 'Email, password, and full name are required' });
+        }
+
+        // 1. Create the tutor user in Supabase Auth
+        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name: fullName }
+        });
+
+        if (authError) throw authError;
+        if (!authUser.user) throw new Error('Failed to create tutor user');
+
+        const tutorId = authUser.user.id;
+
+        // 2. Insert into public.users with role='tutor'
+        const { error: profileError } = await supabase
+            .from('users')
+            .upsert({
+                id: tutorId,
+                email,
+                full_name: fullName,
+                role: 'tutor',
+                firstname: fullName.split(' ')[0],
+                lastname: fullName.split(' ').slice(1).join(' ')
+            });
+
+        if (profileError) throw profileError;
+
+        // 3. Link tutor to student in student_tutors table
+        const { error: linkError } = await supabase
+            .from('student_tutors')
+            .insert({ student_id: studentId, tutor_id: tutorId });
+
+        if (linkError) {
+            // If the table doesn't exist yet, still return success with a warning
+            console.warn('Could not link tutor to student (student_tutors table may not exist):', linkError.message);
+            return res.status(201).json({
+                message: 'Tutor created but could not be linked (student_tutors table missing)',
+                tutor: { id: tutorId, email, fullName, role: 'tutor' },
+                warning: linkError.message
+            });
+        }
+
+        res.status(201).json({
+            message: 'Tutor created and linked to student successfully',
+            tutor: { id: tutorId, email, fullName, role: 'tutor' }
+        });
+
+    } catch (error: any) {
+        console.error('Error creating tutor:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // Get tutor's students' courses
 app.get('/api/tutors/:tutorId/courses', async (req, res) => {
@@ -229,6 +702,80 @@ app.get('/api/tutors/:tutorId/courses', async (req, res) => {
         res.json(formattedCourses || []);
     } catch (error: any) {
         console.error('Error fetching tutor courses:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get students. Add ?expand=centers for enrollment/center data.
+app.get('/api/students', async (req, res) => {
+    try {
+        const expandCenters = req.query.expand === 'centers';
+
+        const { data: students, error: studentsError } = await supabase
+            .from('users')
+            .select('id, full_name, email, firstname, lastname, avatar_url, created_at')
+            .eq('role', 'student')
+            .order('full_name', { ascending: true });
+
+        if (studentsError) throw studentsError;
+
+        if (!students || students.length === 0) return res.json([]);
+
+        // Minimal shape — no centers needed, return early.
+        if (!expandCenters) {
+            const formatted = students.map(s => ({
+                id: s.id,
+                name: s.full_name || `${s.firstname || ''} ${s.lastname || ''}`.trim() || s.email,
+                email: s.email,
+            }));
+            return res.json(formatted);
+        }
+
+        // Expanded shape — fetch enrollments + centers and attach them.
+        const studentIds = students.map(s => s.id);
+
+        const { data: enrollments, error: enrollmentsError } = await supabase
+            .from('enrollments')
+            .select('student_id, center_id')
+            .in('student_id', studentIds);
+
+        if (enrollmentsError) throw enrollmentsError;
+
+        const centerIds = [...new Set((enrollments || []).map(e => e.center_id).filter(Boolean))];
+        let centersMap: Record<string, string> = {};
+
+        if (centerIds.length > 0) {
+            const { data: centers, error: centersError } = await supabase
+                .from('educational_centers')
+                .select('id, name')
+                .in('id', centerIds);
+
+            if (centersError) throw centersError;
+            (centers || []).forEach(c => { centersMap[c.id] = c.name; });
+        }
+
+        const studentCentersMap: Record<string, { id: string; name: string }[]> = {};
+        (enrollments || []).forEach(e => {
+            if (!e.center_id) return;
+            if (!studentCentersMap[e.student_id]) studentCentersMap[e.student_id] = [];
+            const centerName = centersMap[e.center_id];
+            if (centerName && !studentCentersMap[e.student_id].find(c => c.id === e.center_id)) {
+                studentCentersMap[e.student_id].push({ id: e.center_id, name: centerName });
+            }
+        });
+
+        const formatted = students.map(s => ({
+            id: s.id,
+            name: s.full_name || `${s.firstname || ''} ${s.lastname || ''}`.trim() || s.email,
+            email: s.email,
+            avatar_url: s.avatar_url,
+            created_at: s.created_at,
+            centers: studentCentersMap[s.id] || []
+        }));
+
+        res.json(formatted);
+    } catch (error: any) {
+        console.error('Error fetching students:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -426,53 +973,6 @@ app.get('/api/students/:studentId/progress', async (req, res) => {
     }
 });
 
-app.get('/api/users/:userId/activity', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        
-        // Fetch activity for the last 7 days
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        
-        const { data, error } = await supabase
-            .from('activity_logs')
-            .select('duration_seconds, created_at, path')
-            .eq('user_id', userId)
-            .gte('created_at', sevenDaysAgo.toISOString())
-            .order('created_at', { ascending: true });
-            
-        if (error) throw error;
-        
-        // Group by day
-        const dailyActivity: Record<string, number> = {};
-        const pathActivity: Record<string, number> = {};
-        
-        (data || []).forEach(log => {
-            const dateStr = new Date(log.created_at).toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' });
-            if (!dailyActivity[dateStr]) dailyActivity[dateStr] = 0;
-            dailyActivity[dateStr] += log.duration_seconds;
-            
-            const p = log.path || '/unknown';
-            if (!pathActivity[p]) pathActivity[p] = 0;
-            pathActivity[p] += log.duration_seconds;
-        });
-        
-        const dailyArray = Object.keys(dailyActivity).map(k => ({ date: k, seconds: dailyActivity[k] }));
-        const pathArray = Object.keys(pathActivity)
-            .map(k => ({ path: k, seconds: pathActivity[k] }))
-            .sort((a,b) => b.seconds - a.seconds)
-            .slice(0, 10);
-        
-        res.json({
-            daily: dailyArray,
-            sections: pathArray
-        });
-    } catch (error: any) {
-        console.error('Error fetching student activity:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // ============================================
 // STUDENT ITEM PROGRESS ENDPOINTS
 // ============================================
@@ -643,98 +1143,6 @@ app.delete('/api/comments/:commentId', async (req, res) => {
     }
 });
 
-// Get ALL registered users with role=student (for search-and-enroll)
-app.get('/api/users/students', async (req, res) => {
-    try {
-        const { data: students, error } = await supabase
-            .from('users')
-            .select('id, full_name, email, firstname, lastname, avatar_url')
-            .eq('role', 'student')
-            .order('full_name', { ascending: true });
-
-        if (error) throw error;
-
-        const formatted = (students || []).map((s) => ({
-            id: s.id,
-            name: s.full_name || `${s.firstname || ''} ${s.lastname || ''}`.trim() || s.email,
-            email: s.email,
-        }));
-
-        res.json(formatted);
-    } catch (error: any) {
-        console.error('Error fetching all students:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get students (optionally filtered by professor)
-
-app.get('/api/students', async (req, res) => {
-    try {
-        const professorId = req.query.professorId as string;
-        
-        let studentIds: string[] = [];
-        
-        if (professorId) {
-            // 1. Get subjects for professor
-            const { data: profSubjects, error: profSubjError } = await supabase
-                .from('professor_subjects')
-                .select('subject_id')
-                .eq('professor_id', professorId);
-
-            if (profSubjError) throw profSubjError;
-
-            const subjectIds = [...new Set(profSubjects?.map(ps => ps.subject_id))];
-
-            if (subjectIds.length === 0) return res.json([]);
-
-            // 2. Get enrollments for those subjects
-            const { data: enrollments, error: enrollmentsError } = await supabase
-                .from('enrollments')
-                .select('student_id')
-                .in('subject_id', subjectIds);
-
-            if (enrollmentsError) throw enrollmentsError;
-
-            studentIds = [...new Set(enrollments?.map(e => e.student_id))];
-
-            if (studentIds.length === 0) return res.json([]);
-        }
-
-        // 3. Get Student Info
-        let query = supabase
-            .from('users')
-            .select('id, full_name, email, firstname, lastname, avatar_url')
-            .eq('role', 'student');
-            
-        if (studentIds.length > 0) {
-            query = query.in('id', studentIds);
-        } else if (professorId) {
-            return res.json([]);
-        }
-
-        const { data: students, error: studentsError } = await query;
-
-        if (studentsError) throw studentsError;
-
-        // Map to format expected by frontend
-        const formattedStudents = students?.map((student, index) => ({
-            id: index + 1,
-            userId: student.id,
-            name: student.full_name || `${student.firstname || ''} ${student.lastname || ''}`.trim() || 'Alumno',
-            email: student.email,
-            description: 'Estudiante',
-            color: ['purple', 'orange', 'salmon', 'blue'][index % 4]
-        })) || [];
-
-        res.json(formattedStudents);
-
-    } catch (error: any) {
-        console.error('Error fetching students:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // Get professor's courses
 app.get('/api/professors/:professorId/courses', async (req, res) => {
     try {
@@ -788,6 +1196,40 @@ app.get('/api/professors/:professorId/courses', async (req, res) => {
     }
 });
 
+
+// Get centers for a professor
+app.get('/api/professors/:professorId/centers', async (req, res) => {
+    try {
+        const { professorId } = req.params;
+
+        const { data: relations, error: relationError } = await supabase
+            .from('center_professors')
+            .select('center_id')
+            .eq('user_id', professorId);
+
+        if (relationError) throw relationError;
+
+        const centerIds = relations?.map(r => r.center_id) || [];
+
+        if (centerIds.length === 0) {
+            return res.json([]);
+        }
+
+        const { data: centers, error: centersError } = await supabase
+            .from('educational_centers')
+            .select('*')
+            .in('id', centerIds);
+
+        if (centersError) throw centersError;
+
+        res.json(centers || []);
+    } catch (error: any) {
+        console.error('Error fetching professor centers:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 // Get grade summary for all students of a professor
 app.get('/api/professors/:professorId/grades-summary', async (req, res) => {
     try {
@@ -834,414 +1276,8 @@ app.get('/api/professors/:professorId/grades-summary', async (req, res) => {
     }
 });
 
-// ============================================
-// ADMIN ENDPOINTS - HIERARCHICAL STRUCTURE
-// ============================================
-
-// ========== USER MANAGEMENT ==========
-
-// Get all students with their enrolled centers
-app.get('/api/admin/students', async (req, res) => {
-    try {
-        // 1. Fetch all users with role=student
-        const { data: students, error: studentsError } = await supabase
-            .from('users')
-            .select('id, full_name, email, firstname, lastname, avatar_url, created_at')
-            .eq('role', 'student')
-            .order('full_name', { ascending: true });
-
-        if (studentsError) throw studentsError;
-
-        if (!students || students.length === 0) return res.json([]);
-
-        const studentIds = students.map(s => s.id);
-
-        // 2. Fetch enrollments with center info for these students
-        const { data: enrollments, error: enrollmentsError } = await supabase
-            .from('enrollments')
-            .select('student_id, center_id')
-            .in('student_id', studentIds);
-
-        if (enrollmentsError) throw enrollmentsError;
-
-        // 3. Get distinct center IDs
-        const centerIds = [...new Set((enrollments || []).map(e => e.center_id).filter(Boolean))];
-        let centersMap: Record<string, string> = {};
-
-        if (centerIds.length > 0) {
-            const { data: centers, error: centersError } = await supabase
-                .from('educational_centers')
-                .select('id, name')
-                .in('id', centerIds);
-
-            if (centersError) throw centersError;
-            (centers || []).forEach(c => { centersMap[c.id] = c.name; });
-        }
-
-        // 4. Build student-to-centers map
-        const studentCentersMap: Record<string, { id: string; name: string }[]> = {};
-        (enrollments || []).forEach(e => {
-            if (!e.center_id) return;
-            if (!studentCentersMap[e.student_id]) studentCentersMap[e.student_id] = [];
-            const centerName = centersMap[e.center_id];
-            if (centerName && !studentCentersMap[e.student_id].find(c => c.id === e.center_id)) {
-                studentCentersMap[e.student_id].push({ id: e.center_id, name: centerName });
-            }
-        });
-
-        // 5. Format response
-        const formatted = students.map(s => ({
-            id: s.id,
-            name: s.full_name || `${s.firstname || ''} ${s.lastname || ''}`.trim() || s.email,
-            email: s.email,
-            avatar_url: s.avatar_url,
-            created_at: s.created_at,
-            centers: studentCentersMap[s.id] || []
-        }));
-
-        res.json(formatted);
-    } catch (error: any) {
-        console.error('Error fetching all students with centers:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Update user profile info and center associations (works for both students and professors)
-app.put('/api/admin/users/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { fullName, email, centerIds } = req.body;
-
-        if (!fullName || !email) {
-            return res.status(400).json({ error: 'Full name and email are required' });
-        }
-
-        // 1. Update auth email if changed
-        const { error: authError } = await supabase.auth.admin.updateUserById(id, {
-            email,
-            user_metadata: { full_name: fullName }
-        });
-        if (authError) throw authError;
-
-        // 2. Update users table and get the user's role
-        const { data: updatedUser, error: profileError } = await supabase
-            .from('users')
-            .update({
-                full_name: fullName,
-                email,
-                firstname: fullName.split(' ')[0],
-                lastname: fullName.split(' ').slice(1).join(' ')
-            })
-            .eq('id', id)
-            .select('role')
-            .single();
-
-        if (profileError) throw profileError;
-
-        const userRole = updatedUser?.role;
-
-        // 3. Reconcile center associations based on role
-        if (Array.isArray(centerIds)) {
-            if (userRole === 'professor') {
-                // ── PROFESSOR: reconcile center_professors table ──────────────────
-                const { data: currentLinks, error: currentLinksError } = await supabase
-                    .from('center_professors')
-                    .select('center_id')
-                    .eq('user_id', id);
-
-                if (currentLinksError) throw currentLinksError;
-
-                const currentCenterIds = (currentLinks || []).map((l: any) => l.center_id) as string[];
-
-                // Centers to REMOVE
-                const centersToRemove = currentCenterIds.filter(cId => !centerIds.includes(cId));
-                if (centersToRemove.length > 0) {
-                    const { error: deleteError } = await supabase
-                        .from('center_professors')
-                        .delete()
-                        .eq('user_id', id)
-                        .in('center_id', centersToRemove);
-                    if (deleteError) throw deleteError;
-                }
-
-                // Centers to ADD
-                const centersToAdd = (centerIds as string[]).filter(cId => !currentCenterIds.includes(cId));
-                if (centersToAdd.length > 0) {
-                    const rows = centersToAdd.map(cId => ({ center_id: cId, user_id: id }));
-                    const { error: insertError } = await supabase
-                        .from('center_professors')
-                        .insert(rows);
-                    if (insertError) throw insertError;
-                    // Update users.center_id to the last added center
-                    await supabase.from('users').update({ center_id: centersToAdd[centersToAdd.length - 1] }).eq('id', id);
-                } else if (centersToRemove.length > 0) {
-                    // Centers were only removed — revert to most recent remaining
-                    const { data: remaining } = await supabase
-                        .from('center_professors')
-                        .select('center_id, created_at')
-                        .eq('user_id', id)
-                        .order('created_at', { ascending: false })
-                        .limit(1);
-                    const latestCenterId = remaining && remaining.length > 0 ? remaining[0].center_id : null;
-                    await supabase.from('users').update({ center_id: latestCenterId }).eq('id', id);
-                }
-            } else {
-                // ── STUDENT (default): reconcile enrollments table ───────────────
-                const { data: currentEnrollments, error: currentEnrollmentsError } = await supabase
-                    .from('enrollments')
-                    .select('center_id')
-                    .eq('student_id', id);
-
-                if (currentEnrollmentsError) throw currentEnrollmentsError;
-
-                const currentCenterIds = [...new Set((currentEnrollments || []).map((e: any) => e.center_id).filter(Boolean))] as string[];
-
-                // Centers to REMOVE
-                const centersToRemove = currentCenterIds.filter(cId => !centerIds.includes(cId));
-                if (centersToRemove.length > 0) {
-                    const { error: deleteError } = await supabase
-                        .from('enrollments')
-                        .delete()
-                        .eq('student_id', id)
-                        .in('center_id', centersToRemove);
-                    if (deleteError) throw deleteError;
-                }
-
-                // Centers to ADD
-                const centersToAdd = (centerIds as string[]).filter(cId => !currentCenterIds.includes(cId));
-                if (centersToAdd.length > 0) {
-                    const { data: grades, error: gradesError } = await supabase
-                        .from('grades_levels')
-                        .select('id, center_id')
-                        .in('center_id', centersToAdd);
-
-                    if (gradesError) throw gradesError;
-
-                    if (grades && grades.length > 0) {
-                        const gradeIds = grades.map((g: any) => g.id);
-
-                        const { data: subjects, error: subjectsError } = await supabase
-                            .from('subjects')
-                            .select('id, grade_id')
-                            .in('grade_id', gradeIds);
-
-                        if (subjectsError) throw subjectsError;
-
-                        if (subjects && subjects.length > 0) {
-                            const { data: existingEnrollments } = await supabase
-                                .from('enrollments')
-                                .select('subject_id')
-                                .eq('student_id', id);
-
-                            const enrolledSubjectIds = new Set(
-                                (existingEnrollments || []).map((e: any) => e.subject_id)
-                            );
-
-                            const now = new Date().toISOString();
-                            const rows = subjects
-                                .filter((s: any) => !enrolledSubjectIds.has(s.id))
-                                .map((s: any) => {
-                                    const grade = grades.find((g: any) => g.id === s.grade_id)!;
-                                    return {
-                                        student_id: id,
-                                        subject_id: s.id,
-                                        grade_id: s.grade_id,
-                                        center_id: grade.center_id,
-                                        status: 'active',
-                                        created_at: now,
-                                    };
-                                });
-
-                            if (rows.length > 0) {
-                                const { error: insertError } = await supabase
-                                    .from('enrollments')
-                                    .insert(rows);
-                                if (insertError) throw insertError;
-                                // Update users.center_id to the last added center
-                                await supabase.from('users').update({ center_id: centersToAdd[centersToAdd.length - 1] }).eq('id', id);
-                            }
-                        }
-                    }
-                } else if (centersToRemove.length > 0) {
-                    // Centers were only removed — revert to most recent remaining
-                    const { data: remaining } = await supabase
-                        .from('enrollments')
-                        .select('center_id, created_at')
-                        .eq('student_id', id)
-                        .order('created_at', { ascending: false })
-                        .limit(1);
-                    const latestCenterId = remaining && remaining.length > 0 ? remaining[0].center_id : null;
-                    await supabase.from('users').update({ center_id: latestCenterId }).eq('id', id);
-                }
-            }
-        }
-
-        res.json({ message: 'User updated successfully' });
-    } catch (error: any) {
-        console.error('Error updating user:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Delete a user (removes from auth and all DB tables — handles both students and professors)
-app.delete('/api/admin/users/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        // Student-specific cleanup
-        await supabase.from('enrollments').delete().eq('student_id', id);
-        await supabase.from('student_tutors').delete().eq('student_id', id);
-        await supabase.from('student_comments').delete().eq('student_id', id);
-
-        // Professor-specific cleanup
-        await supabase.from('center_professors').delete().eq('user_id', id);
-        await supabase.from('student_comments').delete().eq('professor_id', id);
-
-        // Delete user profile
-        await supabase.from('users').delete().eq('id', id);
-
-        // Delete from auth
-        const { error: authDeleteError } = await supabase.auth.admin.deleteUser(id);
-        if (authDeleteError) throw authDeleteError;
-
-        res.json({ message: 'User deleted successfully' });
-    } catch (error: any) {
-        console.error('Error deleting user:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-
-// Create new user (Admin, Teacher, Student)
-app.post('/api/admin/users', async (req, res) => {
-    try {
-        const { email, password, fullName, role } = req.body;
-
-        if (!email || !password || !fullName || !role) {
-            return res.status(400).json({ error: 'Email, password, full name, and role are required' });
-        }
-
-        // 1. Create user in Supabase Auth
-        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-            email,
-            password,
-            email_confirm: true,
-            user_metadata: { full_name: fullName }
-        });
-
-        if (authError) throw authError;
-
-        if (!authUser.user) {
-            throw new Error('Failed to create user object');
-        }
-
-        // 2. Create profile in 'users' table with role
-        // Note: The 'users' table in public schema is usually synchronized with auth.users via triggers.
-        // If we need to set specific fields like 'role' which might not be in the trigger, we should update it.
-        // First, let's try to upsert to ensure it exists and has the role.
-
-        const { error: profileError } = await supabase
-            .from('users')
-            .upsert({
-                id: authUser.user.id,
-                email: email,
-                full_name: fullName,
-                role: role, // Assuming 'role' column exists in public.users
-                // Default fields if needed
-                firstname: fullName.split(' ')[0],
-                lastname: fullName.split(' ').slice(1).join(' ')
-            });
-
-        if (profileError) {
-            // If profile creation fails, we might want to delete the auth user to keep consistency,
-            // but for now let's just throw error.
-            console.error('Error creating profile:', profileError);
-            throw profileError;
-        }
-
-        res.status(201).json({
-            message: 'User created successfully',
-            user: {
-                id: authUser.user.id,
-                email,
-                fullName,
-                role
-            }
-        });
-
-    } catch (error: any) {
-        console.error('Error creating user:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Create a tutor account and link it to a student
-app.post('/api/admin/students/:studentId/tutor', async (req, res) => {
-    try {
-        const { studentId } = req.params;
-        const { email, password, fullName } = req.body;
-
-        if (!email || !password || !fullName) {
-            return res.status(400).json({ error: 'Email, password, and full name are required' });
-        }
-
-        // 1. Create the tutor user in Supabase Auth
-        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-            email,
-            password,
-            email_confirm: true,
-            user_metadata: { full_name: fullName }
-        });
-
-        if (authError) throw authError;
-        if (!authUser.user) throw new Error('Failed to create tutor user');
-
-        const tutorId = authUser.user.id;
-
-        // 2. Insert into public.users with role='tutor'
-        const { error: profileError } = await supabase
-            .from('users')
-            .upsert({
-                id: tutorId,
-                email,
-                full_name: fullName,
-                role: 'tutor',
-                firstname: fullName.split(' ')[0],
-                lastname: fullName.split(' ').slice(1).join(' ')
-            });
-
-        if (profileError) throw profileError;
-
-        // 3. Link tutor to student in student_tutors table
-        const { error: linkError } = await supabase
-            .from('student_tutors')
-            .insert({ student_id: studentId, tutor_id: tutorId });
-
-        if (linkError) {
-            // If the table doesn't exist yet, still return success with a warning
-            console.warn('Could not link tutor to student (student_tutors table may not exist):', linkError.message);
-            return res.status(201).json({
-                message: 'Tutor created but could not be linked (student_tutors table missing)',
-                tutor: { id: tutorId, email, fullName, role: 'tutor' },
-                warning: linkError.message
-            });
-        }
-
-        res.status(201).json({
-            message: 'Tutor created and linked to student successfully',
-            tutor: { id: tutorId, email, fullName, role: 'tutor' }
-        });
-
-    } catch (error: any) {
-        console.error('Error creating tutor:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ========== PROFESSORS (ADMIN) ==========
-
 // Get all professors with their assigned centers
-app.get('/api/admin/professors', async (req, res) => {
+app.get('/api/professors', async (req, res) => {
     try {
         // 1. Fetch all users with role=professor
         const { data: professors, error: professorsError } = await supabase
@@ -1320,9 +1356,8 @@ app.get('/api/admin/professors', async (req, res) => {
 
 // ========== EDUCATIONAL CENTERS ==========
 
-
 // Get all educational centers
-app.get('/api/admin/centers', async (req, res) => {
+app.get('/api/centers', async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('educational_centers')
@@ -1338,7 +1373,7 @@ app.get('/api/admin/centers', async (req, res) => {
 });
 
 // Get specific educational center
-app.get('/api/admin/centers/:id', async (req, res) => {
+app.get('/api/centers/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { data, error } = await supabase
@@ -1358,7 +1393,7 @@ app.get('/api/admin/centers/:id', async (req, res) => {
 });
 
 // Create educational center
-app.post('/api/admin/centers', async (req, res) => {
+app.post('/api/centers', async (req, res) => {
     try {
         const { name, address, phone, email, vr_code } = req.body;
 
@@ -1381,7 +1416,7 @@ app.post('/api/admin/centers', async (req, res) => {
 });
 
 // Update educational center
-app.put('/api/admin/centers/:id', async (req, res) => {
+app.put('/api/centers/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { name, address, phone, email, vr_code, is_active } = req.body;
@@ -1402,7 +1437,7 @@ app.put('/api/admin/centers/:id', async (req, res) => {
 });
 
 // Delete educational center
-app.delete('/api/admin/centers/:id', async (req, res) => {
+app.delete('/api/centers/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -1419,140 +1454,65 @@ app.delete('/api/admin/centers/:id', async (req, res) => {
     }
 });
 
-// ========== ENROLLMENTS ==========
-
-// Enroll a new student in a grade (and all of its subjects)
-app.post('/api/admin/enrollments', async (req, res) => {
+// Get grades by center
+app.get('/api/centers/:centerId/grades', async (req, res) => {
     try {
-        const { center_id, grade_id, student_id } = req.body;
+        const { centerId } = req.params;
 
-        if (!center_id || !grade_id || !student_id) {
-            return res.status(400).json({ error: 'All fields are required' });
-        }
-
-        // 1. Get all subjects belonging to this grade
-        const { data: subjects, error: subjectsError } = await supabase
-            .from('subjects')
-            .select('id')
-            .eq('grade_id', grade_id);
-
-        if (subjectsError) throw subjectsError;
-
-        if (!subjects || subjects.length === 0) {
-            return res.status(400).json({ error: 'This grade has no subjects to enroll into' });
-        }
-
-        // 2. Build one enrollment row per subject
-        const now = new Date().toISOString();
-        const rows = subjects.map(subject => ({
-            subject_id: subject.id,
-            grade_id,
-            center_id,
-            student_id,
-            created_at: now,
-            status: 'active'
-        }));
-
-        // 3. Insert all enrollments at once
         const { data, error } = await supabase
-            .from('enrollments')
-            .insert(rows)
-            .select();
+            .from('grades_levels')
+            .select('*')
+            .eq('center_id', centerId)
+            .order('level');
 
         if (error) throw error;
-
-        // 4. Update users.center_id to the most recently assigned center
-        await supabase
-            .from('users')
-            .update({ center_id })
-            .eq('id', student_id);
-
-        res.status(201).json(data);
+        res.json(data || []);
     } catch (error: any) {
-        console.error('Error enrolling student:', error);
+        console.error('Error fetching grades:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Get students enrolled in a specific grade
-app.get('/api/admin/grades/:gradeId/students', async (req, res) => {
+
+// Get complete hierarchy for a center 
+app.get('/api/centers/:centerId/hierarchy', async (req, res) => {
     try {
-        const { gradeId } = req.params;
+        const { centerId } = req.params;
 
-        // 1. Get distinct student_ids enrolled in this grade
-        const { data: enrollments, error: enrollErr } = await supabase
-            .from('enrollments')
-            .select('student_id')
-            .eq('grade_id', gradeId);
+        // Get center info
+        const { data: center, error: centerError } = await supabase
+            .from('educational_centers')
+            .select('*')
+            .eq('id', centerId)
+            .single();
 
-        if (enrollErr) throw enrollErr;
+        if (centerError) throw centerError;
 
-        if (!enrollments || enrollments.length === 0) {
-            return res.json([]);
-        }
+        // Get grades with subjects
+        const { data: grades, error: gradesError } = await supabase
+            .from('grades_levels')
+            .select(`
+            *,
+                subjects (*)
+            )
+        `)
+            .eq('center_id', centerId)
+            .order('level');
 
-        const studentIds = [...new Set(enrollments.map(e => e.student_id))];
+        if (gradesError) throw gradesError;
 
-        // 2. Fetch user details for those students
-        const { data: students, error: studErr } = await supabase
-            .from('users')
-            .select('id, full_name, email, firstname, lastname, avatar_url')
-            .in('id', studentIds)
-            .order('full_name', { ascending: true });
-
-        if (studErr) throw studErr;
-
-        const formatted = (students || []).map(s => ({
-            id: s.id,
-            name: s.full_name || `${s.firstname || ''} ${s.lastname || ''}`.trim() || s.email,
-            email: s.email,
-            avatar_url: s.avatar_url,
-        }));
-
-        res.json(formatted);
+        res.json({
+            center,
+            grades: grades || []
+        });
     } catch (error: any) {
-        console.error('Error fetching grade students:', error);
+        console.error('Error fetching hierarchy:', error);
         res.status(500).json({ error: error.message });
     }
 });
-
-
-// Remove a student from a grade (delete their enrollments for that grade)
-app.delete('/api/admin/grades/:gradeId/students/:studentId', async (req, res) => {
-    try {
-        const { gradeId, studentId } = req.params;
-
-        const { error } = await supabase
-            .from('enrollments')
-            .delete()
-            .eq('grade_id', gradeId)
-            .eq('student_id', studentId);
-
-        if (error) throw error;
-
-        // Update users.center_id to the student's most recent remaining center (or null)
-        const { data: remaining } = await supabase
-            .from('enrollments')
-            .select('center_id, created_at')
-            .eq('student_id', studentId)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-        const latestCenterId = remaining && remaining.length > 0 ? remaining[0].center_id : null;
-        await supabase.from('users').update({ center_id: latestCenterId }).eq('id', studentId);
-
-        res.json({ message: 'Student removed from grade successfully' });
-    } catch (error: any) {
-        console.error('Error removing student from grade:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ========== CENTER PROFESSORS ==========
-
 
 // Get professors for a center
-app.get('/api/admin/centers/:centerId/professors', async (req, res) => {
+app.get('/api/centers/:centerId/professors', async (req, res) => {
     try {
         const { centerId } = req.params;
 
@@ -1606,7 +1566,7 @@ app.get('/api/admin/centers/:centerId/professors', async (req, res) => {
 });
 
 // Assign professor to center
-app.post('/api/admin/centers/:centerId/professors', async (req, res) => {
+app.post('/api/centers/:centerId/professors', async (req, res) => {
     try {
         const { centerId } = req.params;
         const { userId } = req.body;
@@ -1642,40 +1602,8 @@ app.post('/api/admin/centers/:centerId/professors', async (req, res) => {
     }
 });
 
-// Get centers for a professor
-app.get('/api/professors/:professorId/centers', async (req, res) => {
-    try {
-        const { professorId } = req.params;
-
-        const { data: relations, error: relationError } = await supabase
-            .from('center_professors')
-            .select('center_id')
-            .eq('user_id', professorId);
-
-        if (relationError) throw relationError;
-
-        const centerIds = relations?.map(r => r.center_id) || [];
-
-        if (centerIds.length === 0) {
-            return res.json([]);
-        }
-
-        const { data: centers, error: centersError } = await supabase
-            .from('educational_centers')
-            .select('*')
-            .in('id', centerIds);
-
-        if (centersError) throw centersError;
-
-        res.json(centers || []);
-    } catch (error: any) {
-        console.error('Error fetching professor centers:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // Unassign professor from center
-app.delete('/api/admin/centers/:centerId/professors/:userId', async (req, res) => {
+app.delete('/api/centers/:centerId/professors/:userId', async (req, res) => {
     try {
         const { centerId, userId } = req.params;
 
@@ -1704,29 +1632,149 @@ app.delete('/api/admin/centers/:centerId/professors/:userId', async (req, res) =
     }
 });
 
-// ========== GRADES ==========
 
-// Get grades by center
-app.get('/api/admin/centers/:centerId/grades', async (req, res) => {
+// ========== GRADE LEVELS ==========
+// Enroll a new student in a grade (and all of its subjects)
+app.post('/api/grades/:gradeId/students', async (req, res) => {
     try {
-        const { centerId } = req.params;
+        const { gradeId } = req.params;
+        const { student_id } = req.body;
 
-        const { data, error } = await supabase
+        if (!student_id) {
+            return res.status(400).json({ error: 'student_id is required' });
+        }
+
+        // 0. Look up the grade to get its authoritative center_id —
+        //    never trust center_id from the client, it must match the grade.
+        const { data: grade, error: gradeError } = await supabase
             .from('grades_levels')
-            .select('*')
-            .eq('center_id', centerId)
-            .order('level');
+            .select('id, center_id')
+            .eq('id', gradeId)
+            .single();
+
+        if (gradeError) throw gradeError;
+        if (!grade) return res.status(404).json({ error: 'Grade not found' });
+
+        // 1. Get all subjects belonging to this grade
+        const { data: subjects, error: subjectsError } = await supabase
+            .from('subjects')
+            .select('id')
+            .eq('grade_id', gradeId);
+
+        if (subjectsError) throw subjectsError;
+
+        if (!subjects || subjects.length === 0) {
+            return res.status(400).json({ error: 'This grade has no subjects to enroll into' });
+        }
+
+        // 2. Build one enrollment row per subject
+        const now = new Date().toISOString();
+        const rows = subjects.map(subject => ({
+            subject_id: subject.id,
+            grade_id: gradeId,
+            center_id: grade.center_id,
+            student_id,
+            created_at: now,
+            status: 'active'
+        }));
+
+        // 3. Insert all enrollments at once
+        const { data, error } = await supabase
+            .from('enrollments')
+            .insert(rows)
+            .select();
 
         if (error) throw error;
-        res.json(data || []);
+
+        // 4. Update users.center_id to the most recently assigned center
+        await supabase
+            .from('users')
+            .update({ center_id: grade.center_id })
+            .eq('id', student_id);
+
+        res.status(201).json(data);
     } catch (error: any) {
-        console.error('Error fetching grades:', error);
+        console.error('Error enrolling student:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get students enrolled in a specific grade
+app.get('/api/grades/:gradeId/students', async (req, res) => {
+    try {
+        const { gradeId } = req.params;
+
+        // 1. Get distinct student_ids enrolled in this grade
+        const { data: enrollments, error: enrollErr } = await supabase
+            .from('enrollments')
+            .select('student_id')
+            .eq('grade_id', gradeId);
+
+        if (enrollErr) throw enrollErr;
+
+        if (!enrollments || enrollments.length === 0) {
+            return res.json([]);
+        }
+
+        const studentIds = [...new Set(enrollments.map(e => e.student_id))];
+
+        // 2. Fetch user details for those students
+        const { data: students, error: studErr } = await supabase
+            .from('users')
+            .select('id, full_name, email, firstname, lastname, avatar_url')
+            .in('id', studentIds)
+            .order('full_name', { ascending: true });
+
+        if (studErr) throw studErr;
+
+        const formatted = (students || []).map(s => ({
+            id: s.id,
+            name: s.full_name || `${s.firstname || ''} ${s.lastname || ''}`.trim() || s.email,
+            email: s.email,
+            avatar_url: s.avatar_url,
+        }));
+
+        res.json(formatted);
+    } catch (error: any) {
+        console.error('Error fetching grade students:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+// Remove a student from a grade (delete their enrollments for that grade)
+app.delete('/api/grades/:gradeId/students/:studentId', async (req, res) => {
+    try {
+        const { gradeId, studentId } = req.params;
+
+        const { error } = await supabase
+            .from('enrollments')
+            .delete()
+            .eq('grade_id', gradeId)
+            .eq('student_id', studentId);
+
+        if (error) throw error;
+
+        // Update users.center_id to the student's most recent remaining center (or null)
+        const { data: remaining } = await supabase
+            .from('enrollments')
+            .select('center_id, created_at')
+            .eq('student_id', studentId)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        const latestCenterId = remaining && remaining.length > 0 ? remaining[0].center_id : null;
+        await supabase.from('users').update({ center_id: latestCenterId }).eq('id', studentId);
+
+        res.json({ message: 'Student removed from grade successfully' });
+    } catch (error: any) {
+        console.error('Error removing student from grade:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
 // Create grade
-app.post('/api/admin/grades', async (req, res) => {
+app.post('/api/grades', async (req, res) => {
     try {
         const { center_id, name, level } = req.body;
 
@@ -1749,7 +1797,7 @@ app.post('/api/admin/grades', async (req, res) => {
 });
 
 // Get grade by ID
-app.get('/api/admin/grades/:id', async (req, res) => {
+app.get('/api/grades/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { data, error } = await supabase
@@ -1769,7 +1817,7 @@ app.get('/api/admin/grades/:id', async (req, res) => {
 });
 
 // Update grade
-app.put('/api/admin/grades/:id', async (req, res) => {
+app.put('/api/grades/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { name, level, is_active } = req.body;
@@ -1790,7 +1838,7 @@ app.put('/api/admin/grades/:id', async (req, res) => {
 });
 
 // Delete grade
-app.delete('/api/admin/grades/:id', async (req, res) => {
+app.delete('/api/grades/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -1807,10 +1855,299 @@ app.delete('/api/admin/grades/:id', async (req, res) => {
     }
 });
 
+// Get subjects by grade
+app.get('/api/grades/:gradeId/subjects', async (req, res) => {
+    try {
+        const { gradeId } = req.params;
+
+        const { data, error } = await supabase
+            .from('subjects')
+            .select('*')
+            .eq('grade_id', gradeId)
+            .order('name');
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (error: any) {
+        console.error('Error fetching subjects:', error);
+        res.status(500).json({
+            error: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+        });
+    }
+});
+
+// Get all content for a grade (Admin/Professor/Student with access)
+app.get('/api/grades/:gradeId/content', async (req, res) => { 
+    try {
+        const { gradeId } = req.params;
+        const { userId, role } = req.query;
+
+        if (!userId || !role) {
+            return res.status(400).json({ error: 'User ID and Role are required' });
+        }
+
+        let hasAccess = false;
+
+        if (role === 'admin') {
+            hasAccess = true;
+        } else if (role === 'professor') {
+            // Check if professor is assigned to the center of this grade
+            const { data: grade } = await supabase
+                .from('grades_levels')
+                .select('center_id')
+                .eq('id', gradeId)
+                .single();
+
+            if (grade) {
+                const { data: relation } = await supabase
+                    .from('center_professors')
+                    .select('id')
+                    .eq('center_id', grade.center_id)
+                    .eq('user_id', userId)
+                    .single();
+
+                if (relation) hasAccess = true;
+            }
+        } else if (role === 'student') {
+            // Check if student is enrolled in this grade
+            const { data: enrollment } = await supabase
+                .from('enrollments')
+                .select('id')
+                .eq('student_id', userId)
+                .eq('grade_id', gradeId)
+                .limit(1)
+                .maybeSingle();
+
+            if (enrollment) hasAccess = true;
+        }
+
+        if (!hasAccess) {
+            return res.status(403).json({ error: 'Access denied to this grade content' });
+        }
+
+        // Fetch content
+        const { data, error } = await supabase
+            .from('grade_content')
+            .select('*')
+            .eq('grade_id', gradeId)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Generate signed URLs
+        const contentWithUrls = await Promise.all(
+            (data || []).map(async (content) => {
+                try {
+                    const { data: urlData } = await supabase.storage
+                        .from('grade-content')
+                        .createSignedUrl(content.file_path, 3600);
+
+                    return {
+                        ...content,
+                        download_url: urlData?.signedUrl || null
+                    };
+                } catch (err) {
+                    console.error('Error generating signed URL:', err);
+                    return {
+                        ...content,
+                        download_url: null
+                    };
+                }
+            })
+        );
+
+        res.json(contentWithUrls);
+    } catch (error: any) {
+        console.error('Error fetching grade content:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Admin only endpoint (kept for compatibility or specific admin dashboard usage)
+app.get('/api/grades/:gradeId/content', async (req, res) => {
+    try {
+        const { gradeId } = req.params;
+        // Admin assumed access
+        const { data, error } = await supabase
+            .from('grade_content')
+            .select('*')
+            .eq('grade_id', gradeId)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+
+        // ... (rest of implementation similar to above) ...
+        if (error) throw error;
+
+        const contentWithUrls = await Promise.all(
+            (data || []).map(async (content) => {
+                try {
+                    const { data: urlData } = await supabase.storage
+                        .from('grade-content')
+                        .createSignedUrl(content.file_path, 3600);
+                    return { ...content, download_url: urlData?.signedUrl || null };
+                } catch (err) {
+                    return { ...content, download_url: null };
+                }
+            })
+        );
+        res.json(contentWithUrls);
+    } catch (error: any) {
+        console.error('Error fetching grade content (admin):', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Upload content to a grade (multiple files)
+app.post('/api/grades/:gradeId/content', upload.array('files', 10), async (req, res) => {
+    try {
+        const { gradeId } = req.params;
+        const files = req.files as Express.Multer.File[];
+        const { titles } = req.body; // Optional array of titles
+
+        if (!files || files.length === 0) {
+            return res.status(400).json({ error: 'No files provided' });
+        }
+
+        // Verify grade exists
+        const { data: grade, error: gradeError } = await supabase
+            .from('grades_levels')
+            .select('id, center_id')
+            .eq('id', gradeId)
+            .single();
+
+        if (gradeError || !grade) {
+            return res.status(404).json({ error: 'Grade not found' });
+        }
+
+        const uploadedContent = [];
+        const errors = [];
+
+        // Parse titles if provided
+        let parsedTitles: string[] = [];
+        if (titles) {
+            try {
+                parsedTitles = typeof titles === 'string' ? JSON.parse(titles) : titles;
+            } catch (e) {
+                parsedTitles = [];
+            }
+        }
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const title = parsedTitles[i] || file.originalname.replace('.pdf', '');
+
+            try {
+                // Generate unique file path
+                const timestamp = Date.now();
+                const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+                const filePath = `${grade.center_id}/${gradeId}/${timestamp}_${sanitizedFileName}`;
+
+                // Upload to Supabase Storage
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('grade-content')
+                    .upload(filePath, file.buffer, {
+                        contentType: file.mimetype,
+                        upsert: false
+                    });
+
+                if (uploadError) throw uploadError;
+
+                // Create database record
+                const { data: contentData, error: contentError } = await supabase
+                    .from('grade_content')
+                    .insert({
+                        grade_id: gradeId,
+                        title: title,
+                        file_name: file.originalname,
+                        file_path: filePath,
+                        file_size: file.size
+                    })
+                    .select()
+                    .single();
+
+                if (contentError) {
+                    // If DB insert fails, delete the uploaded file
+                    await supabase.storage.from('grade-content').remove([filePath]);
+                    throw contentError;
+                }
+
+                uploadedContent.push(contentData);
+            } catch (error: any) {
+                console.error(`Error uploading file ${file.originalname}:`, error);
+                errors.push({
+                    fileName: file.originalname,
+                    error: error.message
+                });
+            }
+        }
+
+        if (uploadedContent.length === 0) {
+            return res.status(500).json({
+                error: 'Failed to upload any files',
+                details: errors
+            });
+        }
+
+        res.status(201).json({
+            message: `Successfully uploaded ${uploadedContent.length} of ${files.length} files`,
+            content: uploadedContent,
+            errors: errors.length > 0 ? errors : undefined
+        });
+    } catch (error: any) {
+        console.error('Error uploading content:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete content
+app.delete('/api/admin/content/:contentId', async (req, res) => {
+    try {
+        const { contentId } = req.params;
+
+        // Get content info first
+        const { data: content, error: fetchError } = await supabase
+            .from('grade_content')
+            .select('file_path')
+            .eq('id', contentId)
+            .single();
+
+        if (fetchError || !content) {
+            return res.status(404).json({ error: 'Content not found' });
+        }
+
+        // Delete from storage
+        const { error: storageError } = await supabase.storage
+            .from('grade-content')
+            .remove([content.file_path]);
+
+        if (storageError) {
+            console.error('Error deleting from storage:', storageError);
+            // Continue with DB deletion even if storage deletion fails
+        }
+
+        // Delete from database
+        const { error: deleteError } = await supabase
+            .from('grade_content')
+            .delete()
+            .eq('id', contentId);
+
+        if (deleteError) throw deleteError;
+
+        res.json({ message: 'Content deleted successfully' });
+    } catch (error: any) {
+        console.error('Error deleting content:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ========== SUBJECTS ==========
 
 // Create subject
-app.post('/api/admin/subjects', async (req, res) => {
+app.post('/api/subjects', async (req, res) => {
     try {
         const {
             name,
@@ -1857,7 +2194,7 @@ app.post('/api/admin/subjects', async (req, res) => {
 });
 
 // Update subject
-app.put('/api/admin/subjects/:id', async (req, res) => {
+app.put('/api/subjects/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { name, short_name, description, start_date, end_date, visibility, max_students, is_active, schedule_days, schedule_start_time, schedule_end_time } = req.body;
@@ -1890,7 +2227,7 @@ app.put('/api/admin/subjects/:id', async (req, res) => {
 });
 
 // Delete subject
-app.delete('/api/admin/subjects/:id', async (req, res) => {
+app.delete('/api/subjects/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -1907,32 +2244,8 @@ app.delete('/api/admin/subjects/:id', async (req, res) => {
     }
 });
 
-// Get subjects by grade
-app.get('/api/admin/grades/:gradeId/subjects', async (req, res) => {
-    try {
-        const { gradeId } = req.params;
-
-        const { data, error } = await supabase
-            .from('subjects')
-            .select('*')
-            .eq('grade_id', gradeId)
-            .order('name');
-
-        if (error) throw error;
-        res.json(data || []);
-    } catch (error: any) {
-        console.error('Error fetching subjects:', error);
-        res.status(500).json({
-            error: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code
-        });
-    }
-});
-
 // Get single subject by ID
-app.get('/api/admin/subjects/:id', async (req, res) => {
+app.get('/api/subjects/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { data, error } = await supabase
@@ -2055,7 +2368,7 @@ app.patch('/api/submissions/:id', async (req, res) => {
 // ========== SUBJECT PROFESSORS ==========
 
 // Get professors for a subject
-app.get('/api/admin/subjects/:subjectId/professors', async (req, res) => {
+app.get('/api/subjects/:subjectId/professors', async (req, res) => {
     try {
         const { subjectId } = req.params;
 
@@ -2095,7 +2408,7 @@ app.get('/api/admin/subjects/:subjectId/professors', async (req, res) => {
 });
 
 // Assign professor to subject
-app.post('/api/admin/subjects/:subjectId/professors', async (req, res) => {
+app.post('/api/subjects/:subjectId/professors', async (req, res) => {
     try {
         const { subjectId } = req.params;
         const { userId } = req.body;
@@ -2125,7 +2438,7 @@ app.post('/api/admin/subjects/:subjectId/professors', async (req, res) => {
 });
 
 // Unassign professor from subject
-app.delete('/api/admin/subjects/:subjectId/professors/:userId', async (req, res) => {
+app.delete('/api/subjects/:subjectId/professors/:userId', async (req, res) => {
     try {
         const { subjectId, userId } = req.params;
 
@@ -2390,7 +2703,7 @@ function extractStoragePath(contentUrl: string, bucket: string): string {
 }
 
 // Get modules for a subject
-app.get('/api/admin/subjects/:subjectId/modules', async (req, res) => {
+app.get('/api/subjects/:subjectId/modules', async (req, res) => {
     try {
         const { subjectId } = req.params;
 
@@ -2443,7 +2756,7 @@ app.get('/api/admin/subjects/:subjectId/modules', async (req, res) => {
 });
 
 // Create module
-app.post('/api/admin/subjects/:subjectId/modules', async (req, res) => {
+app.post('/api/subjects/:subjectId/modules', async (req, res) => {
     try {
         const { subjectId } = req.params;
         const { title, order_index } = req.body;
@@ -2462,8 +2775,95 @@ app.post('/api/admin/subjects/:subjectId/modules', async (req, res) => {
     }
 });
 
+// GET all assignments for a subject
+app.get('/api/subjects/:subjectId/assignments', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+
+        const { data, error } = await supabase
+            .from('assignments')
+            .select('*')
+            .eq('subject_id', subjectId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (error: any) {
+        console.error('Error fetching assignments:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST create assignment for a subject
+app.post('/api/subjects/:subjectId/assignments', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+        const {
+            professor_id,
+            module_id,
+            title,
+            instructions_md,
+            due_at,
+            available_from,
+            max_score,
+            allowed_file_types,
+            max_file_size_mb,
+            allow_resubmission,
+            status,
+        } = req.body;
+
+        if (!title || !professor_id) {
+            return res.status(400).json({ error: 'title and professor_id are required' });
+        }
+
+        const { data, error } = await supabase
+            .from('assignments')
+            .insert({
+                subject_id: subjectId,
+                professor_id,
+                module_id: module_id || null,
+                title,
+                instructions_md: instructions_md || null,
+                due_at: due_at || null,
+                available_from: available_from || null,
+                max_score: max_score != null ? Number(max_score) : null,
+                allowed_file_types: allowed_file_types || null,
+                max_file_size_mb: max_file_size_mb != null ? Number(max_file_size_mb) : null,
+                allow_resubmission: allow_resubmission ?? null,
+                status: status || 'draft',
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.status(201).json(data);
+    } catch (error: any) {
+        console.error('Error creating assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET all calendar events for a subject
+app.get('/api/subjects/:subjectId/calendar-events', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+
+        const { data, error } = await supabase
+            .from('calendar_events')
+            .select('*')
+            .eq('subject_id', subjectId)
+            .order('event_date', { ascending: true });
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (error: any) {
+        console.error('Error fetching calendar events:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Update module
-app.put('/api/admin/modules/:id', async (req, res) => {
+app.put('/api/modules/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { title, order_index, is_active } = req.body;
@@ -2484,7 +2884,7 @@ app.put('/api/admin/modules/:id', async (req, res) => {
 });
 
 // Delete module
-app.delete('/api/admin/modules/:id', async (req, res) => {
+app.delete('/api/modules/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -2504,7 +2904,7 @@ app.delete('/api/admin/modules/:id', async (req, res) => {
 // ITEMS
 
 // Create item (Standard JSON)
-app.post('/api/admin/modules/:moduleId/items', async (req, res) => {
+app.post('/api/modules/:moduleId/items', async (req, res) => {
     try {
         const { moduleId } = req.params;
         const { type, title, description, content_url, order_index, image_url } = req.body;
@@ -2533,7 +2933,7 @@ app.post('/api/admin/modules/:moduleId/items', async (req, res) => {
 });
 
 // Upload item (Multipart)
-app.post('/api/admin/modules/:moduleId/items/upload', upload.single('file'), async (req, res) => {
+app.post('/api/modules/:moduleId/items/upload', upload.single('file'), async (req, res) => {
     try {
         const { moduleId } = req.params;
         const file = req.file;
@@ -2587,7 +2987,7 @@ app.post('/api/admin/modules/:moduleId/items/upload', upload.single('file'), asy
 });
 
 // Delete module
-app.delete('/api/admin/modules/:id', async (req, res) => {
+app.delete('/api/modules/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -2607,7 +3007,7 @@ app.delete('/api/admin/modules/:id', async (req, res) => {
 
 
 // Update item
-app.put('/api/admin/items/:id', async (req, res) => {
+app.put('/api/items/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { title, description, content_url, order_index, is_visible, image_url } = req.body;
@@ -2628,7 +3028,7 @@ app.put('/api/admin/items/:id', async (req, res) => {
 });
 
 // Delete item
-app.delete('/api/admin/items/:id', async (req, res) => {
+app.delete('/api/items/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -2641,408 +3041,6 @@ app.delete('/api/admin/items/:id', async (req, res) => {
         res.json({ message: 'Item deleted successfully' });
     } catch (error: any) {
         console.error('Error deleting item:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ========== HIERARCHY VIEW ==========
-
-// Get complete hierarchy for a center // TODO: see if it broke
-app.get('/api/admin/centers/:centerId/hierarchy', async (req, res) => {
-    try {
-        const { centerId } = req.params;
-
-        // Get center info
-        const { data: center, error: centerError } = await supabase
-            .from('educational_centers')
-            .select('*')
-            .eq('id', centerId)
-            .single();
-
-        if (centerError) throw centerError;
-
-        // Get grades with subjects
-        const { data: grades, error: gradesError } = await supabase
-            .from('grades_levels')
-            .select(`
-            *,
-                subjects (*)
-            )
-        `)
-            .eq('center_id', centerId)
-            .order('level');
-
-        if (gradesError) throw gradesError;
-
-        res.json({
-            center,
-            grades: grades || []
-        });
-    } catch (error: any) {
-        console.error('Error fetching hierarchy:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ========== GRADE CONTENT MANAGEMENT ==========
-
-// Get all content for a grade (Admin/Professor/Student with access)
-app.get('/api/grades/:gradeId/content', async (req, res) => { 
-    try {
-        const { gradeId } = req.params;
-        const { userId, role } = req.query;
-
-        if (!userId || !role) {
-            return res.status(400).json({ error: 'User ID and Role are required' });
-        }
-
-        let hasAccess = false;
-
-        if (role === 'admin') {
-            hasAccess = true;
-        } else if (role === 'professor') {
-            // Check if professor is assigned to the center of this grade
-            const { data: grade } = await supabase
-                .from('grades_levels')
-                .select('center_id')
-                .eq('id', gradeId)
-                .single();
-
-            if (grade) {
-                const { data: relation } = await supabase
-                    .from('center_professors')
-                    .select('id')
-                    .eq('center_id', grade.center_id)
-                    .eq('user_id', userId)
-                    .single();
-
-                if (relation) hasAccess = true;
-            }
-        } else if (role === 'student') {
-            // Check if student is enrolled in this grade
-            const { data: enrollment } = await supabase
-                .from('enrollments')
-                .select('id')
-                .eq('student_id', userId)
-                .eq('grade_id', gradeId)
-                .limit(1)
-                .maybeSingle();
-
-            if (enrollment) hasAccess = true;
-        }
-
-        if (!hasAccess) {
-            return res.status(403).json({ error: 'Access denied to this grade content' });
-        }
-
-        // Fetch content
-        const { data, error } = await supabase
-            .from('grade_content')
-            .select('*')
-            .eq('grade_id', gradeId)
-            .eq('is_active', true)
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        // Generate signed URLs
-        const contentWithUrls = await Promise.all(
-            (data || []).map(async (content) => {
-                try {
-                    const { data: urlData } = await supabase.storage
-                        .from('grade-content')
-                        .createSignedUrl(content.file_path, 3600);
-
-                    return {
-                        ...content,
-                        download_url: urlData?.signedUrl || null
-                    };
-                } catch (err) {
-                    console.error('Error generating signed URL:', err);
-                    return {
-                        ...content,
-                        download_url: null
-                    };
-                }
-            })
-        );
-
-        res.json(contentWithUrls);
-    } catch (error: any) {
-        console.error('Error fetching grade content:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Admin only endpoint (kept for compatibility or specific admin dashboard usage)
-app.get('/api/admin/grades/:gradeId/content', async (req, res) => {
-    try {
-        const { gradeId } = req.params;
-        // Admin assumed access
-        const { data, error } = await supabase
-            .from('grade_content')
-            .select('*')
-            .eq('grade_id', gradeId)
-            .eq('is_active', true)
-            .order('created_at', { ascending: false });
-
-        // ... (rest of implementation similar to above) ...
-        if (error) throw error;
-
-        const contentWithUrls = await Promise.all(
-            (data || []).map(async (content) => {
-                try {
-                    const { data: urlData } = await supabase.storage
-                        .from('grade-content')
-                        .createSignedUrl(content.file_path, 3600);
-                    return { ...content, download_url: urlData?.signedUrl || null };
-                } catch (err) {
-                    return { ...content, download_url: null };
-                }
-            })
-        );
-        res.json(contentWithUrls);
-    } catch (error: any) {
-        console.error('Error fetching grade content (admin):', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Upload content to a grade (multiple files)
-app.post('/api/admin/grades/:gradeId/content', upload.array('files', 10), async (req, res) => {
-    try {
-        const { gradeId } = req.params;
-        const files = req.files as Express.Multer.File[];
-        const { titles } = req.body; // Optional array of titles
-
-        if (!files || files.length === 0) {
-            return res.status(400).json({ error: 'No files provided' });
-        }
-
-        // Verify grade exists
-        const { data: grade, error: gradeError } = await supabase
-            .from('grades_levels')
-            .select('id, center_id')
-            .eq('id', gradeId)
-            .single();
-
-        if (gradeError || !grade) {
-            return res.status(404).json({ error: 'Grade not found' });
-        }
-
-        const uploadedContent = [];
-        const errors = [];
-
-        // Parse titles if provided
-        let parsedTitles: string[] = [];
-        if (titles) {
-            try {
-                parsedTitles = typeof titles === 'string' ? JSON.parse(titles) : titles;
-            } catch (e) {
-                parsedTitles = [];
-            }
-        }
-
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const title = parsedTitles[i] || file.originalname.replace('.pdf', '');
-
-            try {
-                // Generate unique file path
-                const timestamp = Date.now();
-                const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-                const filePath = `${grade.center_id}/${gradeId}/${timestamp}_${sanitizedFileName}`;
-
-                // Upload to Supabase Storage
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('grade-content')
-                    .upload(filePath, file.buffer, {
-                        contentType: file.mimetype,
-                        upsert: false
-                    });
-
-                if (uploadError) throw uploadError;
-
-                // Create database record
-                const { data: contentData, error: contentError } = await supabase
-                    .from('grade_content')
-                    .insert({
-                        grade_id: gradeId,
-                        title: title,
-                        file_name: file.originalname,
-                        file_path: filePath,
-                        file_size: file.size
-                    })
-                    .select()
-                    .single();
-
-                if (contentError) {
-                    // If DB insert fails, delete the uploaded file
-                    await supabase.storage.from('grade-content').remove([filePath]);
-                    throw contentError;
-                }
-
-                uploadedContent.push(contentData);
-            } catch (error: any) {
-                console.error(`Error uploading file ${file.originalname}:`, error);
-                errors.push({
-                    fileName: file.originalname,
-                    error: error.message
-                });
-            }
-        }
-
-        if (uploadedContent.length === 0) {
-            return res.status(500).json({
-                error: 'Failed to upload any files',
-                details: errors
-            });
-        }
-
-        res.status(201).json({
-            message: `Successfully uploaded ${uploadedContent.length} of ${files.length} files`,
-            content: uploadedContent,
-            errors: errors.length > 0 ? errors : undefined
-        });
-    } catch (error: any) {
-        console.error('Error uploading content:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Delete content
-app.delete('/api/admin/content/:contentId', async (req, res) => {
-    try {
-        const { contentId } = req.params;
-
-        // Get content info first
-        const { data: content, error: fetchError } = await supabase
-            .from('grade_content')
-            .select('file_path')
-            .eq('id', contentId)
-            .single();
-
-        if (fetchError || !content) {
-            return res.status(404).json({ error: 'Content not found' });
-        }
-
-        // Delete from storage
-        const { error: storageError } = await supabase.storage
-            .from('grade-content')
-            .remove([content.file_path]);
-
-        if (storageError) {
-            console.error('Error deleting from storage:', storageError);
-            // Continue with DB deletion even if storage deletion fails
-        }
-
-        // Delete from database
-        const { error: deleteError } = await supabase
-            .from('grade_content')
-            .delete()
-            .eq('id', contentId);
-
-        if (deleteError) throw deleteError;
-
-        res.json({ message: 'Content deleted successfully' });
-    } catch (error: any) {
-        console.error('Error deleting content:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get aggregated profile details (centers, grades, subjects)
-app.get('/api/users/:userId/profile-details', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const { role } = req.query;
-
-        if (role === 'admin') {
-            return res.json({ centers: 'N/A', grades: 'N/A', subjects: 'N/A' });
-        }
-
-        let centerNames: string[] = [];
-        let gradeNames: string[] = [];
-        let subjectNames: string[] = [];
-
-        if (role === 'professor') {
-            const { data: profSubjects, error } = await supabase
-                .from('professor_subjects')
-                .select(`
-                    subjects (
-                        name,
-                        grades_levels (
-                            name,
-                            educational_centers (name)
-                        )
-                    )
-                `)
-                .eq('professor_id', userId);
-            
-            if (error) throw error;
-
-            profSubjects?.forEach(ps => {
-                const sub: any = ps.subjects;
-                if (sub) {
-                    subjectNames.push(sub.name);
-                    if (sub.grades_levels) {
-                        gradeNames.push(sub.grades_levels.name);
-                        if (sub.grades_levels.educational_centers) {
-                            centerNames.push(sub.grades_levels.educational_centers.name);
-                        }
-                    }
-                }
-            });
-        } else if (role === 'tutor' || role === 'student') {
-            let targetStudentIds = [userId];
-
-            if (role === 'tutor') {
-                const { data: studentTutors, error: tutorError } = await supabase
-                    .from('student_tutors')
-                    .select('student_id')
-                    .eq('tutor_id', userId);
-                if (tutorError) throw tutorError;
-                targetStudentIds = studentTutors?.map(st => st.student_id) || [];
-            }
-
-            if (targetStudentIds.length > 0) {
-                const { data: enrollments, error: enrollError } = await supabase
-                    .from('enrollments')
-                    .select(`
-                        subjects (name),
-                        grades_levels (name, educational_centers (name))
-                    `)
-                    .in('student_id', targetStudentIds);
-                
-                if (enrollError) throw enrollError;
-
-                enrollments?.forEach(en => {
-                    const sub: any = en.subjects;
-                    const grade: any = en.grades_levels;
-                    if (sub) subjectNames.push(sub.name);
-                    if (grade) {
-                        gradeNames.push(grade.name);
-                        if (grade.educational_centers) {
-                            centerNames.push(grade.educational_centers.name);
-                        }
-                    }
-                });
-            }
-        }
-
-        // Deduplicate
-        const uniqueCenters = [...new Set(centerNames)].filter(Boolean);
-        const uniqueGrades = [...new Set(gradeNames)].filter(Boolean);
-        const uniqueSubjects = [...new Set(subjectNames)].filter(Boolean);
-
-        res.json({
-            centers: uniqueCenters.length > 0 ? uniqueCenters.join(', ') : 'N/A',
-            grades: uniqueGrades.length > 0 ? uniqueGrades.join(', ') : 'N/A',
-            subjects: uniqueSubjects.length > 0 ? uniqueSubjects.join(', ') : 'N/A'
-        });
-
-    } catch (error: any) {
-        console.error('Error fetching profile details:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -3183,269 +3181,6 @@ app.get('/api/schedule/:userId', async (req, res) => {
     }
 });
 
-// Basic Route
-app.get('/', (req, res) => {
-    res.send('Backend API Running 🚀');
-});
-
-// Global Error Handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error('Global Error Handler:', err);
-    res.status(500).json({
-        error: err.message || 'Internal Server Error',
-        stack: err.stack,
-        details: JSON.stringify(err)
-    });
-});
-
-// Health check
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// ============================================
-// ASSIGNMENTS (PROFESSOR)
-// ============================================
-
-const assignmentUpload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 100 * 1024 * 1024, // 50MB
-        files: 5
-    }
-});
-
-app.post('/api/professors/:professorId/courses/:courseId/assignments', assignmentUpload.single('attachment'), async (req, res) => {
-    try {
-        const { professorId, courseId } = req.params;
-        const {
-            title,
-            instructions_md,
-            max_score,
-            due_at,
-            available_from,
-            allow_resubmission,
-            module_id
-        } = req.body;
-
-        if (!title) {
-            return res.status(400).json({ error: 'Title is required' });
-        }
-
-        // Insert assignment
-        const { data: assignment, error: assignmentError } = await supabase
-            .from('assignments')
-            .insert({
-                title,
-                instructions_md,
-                max_score: max_score ? parseFloat(max_score) : null,
-                due_at: due_at || null,
-                available_from: available_from || null,
-                allow_resubmission: allow_resubmission === 'true',
-                subject_id: courseId,
-                professor_id: professorId,
-                module_id: module_id || null,
-                status: 'published'
-            })
-            .select()
-            .single();
-
-        if (assignmentError) throw assignmentError;
-
-        // Handle attachment if any
-        if (req.file) {
-            const file = req.file;
-            const fileExt = file.originalname.split('.').pop();
-            const fileName = `${assignment.id}_${Date.now()}.${fileExt}`;
-            const filePath = `assignments/${fileName}`;
-
-            // Upload to Supabase Storage
-            const { error: uploadError } = await supabase.storage
-                .from('grade-content') // Reusing existing bucket, or could create 'assignments' bucket
-                .upload(filePath, file.buffer, {
-                    contentType: file.mimetype,
-                    upsert: true
-                });
-
-            if (uploadError) throw uploadError;
-
-            // Insert attachment record
-            const { error: attachmentError } = await supabase
-                .from('assignment_attachments')
-                .insert({
-                    assignment_id: assignment.id,
-                    file_name: file.originalname,
-                    mime_type: file.mimetype,
-                    storage_path: filePath
-                });
-
-            if (attachmentError) throw attachmentError;
-        }
-
-        res.status(201).json(assignment);
-    } catch (error: any) {
-        console.error('Error creating assignment:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ============================================
-// ASSIGNMENTS CRUD (professor, scoped to subject)
-// ============================================
-
-// GET all assignments for a subject
-app.get('/api/subjects/:subjectId/assignments', async (req, res) => {
-    try {
-        const { subjectId } = req.params;
-
-        const { data, error } = await supabase
-            .from('assignments')
-            .select('*')
-            .eq('subject_id', subjectId)
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        res.json(data || []);
-    } catch (error: any) {
-        console.error('Error fetching assignments:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// POST create assignment for a subject
-app.post('/api/subjects/:subjectId/assignments', async (req, res) => {
-    try {
-        const { subjectId } = req.params;
-        const {
-            professor_id,
-            module_id,
-            title,
-            instructions_md,
-            due_at,
-            available_from,
-            max_score,
-            allowed_file_types,
-            max_file_size_mb,
-            allow_resubmission,
-            status,
-        } = req.body;
-
-        if (!title || !professor_id) {
-            return res.status(400).json({ error: 'title and professor_id are required' });
-        }
-
-        const { data, error } = await supabase
-            .from('assignments')
-            .insert({
-                subject_id: subjectId,
-                professor_id,
-                module_id: module_id || null,
-                title,
-                instructions_md: instructions_md || null,
-                due_at: due_at || null,
-                available_from: available_from || null,
-                max_score: max_score != null ? Number(max_score) : null,
-                allowed_file_types: allowed_file_types || null,
-                max_file_size_mb: max_file_size_mb != null ? Number(max_file_size_mb) : null,
-                allow_resubmission: allow_resubmission ?? null,
-                status: status || 'draft',
-            })
-            .select()
-            .single();
-
-        if (error) throw error;
-        res.status(201).json(data);
-    } catch (error: any) {
-        console.error('Error creating assignment:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// PATCH update assignment
-app.patch('/api/assignments/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const {
-            module_id,
-            title,
-            instructions_md,
-            due_at,
-            available_from,
-            max_score,
-            allowed_file_types,
-            max_file_size_mb,
-            allow_resubmission,
-            status,
-        } = req.body;
-
-        const updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
-        if (title !== undefined) updatePayload.title = title;
-        if (instructions_md !== undefined) updatePayload.instructions_md = instructions_md;
-        if (module_id !== undefined) updatePayload.module_id = module_id || null;
-        if (due_at !== undefined) updatePayload.due_at = due_at || null;
-        if (available_from !== undefined) updatePayload.available_from = available_from || null;
-        if (max_score !== undefined) updatePayload.max_score = max_score != null ? Number(max_score) : null;
-        if (allowed_file_types !== undefined) updatePayload.allowed_file_types = allowed_file_types;
-        if (max_file_size_mb !== undefined) updatePayload.max_file_size_mb = max_file_size_mb != null ? Number(max_file_size_mb) : null;
-        if (allow_resubmission !== undefined) updatePayload.allow_resubmission = allow_resubmission;
-        if (status !== undefined) updatePayload.status = status;
-
-        const { data, error } = await supabase
-            .from('assignments')
-            .update(updatePayload)
-            .eq('id', id)
-            .select()
-            .single();
-
-        if (error) throw error;
-        res.json(data);
-    } catch (error: any) {
-        console.error('Error updating assignment:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// DELETE assignment
-app.delete('/api/assignments/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const { error } = await supabase
-            .from('assignments')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
-        res.json({ message: 'Assignment deleted successfully' });
-    } catch (error: any) {
-        console.error('Error deleting assignment:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ============================================
-// CALENDAR EVENTS CRUD (professor, scoped to subject)
-// ============================================
-
-// GET all calendar events for a subject
-app.get('/api/subjects/:subjectId/calendar-events', async (req, res) => {
-    try {
-        const { subjectId } = req.params;
-
-        const { data, error } = await supabase
-            .from('calendar_events')
-            .select('*')
-            .eq('subject_id', subjectId)
-            .order('event_date', { ascending: true });
-
-        if (error) throw error;
-        res.json(data || []);
-    } catch (error: any) {
-        console.error('Error fetching calendar events:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // POST create calendar event
 app.post('/api/calendar-events', async (req, res) => {
     try {
@@ -3529,6 +3264,150 @@ app.delete('/api/calendar-events/:id', async (req, res) => {
 });
 
 //================== SUBMISSIONS ===============0000
+
+const assignmentUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 100 * 1024 * 1024, // 50MB
+        files: 5
+    }
+});
+
+app.post('/api/professors/:professorId/courses/:courseId/assignments', assignmentUpload.single('attachment'), async (req, res) => {
+    try {
+        const { professorId, courseId } = req.params;
+        const {
+            title,
+            instructions_md,
+            max_score,
+            due_at,
+            available_from,
+            allow_resubmission,
+            module_id
+        } = req.body;
+
+        if (!title) {
+            return res.status(400).json({ error: 'Title is required' });
+        }
+
+        // Insert assignment
+        const { data: assignment, error: assignmentError } = await supabase
+            .from('assignments')
+            .insert({
+                title,
+                instructions_md,
+                max_score: max_score ? parseFloat(max_score) : null,
+                due_at: due_at || null,
+                available_from: available_from || null,
+                allow_resubmission: allow_resubmission === 'true',
+                subject_id: courseId,
+                professor_id: professorId,
+                module_id: module_id || null,
+                status: 'published'
+            })
+            .select()
+            .single();
+
+        if (assignmentError) throw assignmentError;
+
+        // Handle attachment if any
+        if (req.file) {
+            const file = req.file;
+            const fileExt = file.originalname.split('.').pop();
+            const fileName = `${assignment.id}_${Date.now()}.${fileExt}`;
+            const filePath = `assignments/${fileName}`;
+
+            // Upload to Supabase Storage
+            const { error: uploadError } = await supabase.storage
+                .from('grade-content') // Reusing existing bucket, or could create 'assignments' bucket
+                .upload(filePath, file.buffer, {
+                    contentType: file.mimetype,
+                    upsert: true
+                });
+
+            if (uploadError) throw uploadError;
+
+            // Insert attachment record
+            const { error: attachmentError } = await supabase
+                .from('assignment_attachments')
+                .insert({
+                    assignment_id: assignment.id,
+                    file_name: file.originalname,
+                    mime_type: file.mimetype,
+                    storage_path: filePath
+                });
+
+            if (attachmentError) throw attachmentError;
+        }
+
+        res.status(201).json(assignment);
+    } catch (error: any) {
+        console.error('Error creating assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PATCH update assignment
+app.patch('/api/assignments/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            module_id,
+            title,
+            instructions_md,
+            due_at,
+            available_from,
+            max_score,
+            allowed_file_types,
+            max_file_size_mb,
+            allow_resubmission,
+            status,
+        } = req.body;
+
+        const updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (title !== undefined) updatePayload.title = title;
+        if (instructions_md !== undefined) updatePayload.instructions_md = instructions_md;
+        if (module_id !== undefined) updatePayload.module_id = module_id || null;
+        if (due_at !== undefined) updatePayload.due_at = due_at || null;
+        if (available_from !== undefined) updatePayload.available_from = available_from || null;
+        if (max_score !== undefined) updatePayload.max_score = max_score != null ? Number(max_score) : null;
+        if (allowed_file_types !== undefined) updatePayload.allowed_file_types = allowed_file_types;
+        if (max_file_size_mb !== undefined) updatePayload.max_file_size_mb = max_file_size_mb != null ? Number(max_file_size_mb) : null;
+        if (allow_resubmission !== undefined) updatePayload.allow_resubmission = allow_resubmission;
+        if (status !== undefined) updatePayload.status = status;
+
+        const { data, error } = await supabase
+            .from('assignments')
+            .update(updatePayload)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error: any) {
+        console.error('Error updating assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE assignment
+app.delete('/api/assignments/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { error } = await supabase
+            .from('assignments')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        res.json({ message: 'Assignment deleted successfully' });
+    } catch (error: any) {
+        console.error('Error deleting assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // GET a single assignment, with the current student's own submission (if any)
 app.get('/api/assignments/:id', async (req, res) => {
@@ -3696,3 +3575,22 @@ app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
 
+// Basic Route
+app.get('/', (req, res) => {
+    res.send('Backend API Running 🚀');
+});
+
+// Global Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Global Error Handler:', err);
+    res.status(500).json({
+        error: err.message || 'Internal Server Error',
+        stack: err.stack,
+        details: JSON.stringify(err)
+    });
+});
+
+// Health check
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
