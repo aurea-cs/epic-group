@@ -483,6 +483,7 @@ export interface ModuleItem {
     created_at: string
     updated_at: string
     image_url?: string
+    is_editable?: boolean
 }
 
 export interface CourseModule {
@@ -658,7 +659,7 @@ export const createModuleItem = async (
 export const uploadModuleItem = async (
     moduleId: string,
     file: File,
-    data: { title: string, description?: string, order_index?: number }
+    data: { title: string, description?: string, order_index?: number, is_editable?: boolean }
 ): Promise<ModuleItem> => {
     try {
         const formData = new FormData()
@@ -666,6 +667,7 @@ export const uploadModuleItem = async (
         formData.append('title', data.title)
         if (data.description) formData.append('description', data.description)
         if (data.order_index) formData.append('order_index', data.order_index.toString())
+        if (data.is_editable !== undefined) formData.append('is_editable', data.is_editable.toString())
 
         const response = await fetch(`${API_URL}/api/modules/${moduleId}/items/upload`, {
             method: 'POST',

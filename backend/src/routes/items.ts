@@ -7,11 +7,11 @@ const router = Router();
 router.put('/api/items/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, content_url, order_index, is_visible, image_url } = req.body;
+        const { title, description, content_url, order_index, is_visible, image_url, is_editable } = req.body;
 
         const { data, error } = await supabase
             .from('module_items')
-            .update({ title, description, content_url, order_index, is_visible, image_url })
+            .update({ title, description, content_url, order_index, is_visible, image_url, is_editable })
             .eq('id', id)
             .select()
             .single();

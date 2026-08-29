@@ -144,7 +144,7 @@ router.delete('/api/modules/:id', async (req, res) => {
 router.post('/api/modules/:moduleId/items', async (req, res) => {
     try {
         const { moduleId } = req.params;
-        const { type, title, description, content_url, order_index, image_url } = req.body;
+        const { type, title, description, content_url, order_index, image_url, is_editable } = req.body;
 
         const { data, error } = await supabase
             .from('module_items')
@@ -156,7 +156,8 @@ router.post('/api/modules/:moduleId/items', async (req, res) => {
                 content_url,
                 order_index,
                 image_url,
-                is_visible: true
+                is_visible: true,
+                is_editable: is_editable ?? false
             })
             .select()
             .single();
@@ -174,7 +175,7 @@ router.post('/api/modules/:moduleId/items/upload', upload.single('file'), async 
     try {
         const { moduleId } = req.params;
         const file = req.file;
-        const { title, description, order_index } = req.body;
+        const { title, description, order_index, is_editable } = req.body;
 
         if (!file) {
             return res.status(400).json({ error: 'No file provided' });
@@ -205,7 +206,8 @@ router.post('/api/modules/:moduleId/items/upload', upload.single('file'), async 
                 description,
                 content_url: filePath,
                 order_index: order_index || 999,
-                is_visible: true
+                is_visible: true,
+                is_editable: is_editable === 'true' || is_editable === true
             })
             .select()
             .single();

@@ -259,7 +259,7 @@ const TutorsListModal: React.FC<TutorsListModalProps> = ({ student, tutors, onCl
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId }) => {
+const StudentManagement: React.FC<StudentManagementProps> = ({ gradeId }) => {
     // ── Registered students in this grade ──────────────────────────────
     const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>([])
     const [loadingEnrolled, setLoadingEnrolled] = useState(false)
@@ -337,10 +337,10 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
     }
 
     const enrollStudent = async (studentId: string) => {
-        const res = await fetch(`${API}/api/admin/enrollments`, {
+        const res = await fetch(`${API}/api/grades/${gradeId}/students`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ center_id: centerId, grade_id: gradeId, student_id: studentId })
+            body: JSON.stringify({ student_id: studentId })
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Error inscribiendo alumno')

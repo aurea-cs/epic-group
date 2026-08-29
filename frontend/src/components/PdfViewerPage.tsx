@@ -10,6 +10,7 @@ const PdfViewerPage: React.FC = () => {
     const [searchParams] = useSearchParams()
     const url = searchParams.get('url')
     const itemId = searchParams.get('itemId')
+    const isEditable = searchParams.get('editable') === 'true'
 
     const [userId, setUserId] = useState<string | null>(null)
     const [assignment, setAssignment] = useState<any | null>(null)
@@ -26,6 +27,11 @@ const PdfViewerPage: React.FC = () => {
     }, [url])
 
     useEffect(() => {
+        if (!isEditable) {
+            setLoading(false)
+            return
+        }
+
         const loadUserAndAssignment = async () => {
             try {
                 const { data: { user } } = await supabase.auth.getUser()
@@ -62,7 +68,7 @@ const PdfViewerPage: React.FC = () => {
         }
 
         loadUserAndAssignment()
-    }, [itemId])
+    }, [itemId, isEditable])
 
     if (!url) {
         navigate(-1)
@@ -134,11 +140,12 @@ const PdfViewerPage: React.FC = () => {
         <PdfViewerModal
             url={pdfUrl}
             onClose={() => navigate(-1)}
-            onSave={showSaveButton ? handleSave : undefined}
+            onSave={isEditable && showSaveButton ? handleSave : undefined}
             itemId={itemId}
             studentId={userId}
             assignedPages={assignment?.assigned_pages}
             submittedRanges={submittedRanges}
+            isEditable={isEditable}
         />
     )
 }

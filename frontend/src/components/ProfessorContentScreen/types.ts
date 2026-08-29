@@ -65,6 +65,7 @@ export interface ModuleItem {
     show_student?: boolean | null
     show_teacher?: boolean | null
     image_url?: string | null
+    is_editable?: boolean | null
 }
 
 export interface SubmissionFile {

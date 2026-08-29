@@ -32,7 +32,7 @@ const ContentTab: React.FC<ContentTabProps> = ({
 
         if (item.type === 'pdf') {
             navigate(
-                `/course/${courseId || 'unknown'}/module/${moduleId}/pdf?url=${encodeURIComponent(url)}`
+                `/course/${courseId || 'unknown'}/module/${moduleId}/pdf?url=${encodeURIComponent(url)}&itemId=${item.id}&editable=${item.is_editable ? 'true' : 'false'}`
             )
         } else {
             // video, link, or anything else — open in a new tab

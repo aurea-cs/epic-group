@@ -20,6 +20,8 @@ interface PdfViewerModalProps {
   /** Optional: passed through for future server-side checks */
   itemId?: string | null
   studentId?: string | null
+  /** Optional: false for normal/static PDFs to bypass interactive parsing/saving overlays */
+  isEditable?: boolean
 }
 
 /**
@@ -116,7 +118,7 @@ const options = {
   standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`
 }
 
-const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, assignedPages, submittedRanges, itemId, studentId }) => {
+const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, assignedPages, submittedRanges, itemId: _itemId, studentId: _studentId, isEditable = true }) => {
   const [numPages, setNumPages] = useState<number>(0)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -153,6 +155,8 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
 
   // Extract all drawing field coordinates directly from the PDF binary structure using pdf-lib
   useEffect(() => {
+    if (!isEditable) return
+
     const extractDrawingBoxes = async () => {
       if (!url) return
       try {
@@ -185,7 +189,16 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
             } else {
               for (let i = 0; i < pages.length; i++) {
                 const annots = pages[i].node.Annots()
-                if (annots && annots.array.includes(widget.ref)) {
+                const annotCount = annots ? annots.size() : 0
+                let found = false
+                for (let j = 0; j < annotCount; j++) {
+                  const entry = annots?.get(j)
+                  if (entry && entry.toString() === widget.dict.toString()) {
+                    found = true
+                    break
+                  }
+                }
+                if (found) {
                   pageIndex = i
                   break
                 }
@@ -208,7 +221,8 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
               topPercent,
               widthPercent,
               heightPercent,
-            })
+              isEditable
+            } as any)
           }
         }
 
@@ -220,7 +234,7 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
     }
 
     extractDrawingBoxes()
-  }, [url])
+  }, [url, isEditable])
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages)
@@ -328,7 +342,10 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
           } else {
             for (const page of pages) {
               const annots = page.node.Annots()
-              if (annots && annots.array.includes(widget.ref)) {
+              // pdf-lib doesn't expose widget.ref publicly; access via acroField.ref
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const widgetRef = (widget as any).ref
+              if (annots && annots.asArray().includes(widgetRef)) {
                 targetPage = page
                 break
               }
@@ -504,7 +521,7 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
               </p>
             }
           >
-            {Array.from(new Array(numPages), (el, index) => {
+            {Array.from(new Array(numPages), (_el, index) => {
               const pageNum = index + 1
 
               // Find if this page belongs to a previously-submitted range
@@ -514,6 +531,7 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
               const lockedBySubmittedRange = !!submittedInfo
 
               const pageEditable =
+                isEditable &&
                 !!onSave &&
                 isPageAssigned(pageNum, assignedPages) &&
                 !lockedBySubmittedRange
@@ -623,7 +641,7 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
                     />
 
                     {/* Locked-page visual overlay */}
-                    {!pageEditable && (
+                    {isEditable && !pageEditable && (
                       <div
                         style={{
                           position: 'absolute',
