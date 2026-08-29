@@ -275,7 +275,7 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
 
         const fetchCenters = useCallback(async () => {
         try {
-        const res = await fetch(`${API_URL}/api/admin/centers`)
+        const res = await fetch(`${API_URL}/api/centers`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         setAllCenters(Array.isArray(data) ? data : [])

@@ -53,6 +53,8 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
     const [saving, setSaving] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
     const [showConfirm, setShowConfirm] = useState(false)
+    const [moduleItemId, setModuleItemId] = useState<string>(initial?.module_item_id || '')
+    const [assignedPages, setAssignedPages] = useState<string>(initial?.assigned_pages || '')
 
     const isEditing = !!initial
 
@@ -66,7 +68,9 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
     allowedFileTypes !== (initial?.allowed_file_types ?? ['pdf','docx']).join(', ') ||
     maxFileSizeMb !== (initial?.max_file_size_mb ?? 10) ||
     allowResubmission !== (initial?.allow_resubmission ?? false) ||
-    status !== (initial?.status || 'draft')
+    status !== (initial?.status || 'draft') ||
+    moduleItemId !== (initial?.module_item_id || '') ||
+    assignedPages !== (initial?.assigned_pages || '')
 
     const handleAttemptClose = () => {
         if (!isDirty) return onClose()
@@ -89,6 +93,8 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
                 max_file_size_mb: maxFileSizeMb,
                 allow_resubmission: allowResubmission,
                 status,
+                module_item_id: moduleItemId || null,
+                assigned_pages: assignedPages.trim() || null,
             })
         } catch (e: any) {
             setFormError(e.message || 'Error al guardar')
@@ -158,13 +164,55 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
             <div style={{ marginBottom: '1rem' }}>
              <CustomSelect
                 value={moduleId || NO_MODULE}
-                onChange={v => setModuleId(v === NO_MODULE ? '' : v)}
+                onChange={v => {
+                    const val = v === NO_MODULE ? '' : v;
+                    setModuleId(val);
+                    if (!val) {
+                        setModuleItemId('');
+                        setAssignedPages('');
+                    }
+                }}
                 options={[
                     { value: NO_MODULE, label: 'Sin módulo' },
                     ...modules.map(m => ({ value: m.id, label: m.title })),
                 ]}
             />
             </div>
+
+            {moduleId && (
+                <>
+                    <label style={fieldLabelStyle}>Recurso PDF asociado (opcional)</label>
+                    <div style={{ marginBottom: '1rem' }}>
+                        <CustomSelect
+                            value={moduleItemId || NO_MODULE}
+                            onChange={v => {
+                                const val = v === NO_MODULE ? '' : v;
+                                setModuleItemId(val);
+                                if (!val) setAssignedPages('');
+                            }}
+                            options={[
+                                { value: NO_MODULE, label: 'Ninguno' },
+                                ...(modules.find(m => m.id === moduleId)?.items?.filter(item => item.type === 'pdf') || []).map(item => ({
+                                    value: item.id,
+                                    label: item.title,
+                                })),
+                            ]}
+                        />
+                    </div>
+                </>
+            )}
+
+            {moduleId && moduleItemId && (
+                <div style={{ marginBottom: '1rem' }}>
+                    <label style={fieldLabelStyle}>Páginas asignadas (ej. 10-15 o dejar vacío para todo el documento)</label>
+                    <input
+                        style={inputStyle}
+                        value={assignedPages}
+                        onChange={e => setAssignedPages(e.target.value)}
+                        placeholder="Ej. 10-15 o 3,4,7"
+                    />
+                </div>
+            )}
 
             <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>

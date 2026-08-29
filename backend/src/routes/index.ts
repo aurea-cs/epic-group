@@ -1,0 +1,14 @@
+export { default as usersRouter } from './users';
+export { default as studentsRouter } from './students';
+export { default as tutorsRouter } from './tutors';
+export { default as professorsRouter } from './professors';
+export { default as centersRouter } from './centers';
+export { default as gradesRouter } from './grades';
+export { default as subjectsRouter } from './subjects';
+export { default as modulesRouter } from './modules';
+export { default as itemsRouter } from './items';
+export { default as assignmentsRouter } from './assignments';
+export { default as submissionsRouter } from './submissions';
+export { default as calendarRouter } from './calendar';
+export { default as commentsRouter } from './comments';
+export { default as uploadRouter } from './uploadRoutes';
