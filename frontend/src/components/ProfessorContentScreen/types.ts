@@ -20,6 +20,8 @@ export interface Assignment {
     status: string | null
     created_at: string
     updated_at: string | null
+    module_item_id?: string | null
+    assigned_pages?: string | null
 }
 
 export interface CalendarEvent {
@@ -105,6 +107,8 @@ export interface AssignmentDetail {
   status: string | null
   subjects: { id: string; name: string; short_name: string | null } | null
   submission: Submission | null
+  module_item_id?: string | null
+  assigned_pages?: string | null
 }
 
 export type ModuleWithItems = CourseModule & { items?: ModuleItem[] }

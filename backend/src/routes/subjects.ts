@@ -463,6 +463,8 @@ router.post('/api/subjects/:subjectId/assignments', async (req, res) => {
             max_file_size_mb,
             allow_resubmission,
             status,
+            module_item_id,
+            assigned_pages,
         } = req.body;
 
         if (!title || !professor_id) {
@@ -484,6 +486,8 @@ router.post('/api/subjects/:subjectId/assignments', async (req, res) => {
                 max_file_size_mb: max_file_size_mb != null ? Number(max_file_size_mb) : null,
                 allow_resubmission: allow_resubmission ?? null,
                 status: status || 'draft',
+                module_item_id: module_item_id || null,
+                assigned_pages: assigned_pages || null,
             })
             .select()
             .single();

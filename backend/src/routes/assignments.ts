@@ -4,6 +4,168 @@ import { upload, assignmentUpload } from '../middleware/upload';
 
 const router = Router();
 
+// GET assignment by module_item_id, with the current student's own submission (if any)
+// NOTE: this MUST be declared before /:id so Express doesn't swallow "by-item" as an :id param
+router.get('/api/assignments/by-item/:itemId', async (req, res) => {
+    try {
+        const { itemId } = req.params;
+        const { student_id } = req.query;
+
+        if (!student_id) {
+            return res.status(400).json({ error: 'student_id is required' });
+        }
+
+        // 1. Get enrollments for the student
+        const { data: enrollments, error: enrollError } = await supabase
+            .from('enrollments')
+            .select('subject_id')
+            .eq('student_id', student_id);
+
+        if (enrollError) throw enrollError;
+        const subjectIds = (enrollments || []).map(e => e.subject_id);
+
+        if (subjectIds.length === 0) {
+            return res.json({ assignment: null, submission: null });
+        }
+
+        // 2. Fetch all published assignments for this item and student's subjects
+        const { data: assignments, error: assignmentError } = await supabase
+            .from('assignments')
+            .select(`
+                id, title, instructions_md, due_at, available_from, max_score,
+                allowed_file_types, max_file_size_mb, allow_resubmission, status,
+                module_item_id, assigned_pages,
+                subjects(id, name, short_name)
+            `)
+            .eq('module_item_id', itemId)
+            .in('subject_id', subjectIds)
+            .eq('status', 'published');
+
+        if (assignmentError) throw assignmentError;
+        if (!assignments || assignments.length === 0) {
+            return res.json({ assignment: null, submission: null });
+        }
+
+        // 3. Fetch submissions for all candidate assignments
+        const assignmentIds = assignments.map(a => a.id);
+        const { data: submissions, error: subError } = await supabase
+            .from('submissions')
+            .select(`
+                id, assignment_id, submitted_at, graded_at, graded_by, feedback_md, grade, status,
+                attempt_number, body_md,
+                submission_files(id, file_name, storage_path, external_url, mime_type, file_size_bytes, uploaded_at)
+            `)
+            .in('assignment_id', assignmentIds)
+            .eq('student_id', student_id)
+            .order('submitted_at', { ascending: false });
+
+        if (subError) throw subError;
+
+        // 4. Build a lookup map: assignment_id -> most-recent submission row
+        const subByAssignment: Record<string, any> = {};
+        for (const sub of (submissions || [])) {
+            if (!subByAssignment[sub.assignment_id]) {
+                subByAssignment[sub.assignment_id] = sub;
+            }
+        }
+
+        // 5. Sort assignments by due_at ascending (nulls last) so that the earliest deadline is prioritized
+        const sortedAssignments = [...(assignments || [])].sort((a, b) => {
+            if (!a.due_at && !b.due_at) return 0;
+            if (!a.due_at) return 1;
+            if (!b.due_at) return -1;
+            return new Date(a.due_at).getTime() - new Date(b.due_at).getTime();
+        });
+
+        // 6. Pick the best assignment using priority.
+        //    IMPORTANT: unsubmitted active assignments always win over submitted ones,
+        //    so a student who submitted assignment A (pages 1-5) can still work on
+        //    assignment B (pages 6-10) when they reopen the PDF.
+        //
+        //    P1 – active window, NOT yet submitted  (earliest due_at first)
+        //    P2 – upcoming (available_from > now), NOT submitted
+        //    P3 – past-due, NOT submitted
+        //    P4 – already submitted (show for review only when nothing actionable remains)
+        const now = Date.now();
+        const active    = sortedAssignments.filter(a =>
+            !subByAssignment[a.id] &&
+            (!a.due_at || new Date(a.due_at).getTime() >= now) &&
+            (!a.available_from || new Date(a.available_from).getTime() <= now)
+        );
+        const upcoming  = sortedAssignments.filter(a =>
+            !subByAssignment[a.id] &&
+            a.available_from && new Date(a.available_from).getTime() > now
+        );
+        const pastNoSub = sortedAssignments.filter(a =>
+            !subByAssignment[a.id] &&
+            a.due_at && new Date(a.due_at).getTime() < now
+        );
+        // Among submitted, prefer the most-recently submitted (already ordered by submitted_at desc)
+        const submitted = sortedAssignments.filter(a => !!subByAssignment[a.id]);
+
+        const chosen = active[0] ?? upcoming[0] ?? pastNoSub[0] ?? submitted[0] ?? null;
+        if (!chosen) {
+            return res.json({ assignment: null, submission: null });
+        }
+
+        // 6. Collect page ranges from ALL OTHER assignments the student already submitted
+        //    for this same item, including the signed URL of the submitted file so the
+        //    frontend can render those pages from the submitted (flattened) PDF.
+        const submittedRanges = await Promise.all(
+            assignments
+                .filter(a => a.id !== chosen.id && !!subByAssignment[a.id] && a.assigned_pages)
+                .map(async a => {
+                    const sub = subByAssignment[a.id];
+                    const firstFile = (sub?.submission_files ?? [])[0];
+                    let signed_url: string | null = null;
+
+                    if (firstFile?.external_url) {
+                        signed_url = firstFile.external_url;
+                    } else if (firstFile?.storage_path) {
+                        const { data: signed, error: signError } = await supabase.storage
+                            .from('submissions')
+                            .createSignedUrl(firstFile.storage_path, 3600);
+                        if (!signError) signed_url = signed.signedUrl;
+                    }
+
+                    return { pages: a.assigned_pages as string, signed_url };
+                })
+        );
+
+        // 7. Resolve signed URLs for the chosen assignment's submission (if any)
+        let submission = null;
+        const subData = subByAssignment[chosen.id] ?? null;
+
+        if (subData) {
+            const { submission_files, ...s } = subData;
+
+            const files = await Promise.all(
+                (submission_files || []).map(async (f: any) => {
+                    if (f.external_url) return { ...f, signed_url: f.external_url };
+                    if (!f.storage_path) return { ...f, signed_url: null };
+
+                    const { data: signed, error: signError } = await supabase.storage
+                        .from('submissions')
+                        .createSignedUrl(f.storage_path, 3600);
+
+                    if (signError) {
+                        console.error('Error signing submission file:', f.storage_path, signError);
+                        return { ...f, signed_url: null };
+                    }
+                    return { ...f, signed_url: signed.signedUrl };
+                })
+            );
+
+            submission = { ...s, files };
+        }
+
+        res.json({ ...chosen, submission, submitted_ranges: submittedRanges });
+    } catch (error: any) {
+        console.error('Error fetching assignment by item:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // GET a single assignment, with the current student's own submission (if any)
 router.get('/api/assignments/:id', async (req, res) => {
     try {
@@ -15,6 +177,7 @@ router.get('/api/assignments/:id', async (req, res) => {
             .select(`
                 id, title, instructions_md, due_at, available_from, max_score,
                 allowed_file_types, max_file_size_mb, allow_resubmission, status,
+                module_item_id, assigned_pages,
                 subjects(id, name, short_name)
             `)
             .eq('id', id)
@@ -66,6 +229,8 @@ router.patch('/api/assignments/:id', async (req, res) => {
             max_file_size_mb,
             allow_resubmission,
             status,
+            module_item_id,
+            assigned_pages,
         } = req.body;
 
         const updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
@@ -79,6 +244,8 @@ router.patch('/api/assignments/:id', async (req, res) => {
         if (max_file_size_mb !== undefined) updatePayload.max_file_size_mb = max_file_size_mb != null ? Number(max_file_size_mb) : null;
         if (allow_resubmission !== undefined) updatePayload.allow_resubmission = allow_resubmission;
         if (status !== undefined) updatePayload.status = status;
+        if (module_item_id !== undefined) updatePayload.module_item_id = module_item_id || null;
+        if (assigned_pages !== undefined) updatePayload.assigned_pages = assigned_pages || null;
 
         const { data, error } = await supabase
             .from('assignments')
@@ -239,7 +406,9 @@ router.post('/api/professors/:professorId/courses/:courseId/assignments', assign
             due_at,
             available_from,
             allow_resubmission,
-            module_id
+            module_id,
+            module_item_id,
+            assigned_pages,
         } = req.body;
 
         if (!title) {
@@ -259,7 +428,9 @@ router.post('/api/professors/:professorId/courses/:courseId/assignments', assign
                 subject_id: courseId,
                 professor_id: professorId,
                 module_id: module_id || null,
-                status: 'published'
+                status: 'published',
+                module_item_id: module_item_id || null,
+                assigned_pages: assigned_pages || null,
             })
             .select()
             .single();

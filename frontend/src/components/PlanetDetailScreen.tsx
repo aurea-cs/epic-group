@@ -49,7 +49,7 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = ({ user }) => {
 
         // Fetch modules and read items in parallel
         const [res, readItemsList] = await Promise.all([
-          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/subjects/${courseId}/modules`),
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/subjects/${courseId}/modules`),
           getStudentReadItems(user.id)
         ]);
 
