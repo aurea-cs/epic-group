@@ -191,7 +191,7 @@ const EditProfessorModal: React.FC<{ professor: Professor; allCenters: Center[];
     if (!form.fullName || !form.email) { setError('Nombre y correo son requeridos.'); return }
     setSubmitting(true); setError('')
     try {
-      const res = await fetch(`${API}/api/professors/${professor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fullName: form.fullName, email: form.email, centerIds: selectedCenterIds }) })
+      const res = await fetch(`${API}/api/users/${professor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fullName: form.fullName, email: form.email, centerIds: selectedCenterIds }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al actualizar profesor')
       onSuccess(); onClose()
@@ -313,7 +313,7 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
     if (!deletingProfessor) return
     setIsDeleting(true)
     try {
-      const res = await fetch(`${API}/api/professors/${deletingProfessor.id}`, { method: 'DELETE' })
+      const res = await fetch(`${API}/api/users/${deletingProfessor.id}`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al eliminar')
       setProfessors(prev => prev.filter(s => s.id !== deletingProfessor.id))
