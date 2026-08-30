@@ -95,7 +95,7 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave })
       });
       
       const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
       await onSave(blob);
       onClose();
     } catch (err) {
