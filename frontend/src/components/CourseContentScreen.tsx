@@ -91,7 +91,8 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
         description: string
         content_url: string
         image_url: string
-    }>({ title: '', description: '', content_url: '', image_url: '' })
+        is_editable: boolean
+    }>({ title: '', description: '', content_url: '', image_url: '', is_editable: false })
 
     // Form states
     const [moduleForm, setModuleForm] = useState({ title: '' })
@@ -100,13 +101,15 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
         title: string,
         description: string,
         content_url: string,
-        image_url: string
+        image_url: string,
+        is_editable: boolean
     }>({
         type: 'pdf',
         title: '',
         description: '',
         content_url: '',
-        image_url: ''
+        image_url: '',
+        is_editable: false
     })
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -137,7 +140,8 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
             title: item.title,
             description: item.description || '',
             content_url: item.content_url || '',
-            image_url: item.image_url || ''
+            image_url: item.image_url || '',
+            is_editable: !!item.is_editable
         })
         setOpenMenuItemId(null)
         setMenuPosition(null)
@@ -152,7 +156,8 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                 title: editItemForm.title,
                 description: editItemForm.description,
                 content_url: editItemForm.content_url,
-                image_url: editItemForm.image_url || undefined
+                image_url: editItemForm.image_url || undefined,
+                is_editable: editItemForm.is_editable
             })
             await loadData()
             setShowEditItemModal(false)
@@ -400,7 +405,8 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
             title: '',
             description: '',
             content_url: '',
-            image_url: ''
+            image_url: '',
+            is_editable: true
         })
         setSelectedFile(null)
         setShowItemModal(true)
@@ -414,7 +420,8 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                 await uploadModuleItem(activeModuleId, selectedFile, {
                     title: itemForm.title,
                     description: itemForm.description,
-                    order_index: 999
+                    order_index: 999,
+                    is_editable: itemForm.is_editable
                 })
             } else {
                 await createModuleItem(activeModuleId, {
@@ -808,7 +815,6 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                         onChange={e => {
                                             if (e.target.files && e.target.files[0]) {
                                                 setSelectedFile(e.target.files[0])
-                                                // Auto-set title if empty
                                                 if (!itemForm.title) {
                                                     setItemForm({ ...itemForm, title: e.target.files[0].name.replace('.pdf', '') })
                                                 }
@@ -816,7 +822,22 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                         }}
                                     />
                                 </div>
-                            ) : (
+                            ) : null}
+                            {itemForm.type === 'pdf' && (
+                                <div className="form-group" style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                                    <input
+                                        type="checkbox"
+                                        id="add-is-editable"
+                                        checked={itemForm.is_editable}
+                                        onChange={e => setItemForm({ ...itemForm, is_editable: e.target.checked })}
+                                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                    />
+                                    <label htmlFor="add-is-editable" style={{ margin: 0, cursor: 'pointer', fontWeight: 'normal', color: 'white' }}>
+                                        Este PDF es un cuaderno interactivo (los alumnos podrán dibujar, rellenar campos y entregarlo)
+                                    </label>
+                                </div>
+                            )}
+                            {itemForm.type !== 'pdf' && (
                                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
                                     <label>URL del Contenido</label>
                                     <input
@@ -967,6 +988,20 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                     onChange={url => setEditItemForm({ ...editItemForm, image_url: url })}
                                 />
                             </div>
+                            {editingItem.type === 'pdf' && (
+                                <div className="form-group" style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                                    <input
+                                        type="checkbox"
+                                        id="edit-is-editable"
+                                        checked={editItemForm.is_editable}
+                                        onChange={e => setEditItemForm({ ...editItemForm, is_editable: e.target.checked })}
+                                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                    />
+                                    <label htmlFor="edit-is-editable" style={{ margin: 0, cursor: 'pointer', fontWeight: 'normal', color: 'white' }}>
+                                        Este PDF es un cuaderno interactivo (los alumnos podrán dibujar, rellenar campos y entregarlo)
+                                    </label>
+                                </div>
+                            )}
                         </div>
                         <div className="modal-actions">
                             <button className="btn-cancel-modern" onClick={() => {

@@ -112,7 +112,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
         setAllProfessors([])
         setSearchQuery('')
         setLoadingAll(true)
-        fetch(`${API}/api/admin/professors`)
+        fetch(`${API}/api/professors`)
             .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
             .then(data => setAllProfessors(Array.isArray(data) ? data : []))
             .catch(err => setError(err.message || 'Error al cargar profesores'))
@@ -121,7 +121,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
 
     // ─── Create professor + assign to center ───────────────────────────
     const createAndAssignProfessor = async (form: { fullName: string; email: string; password: string }) => {
-        const res = await fetch(`${API}/api/admin/users`, {
+        const res = await fetch(`${API}/api/users`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: form.email, password: form.password, fullName: form.fullName, role: 'professor' })

@@ -15,7 +15,7 @@ interface ModuleDraftScreenProps {
   user: User
 }
 
-const ContentCard = ({ item, index, onViewPdf, userId }: { item: ModuleItem, index: number, onViewPdf: (url: string) => void, userId: string }) => {
+const ContentCard = ({ item, index, onViewPdf, userId }: { item: ModuleItem, index: number, onViewPdf: (url: string, itemId: string, isEditable: boolean) => void, userId: string }) => {
   return (
     <div 
       className="hoverable-card"
@@ -31,7 +31,7 @@ const ContentCard = ({ item, index, onViewPdf, userId }: { item: ModuleItem, ind
             markItemAsRead(userId, item.id).catch(console.error);
             
             if (item.type === 'pdf') {
-              onViewPdf(item.content_url);
+              onViewPdf(item.content_url, item.id, !!item.is_editable);
             } else {
               window.open(item.content_url, '_blank', 'noopener,noreferrer');
             }
@@ -50,7 +50,7 @@ const ContentCard = ({ item, index, onViewPdf, userId }: { item: ModuleItem, ind
     }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <img
-          src={item.image_url}
+          src={item.image_url || ciberImg}
           alt={item.title}
           style={{
             width: '180px',
@@ -177,12 +177,12 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
   )
 }
 
-const ResourceCard = ({ item, onViewPdf }: { item: ModuleItem, index: number, onViewPdf: (url: string) => void }) => {
+const ResourceCard = ({ item, onViewPdf }: { item: ModuleItem, index: number, onViewPdf: (url: string, itemId: string, isEditable: boolean) => void }) => {
   const handleClick = () => {
     if (item.content_url) {
       if (item.type === 'video') { window.open(item.content_url, '_blank') }
       else {
-        onViewPdf(item.content_url!)
+        onViewPdf(item.content_url!, item.id, !!item.is_editable)
       }
     }
   }
@@ -288,9 +288,9 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
 
   const userRole = getUserRole(user)
 
-  const handleViewPdf = (url: string) => {
+  const handleViewPdf = (url: string, itemId: string, isEditable: boolean) => {
     navigate(
-      `/course/${courseId}/module/${moduleId}/pdf?url=${encodeURIComponent(url)}`
+      `/course/${courseId}/module/${moduleId}/pdf?url=${encodeURIComponent(url)}&itemId=${itemId}&editable=${isEditable ? 'true' : 'false'}`
     )
   }
 

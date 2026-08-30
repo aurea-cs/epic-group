@@ -50,7 +50,7 @@ const TutorModal: React.FC<TutorModalProps> = ({ student, onClose, onSuccess }) 
         setSubmitting(true)
         setError('')
         try {
-            const res = await fetch(`${API}/api/admin/students/${student.id}/tutor`, {
+            const res = await fetch(`${API}/api/students/${student.id}/tutor`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ fullName: form.fullName, email: form.email, password: form.password })
@@ -259,7 +259,7 @@ const TutorsListModal: React.FC<TutorsListModalProps> = ({ student, tutors, onCl
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId }) => {
+const StudentManagement: React.FC<StudentManagementProps> = ({ gradeId }) => {
     // ── Registered students in this grade ──────────────────────────────
     const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>([])
     const [loadingEnrolled, setLoadingEnrolled] = useState(false)
@@ -298,7 +298,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
         if (!gradeId) return
         setLoadingEnrolled(true)
         try {
-            const res = await fetch(`${API}/api/admin/grades/${gradeId}/students`)
+            const res = await fetch(`${API}/api/grades/${gradeId}/students`)
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data = await res.json()
             setEnrolledStudents(Array.isArray(data) ? data : [])
@@ -317,7 +317,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
         setAllStudents([])
         setSearchQuery('')
         setLoadingAll(true)
-        fetch(`${API}/api/users/students`)
+        fetch(`${API}/api/students`)
             .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
             .then(data => setAllStudents(Array.isArray(data) ? data : []))
             .catch(err => console.error('Error fetching all students:', err))
@@ -326,7 +326,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
 
     // ── Helpers ────────────────────────────────────────────────────────
     const createStudent = async (form: typeof createForm) => {
-        const res = await fetch(`${API}/api/admin/users`, {
+        const res = await fetch(`${API}/api/users`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: form.email, password: form.password, fullName: form.fullName, role: 'student' })
@@ -337,10 +337,10 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
     }
 
     const enrollStudent = async (studentId: string) => {
-        const res = await fetch(`${API}/api/admin/enrollments`, {
+        const res = await fetch(`${API}/api/grades/${gradeId}/students`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ center_id: centerId, grade_id: gradeId, student_id: studentId })
+            body: JSON.stringify({ student_id: studentId })
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Error inscribiendo alumno')
@@ -377,7 +377,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
 
     const handleViewTutors = async (student: EnrolledStudent) => {
         try {
-            const res = await fetch(`${API}/api/admin/students/${student.id}/tutors`, { method: 'GET' })
+            const res = await fetch(`${API}/api/students/${student.id}/tutors`, { method: 'GET' })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || 'Error al obtener tutores')
             setTutors(data)
@@ -392,7 +392,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
         if (!confirm(`¿Quitar a ${student.name} de este grado?`)) return
         setIsDeleting(student.id)
         try {
-            const res = await fetch(`${API}/api/admin/grades/${gradeId}/students/${student.id}`, { method: 'DELETE' })
+            const res = await fetch(`${API}/api/grades/${gradeId}/students/${student.id}`, { method: 'DELETE' })
             if (!res.ok) {
                 const data = await res.json()
                 throw new Error(data.error || 'Error al quitar alumno')

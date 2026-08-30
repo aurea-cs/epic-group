@@ -138,7 +138,7 @@ const AddProfessorModal: React.FC<{ onClose: () => void; onSuccess: () => void }
     if (!form.fullName || !form.email || !form.password) { setError('Todos los campos son requeridos.'); return }
     setSubmitting(true); setError('')
     try {
-      const res = await fetch(`${API}/api/admin/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: form.email, password: form.password, fullName: form.fullName, role: 'professor' }) })
+      const res = await fetch(`${API}/api/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: form.email, password: form.password, fullName: form.fullName, role: 'professor' }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al crear profesor')
       onSuccess(); onClose()
@@ -191,7 +191,7 @@ const EditProfessorModal: React.FC<{ professor: Professor; allCenters: Center[];
     if (!form.fullName || !form.email) { setError('Nombre y correo son requeridos.'); return }
     setSubmitting(true); setError('')
     try {
-      const res = await fetch(`${API}/api/admin/professors/${professor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fullName: form.fullName, email: form.email, centerIds: selectedCenterIds }) })
+      const res = await fetch(`${API}/api/users/${professor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fullName: form.fullName, email: form.email, centerIds: selectedCenterIds }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al actualizar profesor')
       onSuccess(); onClose()
@@ -290,7 +290,7 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
   const fetchProfessors = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API}/api/admin/professors`)
+      const res = await fetch(`${API}/api/professors`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setProfessors(Array.isArray(data) ? data : [])
@@ -300,7 +300,7 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
 
   const fetchCenters = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/admin/centers`)
+      const res = await fetch(`${API}/api/centers`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setAllCenters(Array.isArray(data) ? data : [])
@@ -313,7 +313,7 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
     if (!deletingProfessor) return
     setIsDeleting(true)
     try {
-      const res = await fetch(`${API}/api/admin/professors/${deletingProfessor.id}`, { method: 'DELETE' })
+      const res = await fetch(`${API}/api/users/${deletingProfessor.id}`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al eliminar')
       setProfessors(prev => prev.filter(s => s.id !== deletingProfessor.id))

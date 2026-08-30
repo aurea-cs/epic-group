@@ -64,7 +64,7 @@ const ProfessorDashboard: React.FC<ProfessorDashboardProps> = ({ user }) => {
             centerName: subject.center_name
           }))
         } else if (userRole === 'admin') {
-          const adminCentersRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/centers`)
+          const adminCentersRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/centers`)
           if (adminCentersRes.ok) {
             const adminCenters = await adminCentersRes.json()
             allCourses = adminCenters.map((center: any) => ({

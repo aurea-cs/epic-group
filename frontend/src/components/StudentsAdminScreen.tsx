@@ -125,7 +125,7 @@ const AddStudentModal: React.FC<{ onClose: () => void; onSuccess: () => void }> 
     if (!form.fullName || !form.email || !form.password) { setError('Todos los campos son requeridos.'); return }
     setSubmitting(true); setError('')
     try {
-      const res = await fetch(`${API}/api/admin/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: form.email, password: form.password, fullName: form.fullName, role: 'student' }) })
+      const res = await fetch(`${API}/api/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: form.email, password: form.password, fullName: form.fullName, role: 'student' }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al crear alumno')
       onSuccess(); onClose()
@@ -178,7 +178,7 @@ const EditStudentModal: React.FC<{ student: Student; allCenters: Center[]; onClo
     if (!form.fullName || !form.email) { setError('Nombre y correo son requeridos.'); return }
     setSubmitting(true); setError('')
     try {
-      const res = await fetch(`${API}/api/admin/users/${student.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fullName: form.fullName, email: form.email, centerIds: selectedCenterIds }) })
+      const res = await fetch(`${API}/api/users/${student.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fullName: form.fullName, email: form.email, centerIds: selectedCenterIds }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al actualizar alumno')
       onSuccess(); onClose()
@@ -276,7 +276,7 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
   const fetchStudents = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API}/api/admin/students`)
+      const res = await fetch(`${API}/api/students?expand=centers`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setStudents(Array.isArray(data) ? data : [])
@@ -286,7 +286,7 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
 
   const fetchCenters = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/admin/centers`)
+      const res = await fetch(`${API}/api/centers`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setAllCenters(Array.isArray(data) ? data : [])
@@ -299,7 +299,7 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
     if (!deletingStudent) return
     setIsDeleting(true)
     try {
-      const res = await fetch(`${API}/api/admin/users/${deletingStudent.id}`, { method: 'DELETE' })
+      const res = await fetch(`${API}/api/users/${deletingStudent.id}`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al eliminar')
       setStudents(prev => prev.filter(s => s.id !== deletingStudent.id))
