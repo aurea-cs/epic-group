@@ -29,13 +29,11 @@ router.get('/api/professors/:professorId/courses', async (req, res) => {
             `)
             .eq('professor_id', professorId);
 
-        if (error) throw error;
-        
-        const courses = profSubjects?.map(ps => {
+        const rawCourses = profSubjects?.map(ps => {
             const subject = ps.subjects as any;
             const grade = subject?.grades_levels || {};
             const center = grade?.educational_centers || {};
-            
+
             return {
                 id: subject.id,
                 title: subject.name,
@@ -49,7 +47,53 @@ router.get('/api/professors/:professorId/courses', async (req, res) => {
             };
         }) || [];
 
-        res.json(courses);
+        const includeProgress = req.query.include === 'progress';
+        let progressMap: Record<string, { stars: number; completed: boolean; totalItems: number; completedItems: number }> = {};
+
+        if (includeProgress && rawCourses.length > 0) {
+            const subjectIds = rawCourses.map(c => c.id);
+            const { data: modules } = await supabase
+                .from('modules')
+                .select('id, subject_id, items:module_items(id, type, is_completed)')
+                .in('subject_id', subjectIds);
+
+            (modules || []).forEach(mod => {
+                const subId = mod.subject_id;
+                if (!progressMap[subId]) {
+                    progressMap[subId] = { stars: 0, completed: false, totalItems: 0, completedItems: 0 };
+                }
+                const items = (mod.items || []).filter((it: any) => it.type === 'pdf');
+                progressMap[subId].totalItems += items.length;
+                items.forEach((it: any) => {
+                    if (it.is_completed) {
+                        progressMap[subId].completedItems++;
+                    }
+                });
+            });
+
+            Object.keys(progressMap).forEach(subId => {
+                const p = progressMap[subId];
+                if (p.totalItems > 0) {
+                    const ratio = p.completedItems / p.totalItems;
+                    if (ratio === 1) p.stars = 3;
+                    else if (ratio >= 0.5) p.stars = 2;
+                    else if (ratio > 0) p.stars = 1;
+                    p.completed = p.stars === 3;
+                }
+            });
+        }
+
+        const formattedCourses = rawCourses.map(c => ({
+            ...c,
+            ...(includeProgress ? {
+                stars: progressMap[c.id]?.stars || 0,
+                completed: progressMap[c.id]?.completed || false,
+                totalItems: progressMap[c.id]?.totalItems || 0,
+                completedItems: progressMap[c.id]?.completedItems || 0
+            } : {})
+        }));
+
+        res.json(formattedCourses);
     } catch (error: any) {
         console.error('Error fetching courses:', error);
         res.status(500).json({ error: error.message });
