@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { getCenterProfessors, assignProfessor, unassignProfessor } from '../lib/adminApi'
+import { getCenterProfessors, assignProfessor, unassignProfessor, assignSubjectProfessor } from '../lib/adminApi'
 import UserActivityModal from './UserActivityModal'
 import './HierarchyConfig.css'
 
@@ -25,6 +25,7 @@ interface UserData {
     email: string
     password: string
     full_name: string
+    subject_id?: string
 }
 
 interface Results {
@@ -120,7 +121,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
     }, [activeTab])
 
     // ─── Create professor + assign to center ───────────────────────────
-    const createAndAssignProfessor = async (form: { fullName: string; email: string; password: string }) => {
+    const createAndAssignProfessor = async (form: { fullName: string; email: string; password: string; subjectId?: string }) => {
         const res = await fetch(`${API}/api/users`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -130,6 +131,9 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
         if (!res.ok) throw new Error(data.error || 'Error creando profesor')
         if (data.user?.id) {
             await assignProfessor(centerId, data.user.id)
+            if (form.subjectId) {
+                await assignSubjectProfessor(form.subjectId, data.user.id)
+            }
         }
         return data.user
     }
@@ -193,7 +197,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
         const res: Results = { success: 0, errors: 0, errorDetails: [], processed: [] }
         for (const user of users) {
             try {
-                await createAndAssignProfessor({ fullName: user.full_name, email: user.email, password: user.password })
+                await createAndAssignProfessor({ fullName: user.full_name, email: user.email, password: user.password, subjectId: user.subject_id })
                 res.success++
                 res.processed.push({ email: user.email, status: 'success', message: 'OK' })
             } catch (error: any) {
@@ -219,13 +223,39 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
             const lines = text.split(/\r\n|\n/)
             const parsed: UserData[] = []
             let start = 0
-            if (lines[0].toLowerCase().includes('email')) start = 1
+
+            let emailCol = 0
+            let passCol = 1
+            let nameCol = 2
+            let subjectCol = 3
+
+            if (lines[0].toLowerCase().includes('email')) {
+                start = 1
+                const headers = lines[0].toLowerCase().split(',').map(h => h.trim())
+                const eIdx = headers.findIndex(h => h.includes('email'))
+                const pIdx = headers.findIndex(h => h.includes('pass'))
+                const nIdx = headers.findIndex(h => h.includes('name') || h.includes('nombre'))
+                const sIdx = headers.findIndex(h => h.includes('subject') || h.includes('materia'))
+
+                if (eIdx !== -1) emailCol = eIdx
+                if (pIdx !== -1) passCol = pIdx
+                if (nIdx !== -1) nameCol = nIdx
+                if (sIdx !== -1) subjectCol = sIdx
+            }
+
             for (let i = start; i < lines.length; i++) {
                 const line = lines[i].trim()
                 if (!line) continue
                 const parts = line.split(',')
                 if (parts.length >= 3) {
-                    parsed.push({ email: parts[0].trim(), password: parts[1]?.trim() || 'ingles2025', full_name: parts[2].trim() })
+                    const email = parts[emailCol]?.trim() || ''
+                    const password = parts[passCol]?.trim() || 'ingles2025'
+                    const full_name = parts[nameCol]?.trim() || ''
+                    const subject_id = parts[subjectCol]?.trim() || undefined
+
+                    if (email && full_name) {
+                        parsed.push({ email, password, full_name, subject_id })
+                    }
                 }
             }
             if (confirm(`Se encontraron ${parsed.length} profesores en el CSV. ¿Importar ahora?`)) {
@@ -396,7 +426,10 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
                 <div className="csv-upload-subject">
                     <h4 style={{ color: '#ffffff', textAlign: 'center' }}>Subir Archivo CSV</h4>
                     <div className="csv-helper-text" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                        Formato requerido: <code style={{ color: '#a855f7', background: 'rgba(168,85,247,0.1)' }}>email, password, full_name</code>
+                        Formato requerido: <code style={{ color: '#a855f7', background: 'rgba(168,85,247,0.1)' }}>email, password, full_name, subject (opcional)</code>
+                        <div style={{ marginTop: '0.4rem', fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>
+                            Puedes incluir opcionalmente el campo <code>subject</code> (ID de la materia) para asignar el profesor a su materia al importar.
+                        </div>
                     </div>
                     <input
                         type="file"
