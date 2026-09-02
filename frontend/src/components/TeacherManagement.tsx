@@ -28,11 +28,27 @@ interface UserData {
     subject_ids?: string[]
 }
 
+export interface SubjectAssignmentResult {
+    subjectId: string
+    status: 'success' | 'already_assigned' | 'error'
+    message: string
+}
+
+export interface DetailedUserResult {
+    email: string
+    fullName: string
+    accountStatus: 'created' | 'already_exists' | 'error'
+    accountMessage: string
+    centerStatus: 'assigned' | 'already_assigned' | 'error' | 'skipped'
+    centerMessage: string
+    subjectResults: SubjectAssignmentResult[]
+}
+
 interface Results {
     success: number
     errors: number
     errorDetails: { email: string; error: string }[]
-    processed: { email: string; status: 'success' | 'error'; message: string }[]
+    processed: DetailedUserResult[]
 }
 
 function formatTime(totalSeconds?: number): string {
@@ -120,43 +136,127 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
             .finally(() => setLoadingAll(false))
     }, [activeTab])
 
-    // ─── Create professor + assign to center ───────────────────────────
-    const createAndAssignProfessor = async (form: { fullName: string; email: string; password: string; subjectIds?: string[] }) => {
-        let userId: string | null = null
-        let userData: any = null
-
-        const res = await fetch(`${API}/api/users`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: form.email, password: form.password, fullName: form.fullName, role: 'professor' })
-        })
-        const data = await res.json()
-
-        if (!res.ok) {
-            const existing = allProfessors.find(p => p.email.toLowerCase() === form.email.toLowerCase()) ||
-                assignedTeachers.find(t => t.email.toLowerCase() === form.email.toLowerCase())
-            if (existing) {
-                userId = existing.id
-                userData = existing
-            } else {
-                throw new Error(data.error || 'Error creando profesor')
-            }
-        } else if (data.user?.id) {
-            userId = data.user.id
-            userData = data.user
+    // ─── Create professor + assign to center & subjects with detailed reporting ───
+    const createAndAssignProfessorDetails = async (form: {
+        fullName: string
+        email: string
+        password: string
+        subjectIds?: string[]
+    }): Promise<DetailedUserResult> => {
+        const result: DetailedUserResult = {
+            email: form.email,
+            fullName: form.fullName,
+            accountStatus: 'created',
+            accountMessage: '',
+            centerStatus: 'assigned',
+            centerMessage: '',
+            subjectResults: []
         }
 
+        let userId: string | null = null
+
+        // 1. Create or lookup user account
+        try {
+            const res = await fetch(`${API}/api/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: form.email, password: form.password, fullName: form.fullName, role: 'professor' })
+            })
+            const data = await res.json()
+
+            if (!res.ok) {
+                const existing = allProfessors.find(p => p.email.toLowerCase() === form.email.toLowerCase()) ||
+                    assignedTeachers.find(t => t.email.toLowerCase() === form.email.toLowerCase())
+                if (existing) {
+                    userId = existing.id
+                    result.accountStatus = 'already_exists'
+                    result.accountMessage = 'Usuario ya registrado previamente'
+                } else {
+                    result.accountStatus = 'error'
+                    result.accountMessage = data.error || 'Error creando usuario'
+                    result.centerStatus = 'skipped'
+                    result.centerMessage = 'Omisión por fallo en cuenta'
+                    return result
+                }
+            } else {
+                if (data.alreadyExists) {
+                    result.accountStatus = 'already_exists'
+                    result.accountMessage = 'Usuario ya registrado previamente'
+                } else {
+                    result.accountStatus = 'created'
+                    result.accountMessage = 'Usuario creado exitosamente'
+                }
+                userId = data.user?.id || null
+            }
+        } catch (err: any) {
+            result.accountStatus = 'error'
+            result.accountMessage = err.message || 'Error creando usuario'
+            result.centerStatus = 'skipped'
+            result.centerMessage = 'Omisión por fallo en cuenta'
+            return result
+        }
+
+        // 2. Assign to Center
         if (userId) {
-            await assignProfessor(centerId, userId)
+            try {
+                const centerRes = await assignProfessor(centerId, userId)
+                if (centerRes && (centerRes.alreadyAssigned || centerRes.message?.includes('already'))) {
+                    result.centerStatus = 'already_assigned'
+                    result.centerMessage = 'Ya asignado a este centro'
+                } else {
+                    result.centerStatus = 'assigned'
+                    result.centerMessage = 'Asignado al centro exitosamente'
+                }
+            } catch (err: any) {
+                if (err.message?.toLowerCase().includes('already') || err.message?.includes('23505')) {
+                    result.centerStatus = 'already_assigned'
+                    result.centerMessage = 'Ya asignado a este centro'
+                } else {
+                    result.centerStatus = 'error'
+                    result.centerMessage = err.message || 'Error asignando al centro'
+                }
+            }
+
+            // 3. Assign each Subject independently so errors in one don't block others
             if (form.subjectIds && form.subjectIds.length > 0) {
                 for (const subId of form.subjectIds) {
-                    if (subId) {
-                        await assignSubjectProfessor(subId, userId)
+                    const cleanSubId = subId.trim()
+                    if (!cleanSubId) continue
+                    try {
+                        const subRes = await assignSubjectProfessor(cleanSubId, userId)
+                        if (subRes && subRes.alreadyAssigned) {
+                            result.subjectResults.push({
+                                subjectId: cleanSubId,
+                                status: 'already_assigned',
+                                message: 'Ya asignado previamente a esta materia'
+                            })
+                        } else {
+                            result.subjectResults.push({
+                                subjectId: cleanSubId,
+                                status: 'success',
+                                message: 'Asignado a la materia exitosamente'
+                            })
+                        }
+                    } catch (err: any) {
+                        result.subjectResults.push({
+                            subjectId: cleanSubId,
+                            status: 'error',
+                            message: err.message || 'Error al asignar la materia'
+                        })
                     }
                 }
             }
         }
-        return userData
+
+        return result
+    }
+
+    const createAndAssignProfessor = async (form: { fullName: string; email: string; password: string; subjectIds?: string[] }) => {
+        const detail = await createAndAssignProfessorDetails(form)
+        if (detail.accountStatus === 'error') {
+            throw new Error(detail.accountMessage)
+        }
+        return { email: form.email, fullName: form.fullName }
     }
 
     const handleCreateTeacher = async () => {
@@ -169,7 +269,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
         try {
             await createAndAssignProfessor(createForm)
             setCreateForm({ fullName: '', email: '', password: 'ingles2025' })
-            alert('Profesor creado y asignado al centro exitosamente')
+            alert('Profesor procesado exitosamente')
             fetchAssigned()
         } catch (err: any) {
             setError(err.message || 'Error al crear profesor')
@@ -217,16 +317,32 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
         setResults(null)
         const res: Results = { success: 0, errors: 0, errorDetails: [], processed: [] }
         for (const user of users) {
-            try {
-                await createAndAssignProfessor({ fullName: user.full_name, email: user.email, password: user.password, subjectIds: user.subject_ids })
-                res.success++
-                res.processed.push({ email: user.email, status: 'success', message: 'OK' })
-            } catch (error: any) {
+            const detail = await createAndAssignProfessorDetails({
+                fullName: user.full_name,
+                email: user.email,
+                password: user.password,
+                subjectIds: user.subject_ids
+            })
+
+            res.processed.push(detail)
+
+            const hasError = detail.accountStatus === 'error' ||
+                detail.centerStatus === 'error' ||
+                detail.subjectResults.some(s => s.status === 'error')
+
+            if (hasError) {
                 res.errors++
-                res.errorDetails.push({ email: user.email, error: error.message })
-                res.processed.push({ email: user.email, status: 'error', message: error.message })
+                const errMsgs: string[] = []
+                if (detail.accountStatus === 'error') errMsgs.push(`Cuenta: ${detail.accountMessage}`)
+                if (detail.centerStatus === 'error') errMsgs.push(`Centro: ${detail.centerMessage}`)
+                detail.subjectResults.filter(s => s.status === 'error').forEach(s => {
+                    errMsgs.push(`Materia [${s.subjectId}]: ${s.message}`)
+                })
+                res.errorDetails.push({ email: user.email, error: errMsgs.join(' | ') })
+            } else {
+                res.success++
             }
-            await new Promise(r => setTimeout(r, 100))
+            await new Promise(r => setTimeout(r, 50))
         }
         setResults(res)
         setImporting(false)
@@ -486,22 +602,64 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
 
             {/* ── Import Results ── */}
             {results && (
-                <div className="results-section">
-                    <h3 style={{ color: '#1f295a' }}>📈 Resultados de Importación</h3>
-                    <div className="results-summary">
-                        <div className="result-item success"><span className="result-number">{results.success}</span><span className="result-label">Creados y Asignados</span></div>
-                        <div className="result-item error"><span className="result-number">{results.errors}</span><span className="result-label">Errores</span></div>
-                    </div>
-                    {results.errorDetails.length > 0 && (
-                        <div className="errors-details">
-                            <h4 style={{ color: '#1f295a' }}>❌ Errores Detallados:</h4>
-                            <div className="error-list">
-                                {results.errorDetails.map((e, i) => (
-                                    <div key={i} className="error-item" style={{ color: '#dc2626' }}><strong>{e.email}</strong>: {e.error}</div>
-                                ))}
+                <div className="results-section" style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    borderRadius: '12px',
+                    padding: '1.5rem',
+                    margin: '1.5rem 0',
+                    border: '1px solid rgba(255,255,255,0.1)'
+                }}>
+                    <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '1rem' }}>📈 Resultados de Importación</h3>
+
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '450px', overflowY: 'auto' }}>
+                        {results.processed.map((item, idx) => (
+                            <div key={idx} style={{
+                                background: 'rgba(0,0,0,0.25)',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                borderRadius: '8px',
+                                padding: '1rem'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                                    <span style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.95rem' }}>{item.fullName || item.email}</span>
+                                    <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>{item.email}</span>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.82rem', marginBottom: '0.5rem' }}>
+                                    {/* Account Badge */}
+                                    <span style={{
+                                        padding: '0.25rem 0.6rem', borderRadius: '4px', fontWeight: 500,
+                                        background: item.accountStatus === 'created' ? 'rgba(16,185,129,0.2)' : item.accountStatus === 'already_exists' ? 'rgba(59,130,246,0.2)' : 'rgba(239,68,68,0.2)',
+                                        color: item.accountStatus === 'created' ? '#10b981' : item.accountStatus === 'already_exists' ? '#60a5fa' : '#f87171'
+                                    }}>
+                                        Cuenta: {item.accountMessage}
+                                    </span>
+                                    {/* Center Badge */}
+                                    <span style={{
+                                        padding: '0.25rem 0.6rem', borderRadius: '4px', fontWeight: 500,
+                                        background: item.centerStatus === 'assigned' ? 'rgba(16,185,129,0.2)' : item.centerStatus === 'already_assigned' ? 'rgba(59,130,246,0.2)' : 'rgba(239,68,68,0.2)',
+                                        color: item.centerStatus === 'assigned' ? '#10b981' : item.centerStatus === 'already_assigned' ? '#60a5fa' : '#f87171'
+                                    }}>
+                                        Centro: {item.centerMessage}
+                                    </span>
+                                </div>
+
+                                {/* Subjects Detailed Breakdown */}
+                                {item.subjectResults.length > 0 && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.6rem', paddingLeft: '0.75rem', borderLeft: '3px solid #a855f7', fontSize: '0.82rem' }}>
+                                        {item.subjectResults.map((sub, sIdx) => (
+                                            <div key={sIdx} style={{
+                                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                color: sub.status === 'success' ? '#34d399' : sub.status === 'already_assigned' ? '#93c5fd' : '#f87171'
+                                            }}>
+                                                <span>{sub.status === 'success' ? '✓' : sub.status === 'already_assigned' ? 'ℹ' : '✕'}</span>
+                                                <span>Materia <code style={{ color: '#c084fc', background: 'rgba(192,132,252,0.1)', padding: '1px 5px', borderRadius: '3px' }}>{sub.subjectId}</code>: {sub.message}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    )}
+                        ))}
+                    </div>
                 </div>
             )}
 

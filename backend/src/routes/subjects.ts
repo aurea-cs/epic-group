@@ -244,7 +244,7 @@ router.post('/api/subjects/:subjectId/professors', async (req, res) => {
 
         if (error) {
             if (error.code === '23505') {
-                return res.status(400).json({ error: 'One or more professors are already assigned to this subject' });
+                return res.status(200).json({ message: 'One or more professors are already assigned to this subject', alreadyAssigned: true });
             }
             throw error;
         }
