@@ -122,20 +122,37 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
 
     // ─── Create professor + assign to center ───────────────────────────
     const createAndAssignProfessor = async (form: { fullName: string; email: string; password: string; subjectId?: string }) => {
+        let userId: string | null = null
+        let userData: any = null
+
         const res = await fetch(`${API}/api/users`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: form.email, password: form.password, fullName: form.fullName, role: 'professor' })
         })
         const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Error creando profesor')
-        if (data.user?.id) {
-            await assignProfessor(centerId, data.user.id)
+
+        if (!res.ok) {
+            const existing = allProfessors.find(p => p.email.toLowerCase() === form.email.toLowerCase()) ||
+                assignedTeachers.find(t => t.email.toLowerCase() === form.email.toLowerCase())
+            if (existing) {
+                userId = existing.id
+                userData = existing
+            } else {
+                throw new Error(data.error || 'Error creando profesor')
+            }
+        } else if (data.user?.id) {
+            userId = data.user.id
+            userData = data.user
+        }
+
+        if (userId) {
+            await assignProfessor(centerId, userId)
             if (form.subjectId) {
-                await assignSubjectProfessor(form.subjectId, data.user.id)
+                await assignSubjectProfessor(form.subjectId, userId)
             }
         }
-        return data.user
+        return userData
     }
 
     const handleCreateTeacher = async () => {

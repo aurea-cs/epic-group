@@ -225,7 +225,45 @@ router.post('/api/users', async (req, res) => {
             user_metadata: { full_name: fullName }
         });
 
-        if (authError) throw authError;
+        if (authError) {
+            if (authError.message?.toLowerCase().includes('already') || (authError as any).code === 'email_exists') {
+                let { data: existingUser } = await supabase
+                    .from('users')
+                    .select('id, email, full_name, role')
+                    .eq('email', email)
+                    .maybeSingle();
+
+                if (!existingUser) {
+                    const { data: listData } = await supabase.auth.admin.listUsers();
+                    const foundAuth = listData?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+                    if (foundAuth) {
+                        await supabase.from('users').upsert({
+                            id: foundAuth.id,
+                            email: email,
+                            full_name: fullName,
+                            role: role,
+                            firstname: fullName.split(' ')[0],
+                            lastname: fullName.split(' ').slice(1).join(' ')
+                        });
+                        existingUser = { id: foundAuth.id, email, full_name: fullName, role };
+                    }
+                }
+
+                if (existingUser) {
+                    return res.status(200).json({
+                        message: 'User already exists',
+                        alreadyExists: true,
+                        user: {
+                            id: existingUser.id,
+                            email: existingUser.email,
+                            fullName: existingUser.full_name || fullName,
+                            role: existingUser.role
+                        }
+                    });
+                }
+            }
+            throw authError;
+        }
 
         if (!authUser.user) {
             throw new Error('Failed to create user object');
