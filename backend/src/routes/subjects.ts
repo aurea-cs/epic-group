@@ -215,32 +215,43 @@ router.get('/api/subjects/:subjectId/professors', async (req, res) => {
     }
 });
 
-// Assign professor to subject
+// Assign professor(s) to subject
 router.post('/api/subjects/:subjectId/professors', async (req, res) => {
     try {
         const { subjectId } = req.params;
-        const { userId } = req.body;
+        let ids: string[] = [];
 
-        if (!userId) {
-            return res.status(400).json({ error: 'User ID is required' });
+        if (Array.isArray(req.body.userIds)) {
+            ids = req.body.userIds;
+        } else if (Array.isArray(req.body.userId)) {
+            ids = req.body.userId;
+        } else if (req.body.userId) {
+            ids = [req.body.userId];
+        } else if (req.body.userIds) {
+            ids = [req.body.userIds];
         }
+
+        if (ids.length === 0) {
+            return res.status(400).json({ error: 'User ID or User IDs are required' });
+        }
+
+        const records = ids.map(id => ({ subject_id: subjectId, professor_id: id }));
 
         const { data, error } = await supabase
             .from('professor_subjects')
-            .insert({ subject_id: subjectId, professor_id: userId })
-            .select()
-            .single();
+            .upsert(records, { ignoreDuplicates: true })
+            .select();
 
         if (error) {
             if (error.code === '23505') {
-                return res.status(400).json({ error: 'Professor already assigned to this subject' });
+                return res.status(400).json({ error: 'One or more professors are already assigned to this subject' });
             }
             throw error;
         }
 
         res.status(201).json(data);
     } catch (error: any) {
-        console.error('Error assigning professor to subject:', error);
+        console.error('Error assigning professor(s) to subject:', error);
         res.status(500).json({ error: error.message });
     }
 });
