@@ -208,7 +208,7 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
                         border: '1px solid rgba(255,255,255,0.05)'
                     }}>
                         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🚧</div>
-                        <h3 style={{ color: 'white', marginBottom: '0.5rem' }}>Contenido de la Asignatura</h3>
+                        <h3 style={{ color: 'white', marginBottom: '0.5rem' }}>Contenido de la Materia</h3>
                         <p style={{ color: 'rgba(255,255,255,0.6)' }}>Próximamente podrás ver el contenido detallado aquí.</p>
                     </div>
                 </div>

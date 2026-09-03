@@ -80,7 +80,7 @@ const UploadContentScreen: React.FC<UploadContentScreenProps> = () => {
 
         {/* Lado derecho - Sección funcional */}
         <div className="upload-right-section">
-          <h1 className="upload-title">Mis cursos</h1>
+          <h1 className="upload-title">Materias</h1>
 
           {/* Grid de cursos/contenido */}
           <div className="courses-grid">

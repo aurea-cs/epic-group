@@ -97,7 +97,7 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = ({ user }) => {
   };
 
   const handleBack = () => {
-    navigate('/assignments');
+    navigate(-1);
   };
 
   return (

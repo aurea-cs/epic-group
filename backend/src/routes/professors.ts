@@ -20,6 +20,7 @@ router.get('/api/professors/:professorId/courses', async (req, res) => {
                     grades_levels (
                         id,
                         name,
+                        level,
                         educational_centers (
                             id,
                             name
@@ -42,6 +43,8 @@ router.get('/api/professors/:professorId/courses', async (req, res) => {
                 completedSteps: Math.floor(Math.random() * 100), // Mock progress
                 totalSteps: 100,
                 gradeId: grade.id,
+                gradeName: grade.name || 'Sin Grado',
+                level: grade.level ?? null,
                 centerId: center.id,
                 centerName: center.name || 'Centro Educativo'
             };

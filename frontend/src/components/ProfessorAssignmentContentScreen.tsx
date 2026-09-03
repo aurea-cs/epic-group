@@ -435,7 +435,7 @@ const loadStudents = useCallback(async () => {
                         {subject?.name}
                     </h1>
                     <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.45)', fontSize: '0.92rem' }}>
-                        Mis cursos {'> ' + (subject?.name || '') + ' >'} Configuración
+                        Mis materias {'> ' + (subject?.name || '') + ' >'} Configuración
                     </p>
                 </div>
             </div>
@@ -494,7 +494,7 @@ const loadStudents = useCallback(async () => {
                 <TabButton label="📝 Entregas" active={activeTab === 'submissions'} onClick={() => setActiveTab('submissions')} />
                 <TabButton label="📅 Eventos" active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} />
                 <TabButton label="👥 Alumnos inscritos" active={activeTab === 'students'} onClick={() => setActiveTab('students')} />
-                <TabButton label="🌕 Vista planetas" active={false} onClick={() => navigate('/assignments')} />
+                <TabButton label="🌕 Vista planetas" active={false} onClick={() => navigate(`/course/${courseId}/planet/1`, { state: { title: subject?.name, courseTitle: subject?.name } })} />
 
                 <div style={{ flex: 1 }} />
 
