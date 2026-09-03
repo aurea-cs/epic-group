@@ -133,7 +133,7 @@ const ProgressScreen: React.FC<ProgressScreenProps> = ({ user }) => {
     <div className="progress-screen">
       {!selectedCourse ? (
         <div className="progress-content">
-          <h1 className="progress-title">Mis cursos</h1>
+          <h1 className="progress-title">Mis materias</h1>
 
           {loading && <p style={{ color: 'white', opacity: 0.7 }}>Cargando cursos...</p>}
           {error && <p style={{ color: '#ef4444', marginBottom: '1rem' }}>{error}</p>}

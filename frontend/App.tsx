@@ -10,7 +10,6 @@ import ScheduleScreen from './src/components/ScheduleScreen'
 import StudentsScreen from './src/components/StudentsScreen'
 import StudentProgressScreen from './src/components/StudentProgressScreen'
 import GradesScreen from './src/components/GradesScreen'
-import CourseMapScreen from './src/components/CourseMapScreen'
 import ProfileScreen from './src/components/ProfileScreen'
 import AssignmentsScreen from './src/components/AssignmentsScreen'
 import HierarchyConfig from './src/components/HierarchyConfig'
@@ -152,10 +151,6 @@ function App() {
             }
           />
           <Route path="/course/:courseId/module/:moduleId/pdf" element={<PdfViewerPage />} />
-          <Route
-            path="/course-map"
-            element={user ? <CourseMapScreen user={user} /> : <Navigate to="/login" replace />}
-          />
           <Route
             path="/assignments"
             element={user ? <AssignmentsScreen user={user} /> : <Navigate to="/login" replace />}

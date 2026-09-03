@@ -127,18 +127,68 @@ router.get('/api/students/:studentId/courses', async (req, res) => {
 
         if (centersError) throw centersError;
 
-        // Format the response
+        // Format the response, including progress if requested
+        const includeProgress = req.query.include === 'progress';
+        let progressMap: Record<string, { stars: number; completed: boolean; totalItems: number; completedItems: number }> = {};
+
+        if (includeProgress && subjectIds.length > 0) {
+            const [modulesRes, progressRes] = await Promise.all([
+                supabase
+                    .from('modules')
+                    .select('id, subject_id, items:module_items(id, type, is_completed)')
+                    .in('subject_id', subjectIds),
+                supabase
+                    .from('student_item_progress')
+                    .select('item_id')
+                    .eq('student_id', studentId)
+            ]);
+
+            const modules = modulesRes.data || [];
+            const completedItemIds = new Set((progressRes.data || []).map(p => p.item_id));
+
+            subjectIds.forEach(subId => {
+                const subModules = modules.filter(m => m.subject_id === subId);
+                let total = 0;
+                let done = 0;
+
+                subModules.forEach(mod => {
+                    const items = (mod.items || []).filter((it: any) => it.type === 'pdf');
+                    total += items.length;
+                    items.forEach((it: any) => {
+                        if (it.is_completed || completedItemIds.has(it.id)) {
+                            done++;
+                        }
+                    });
+                });
+
+                let stars = 0;
+                let completed = false;
+                if (total > 0) {
+                    const ratio = done / total;
+                    if (ratio === 1) stars = 3;
+                    else if (ratio >= 0.5) stars = 2;
+                    else if (ratio > 0) stars = 1;
+                    completed = stars === 3;
+                }
+
+                progressMap[subId] = { stars, completed, totalItems: total, completedItems: done };
+            });
+        }
+
         const formattedCourses = subjects?.map(subject => {
             const grade = grades?.find(g => g.id === subject.grade_id);
             const center = centers?.find(c => c.id === grade?.center_id);
-            
+            const prog = progressMap[subject.id];
+
             return {
                 id: subject.id,
                 name: subject.name,
+                title: subject.name,
                 grade_id: grade?.id,
                 grade_name: grade?.name,
                 center_id: center?.id,
-                center_name: center?.name
+                center_name: center?.name,
+                ...(prog ? { stars: prog.stars, completed: prog.completed, totalItems: prog.totalItems, completedItems: prog.completedItems } : {})
             };
         });
 

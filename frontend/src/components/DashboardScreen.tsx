@@ -28,17 +28,18 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
           <div className="welcome-content">
             <div className="welcome-text">
               <h1 className="welcome-title">¡Bienvenid@!</h1>
-              <h2 className="user-name">{user.user_metadata?.full_name || user.email || 'Usuario'}</h2>
-              <div className="progress-info" onClick={() => navigate(isAdmin ? '/admin' : userRole === 'professor' ? '/professor/assignments/courses' : '/assignments')}>
+              <h2>{user.user_metadata?.full_name || user.email || 'Usuario'}</h2>
+              <br></br>
+              <div className="progress-info" onClick={() => navigate(isAdmin ? '/admin' : '/assignments')}>
                 <img src={medallaIcon} alt="Medalla" className="medal-icon-img" />
-                <span className="grades-text">{isAdmin ? 'Ver centros educativos >' : 'Ver campos formativos >'}</span>
+                <span className="grades-text">{isAdmin ? 'Ver centros educativos >' : 'Ver materias >'}</span>
               </div>
               <p className="agenda-text">
                 {isAdmin ? (
                   'Haz click para administrar los centros educativos y su contenido.'
                 ) : userRole === 'professor' ? (
                   <>
-                    Haz click para checar a tus materias,<br />asignar tareas, y ver entregas de los alumnos.
+                    Haz click para checar a tus materias, su contenido, <br />asignar tareas, y ver entregas de los alumnos.
                   </>
                 ) : (
                   <>

@@ -34,14 +34,14 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
 // Professor navigation items (current default)
 const PROFESSOR_NAV_ITEMS: NavItem[] = [
   { key: 'home', label: 'Inicio', path: '/dashboard' },
-  { key: 'my-courses', label: 'Mis cursos', path: '/professor/assignments/courses' },
+  { key: 'my-courses', label: 'Mis materias', path: '/professor/assignments/courses' },
   { key: 'schedule', label: 'Horario', path: '/schedule' },
 ]
 
 // Student navigation items
 const STUDENT_NAV_ITEMS: NavItem[] = [
   { key: 'home', label: 'Inicio', path: '/dashboard' },
-  { key: 'my-courses', label: 'Mis cursos', path: '/assignments' },
+  { key: 'my-courses', label: 'Mis materias', path: '/assignments' },
   { key: 'schedule', label: 'Horario', path: '/schedule' },
   { key: 'calendar', label: 'Calendario', path: '/calendar' },
 ]

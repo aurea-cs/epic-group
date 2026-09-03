@@ -496,7 +496,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                             <h1 style={{ margin: 0, fontSize: '2rem', color: 'white' }}>
                                 {subject?.name}
                             </h1>
-                            <p style={{ color: 'white', marginTop: '0.5rem', opacity: 0.8 }}>Contenido de la Asignatura</p>
+                            <p style={{ color: 'white', marginTop: '0.5rem', opacity: 0.8 }}>Contenido de la Materia</p>
                         </div>
                         <div className="header-action-right" style={{ width: '150px', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                             <button
