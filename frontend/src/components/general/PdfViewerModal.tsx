@@ -401,12 +401,6 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
       const blob = new Blob([finalPdfBytes as unknown as BlobPart], { type: 'application/pdf' })
       await onSave(blob)
       onClose()
-    });
-
-    const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-    await onSave(blob);
-    onClose();
   } catch (err) {
     console.error('Error saving PDF', err)
     alert('Hubo un error al guardar el documento.')

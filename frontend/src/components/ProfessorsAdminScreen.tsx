@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { User } from '@supabase/supabase-js'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import './ProfessorsAdminScreen.css'
 import CustomSelect from './general/CustomSelect'
@@ -129,20 +130,21 @@ function avatarColor(name: string): string {
 
 // ─── Add Professor Modal ────────────────────────────────────────────────────────
 const AddProfessorModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
+  const { t } = useTranslation()
   const [form, setForm] = useState({ fullName: '', email: '', password: 'ingles2025' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.fullName || !form.email || !form.password) { setError('Todos los campos son requeridos.'); return }
+    if (!form.fullName || !form.email || !form.password) { setError(t('adminProfessors.requiredFields')); return }
     setSubmitting(true); setError('')
     try {
       const res = await fetch(`${API}/api/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: form.email, password: form.password, fullName: form.fullName, role: 'professor' }) })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error al crear profesor')
+      if (!res.ok) throw new Error(data.error || t('adminProfessors.createError'))
       onSuccess(); onClose()
-    } catch (err: any) { setError(err.message || 'Error desconocido') }
+    } catch (err: any) { setError(err.message || t('adminProfessors.unknownError')) }
     finally { setSubmitting(false) }
   }
 
@@ -151,25 +153,25 @@ const AddProfessorModal: React.FC<{ onClose: () => void; onSuccess: () => void }
       <div style={modalStyle}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#c084fc' }}>➕ Nuevo Profesor</h3>
-            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)' }}>Crea una cuenta de profesor en la plataforma</p>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#c084fc' }}>{t('adminProfessors.newProfessorBtn')}</h3>
+            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)' }}>{t('adminProfessors.newProfessorSubtitle')}</p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '1.6rem', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>
         </div>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <FormField label="Nombre Completo *">
-            <input type="text" style={inputStyle} placeholder="Ej: María García López" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} autoFocus />
+          <FormField label={t('adminProfessors.fullNameLabel')}>
+            <input type="text" style={inputStyle} placeholder={t('adminProfessors.fullNamePlaceholder')} value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} autoFocus />
           </FormField>
-          <FormField label="Correo Electrónico *">
-            <input type="email" style={inputStyle} placeholder="profesor@ejemplo.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+          <FormField label={t('adminProfessors.emailLabel')}>
+            <input type="email" style={inputStyle} placeholder={t('adminProfessors.emailPlaceholder')} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
           </FormField>
-          <FormField label="Contraseña *">
-            <input type="text" style={inputStyle} placeholder="Contraseña temporal" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+          <FormField label={t('adminProfessors.passwordLabel')}>
+            <input type="text" style={inputStyle} placeholder={t('adminProfessors.passwordPlaceholder')} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
           </FormField>
           {error && <ErrorBanner message={error} />}
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
-            <button type="button" onClick={onClose} style={cancelBtnStyle}>Cancelar</button>
-            <button type="submit" disabled={submitting} style={submitBtnStyle(submitting)}>{submitting ? 'Creando...' : '✓ Crear Profesor'}</button>
+            <button type="button" onClick={onClose} style={cancelBtnStyle}>{t('adminProfessors.cancelBtn')}</button>
+            <button type="submit" disabled={submitting} style={submitBtnStyle(submitting)}>{submitting ? t('adminProfessors.creatingBtn') : t('adminProfessors.createBtn')}</button>
           </div>
         </form>
       </div>
@@ -179,6 +181,7 @@ const AddProfessorModal: React.FC<{ onClose: () => void; onSuccess: () => void }
 
 // ─── Edit Professor Modal ───────────────────────────────────────────────────────
 const EditProfessorModal: React.FC<{ professor: Professor; allCenters: Center[]; onClose: () => void; onSuccess: () => void }> = ({ professor, allCenters, onClose, onSuccess }) => {
+  const { t } = useTranslation()
   const [form, setForm] = useState({ fullName: professor.name, email: professor.email })
   const [selectedCenterIds, setSelectedCenterIds] = useState<string[]>(professor.centers.map(c => c.id))
   const [submitting, setSubmitting] = useState(false)
@@ -188,14 +191,14 @@ const EditProfessorModal: React.FC<{ professor: Professor; allCenters: Center[];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.fullName || !form.email) { setError('Nombre y correo son requeridos.'); return }
+    if (!form.fullName || !form.email) { setError(t('adminProfessors.nameEmailRequired')); return }
     setSubmitting(true); setError('')
     try {
       const res = await fetch(`${API}/api/users/${professor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fullName: form.fullName, email: form.email, centerIds: selectedCenterIds }) })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error al actualizar profesor')
+      if (!res.ok) throw new Error(data.error || t('adminProfessors.updateError'))
       onSuccess(); onClose()
-    } catch (err: any) { setError(err.message || 'Error desconocido') }
+    } catch (err: any) { setError(err.message || t('adminProfessors.unknownError')) }
     finally { setSubmitting(false) }
   }
 
@@ -204,25 +207,25 @@ const EditProfessorModal: React.FC<{ professor: Professor; allCenters: Center[];
       <div style={{ ...modalStyle, maxWidth: '520px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#c084fc' }}>✏️ Editar Profesor</h3>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#c084fc' }}>{t('adminProfessors.editProfessorTitle')}</h3>
             <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)' }}>
-              Modificando a <strong style={{ color: 'rgba(255,255,255,0.7)' }}>{professor.name}</strong>
+              {t('adminProfessors.modifyingPrefix')} <strong style={{ color: 'rgba(255,255,255,0.7)' }}>{professor.name}</strong>
             </p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '1.6rem', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>
         </div>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <FormField label="Nombre Completo *">
+          <FormField label={t('adminProfessors.fullNameLabel')}>
             <input type="text" style={inputStyle} value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} autoFocus />
           </FormField>
-          <FormField label="Correo Electrónico *">
+          <FormField label={t('adminProfessors.emailLabel')}>
             <input type="email" style={inputStyle} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
           </FormField>
 
           <div>
-            <label style={labelStyle}>Centros Inscritos</label>
+            <label style={labelStyle}>{t('adminProfessors.enrolledCenters')}</label>
             {allCenters.length === 0
-              ? <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', margin: '6px 0 0' }}>No hay centros disponibles.</p>
+              ? <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', margin: '6px 0 0' }}>{t('adminProfessors.noCentersAvailable')}</p>
               : <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem', maxHeight: '160px', overflowY: 'auto', paddingRight: '4px' }}>
                 {allCenters.map(center => {
                   const checked = selectedCenterIds.includes(center.id)
@@ -235,13 +238,13 @@ const EditProfessorModal: React.FC<{ professor: Professor; allCenters: Center[];
                 })}
               </div>
             }
-            <p style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.3)', margin: '6px 0 0' }}>Desmarcar un centro elimina las inscripciones del profesor en ese centro.</p>
+            <p style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.3)', margin: '6px 0 0' }}>{t('adminProfessors.uncheckCenterWarning')}</p>
           </div>
 
           {error && <ErrorBanner message={error} />}
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
-            <button type="button" onClick={onClose} style={cancelBtnStyle}>Cancelar</button>
-            <button type="submit" disabled={submitting} style={submitBtnStyle(submitting)}>{submitting ? 'Guardando...' : '✓ Guardar Cambios'}</button>
+            <button type="button" onClick={onClose} style={cancelBtnStyle}>{t('adminProfessors.cancelBtn')}</button>
+            <button type="submit" disabled={submitting} style={submitBtnStyle(submitting)}>{submitting ? t('adminProfessors.savingBtn') : t('adminProfessors.saveChangesBtn')}</button>
           </div>
         </form>
       </div>
@@ -250,28 +253,32 @@ const EditProfessorModal: React.FC<{ professor: Professor; allCenters: Center[];
 }
 
 // ─── Delete Confirm Modal ─────────────────────────────────────────────────────
-const DeleteConfirmModal: React.FC<{ professor: Professor; onClose: () => void; onConfirm: () => void; deleting: boolean }> = ({ professor, onClose, onConfirm, deleting }) => (
-  <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-    <div style={{ ...modalStyle, maxWidth: '420px', textAlign: 'center' }}>
-      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
-      <h3 style={{ margin: '0 0 0.5rem', color: '#f87171', fontSize: '1.2rem' }}>Eliminar Profesor</h3>
-      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', margin: '0 0 1.5rem', lineHeight: 1.6 }}>
-        ¿Estás seguro de que quieres eliminar a{' '}<strong style={{ color: '#fff' }}>{professor.name}</strong>?
-        Esta acción es <span style={{ color: '#f87171', fontWeight: 600 }}>irreversible</span> y eliminará todas sus inscripciones y datos.
-      </p>
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <button onClick={onClose} style={cancelBtnStyle} disabled={deleting}>Cancelar</button>
-        <button onClick={onConfirm} disabled={deleting} style={{ flex: 2, padding: '10px 16px', background: deleting ? 'rgba(239,68,68,0.4)' : 'linear-gradient(135deg, #ef4444, #dc2626)', border: 'none', borderRadius: '8px', color: '#fff', cursor: deleting ? 'not-allowed' : 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
-          {deleting ? 'Eliminando...' : '🗑️ Sí, Eliminar'}
-        </button>
+const DeleteConfirmModal: React.FC<{ professor: Professor; onClose: () => void; onConfirm: () => void; deleting: boolean }> = ({ professor, onClose, onConfirm, deleting }) => {
+  const { t } = useTranslation()
+  return (
+    <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ ...modalStyle, maxWidth: '420px', textAlign: 'center' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+        <h3 style={{ margin: '0 0 0.5rem', color: '#f87171', fontSize: '1.2rem' }}>{t('adminProfessors.deleteProfessorTitle')}</h3>
+        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', margin: '0 0 1.5rem', lineHeight: 1.6 }}>
+          {t('adminProfessors.deleteConfirmPrefix')}{' '}<strong style={{ color: '#fff' }}>{professor.name}</strong>?
+          {t('adminProfessors.deleteWarning')}
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button onClick={onClose} style={cancelBtnStyle} disabled={deleting}>{t('adminProfessors.cancelBtn')}</button>
+          <button onClick={onConfirm} disabled={deleting} style={{ flex: 2, padding: '10px 16px', background: deleting ? 'rgba(239,68,68,0.4)' : 'linear-gradient(135deg, #ef4444, #dc2626)', border: 'none', borderRadius: '8px', color: '#fff', cursor: deleting ? 'not-allowed' : 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
+            {deleting ? t('adminProfessors.deletingBtn') : t('adminProfessors.confirmDeleteBtn')}
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-)
+  )
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) => {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [professors, setProfessors] = useState<Professor[]>([])
   const [allCenters, setAllCenters] = useState<Center[]>([])
   const [loading, setLoading] = useState(true)
@@ -315,10 +322,10 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
     try {
       const res = await fetch(`${API}/api/users/${deletingProfessor.id}`, { method: 'DELETE' })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error al eliminar')
+      if (!res.ok) throw new Error(data.error || t('adminProfessors.deleteError'))
       setProfessors(prev => prev.filter(s => s.id !== deletingProfessor.id))
       setDeletingProfessor(null)
-    } catch (err: any) { alert(err.message || 'Error al eliminar') }
+    } catch (err: any) { alert(err.message || t('adminProfessors.deleteError')) }
     finally { setIsDeleting(false) }
   }
 
@@ -340,10 +347,10 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
         <div className="professors-admin-header">
           <div>
             <h1 style={{ margin: 0, fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-0.5px', background: 'linear-gradient(135deg, #c084fc 0%, #a855f7 40%, #7c3aed 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              Gestión de Profesores
+              {t('adminProfessors.pageTitle')}
             </h1>
             <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.45)', fontSize: '0.92rem' }}>
-              Administra, edita y organiza todos los profesors de la plataforma
+              {t('adminProfessors.pageSubtitle')}
             </p>
           </div>
           {isAdmin && (
@@ -353,42 +360,42 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 25px rgba(168,85,247,0.55)' }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(168,85,247,0.4)' }}
             >
-              ➕ Nuevo Profesor
+              {t('adminProfessors.newProfessorBtn')}
             </button>
           )}
         </div>
 
         {/* Stats */}
         <div className="professors-admin-stats">
-          <StatCard icon="🎓" value={professors.length} label="Total Profesores" color="#a855f7" />
-          <StatCard icon="🏫" value={allCenters.length} label="Centros" color="#06b6d4" />
-          <StatCard icon="🔗" value={professors.filter(s => s.centers.length > 0).length} label="Con inscripción" color="#10b981" />
-          <StatCard icon="⚠️" value={professors.filter(s => s.centers.length === 0).length} label="Sin centro" color="#f59e0b" />
+          <StatCard icon="🎓" value={professors.length} label={t('adminProfessors.totalProfessors')} color="#a855f7" />
+          <StatCard icon="🏫" value={allCenters.length} label={t('adminProfessors.centers')} color="#06b6d4" />
+          <StatCard icon="🔗" value={professors.filter(s => s.centers.length > 0).length} label={t('adminProfessors.withEnrollment')} color="#10b981" />
+          <StatCard icon="⚠️" value={professors.filter(s => s.centers.length === 0).length} label={t('adminProfessors.withoutCenter')} color="#f59e0b" />
         </div>
 
         {/* Filters */}
         <div className="professors-admin-filters">
           <div style={{ position: 'relative', flex: '1 1 260px' }}>
             <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '1rem', pointerEvents: 'none' }}>🔍</span>
-            <input type="text" placeholder="Buscar por nombre o correo..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ ...inputStyle, paddingLeft: '36px', width: '100%', background: 'rgba(255,255,255,0.06)' }} />
+            <input type="text" placeholder={t('adminProfessors.searchPlaceholder')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ ...inputStyle, paddingLeft: '36px', width: '100%', background: 'rgba(255,255,255,0.06)' }} />
           </div>
           <div style={{ flex: '1 1 220px' }}>
             <CustomSelect
               value={filterCenter || 'default'}
               onChange={setFilterCenter}
               options={[
-                { value: 'default', label: 'Todos los centros' },
+                { value: 'default', label: t('adminProfessors.allCenters') },
                 ...allCenters.map(c => ({ value: c.id, label: c.name }))
               ]}
             />
           </div>
           {(searchQuery || (filterCenter && filterCenter !== 'default')) && (
             <button onClick={() => { setSearchQuery(''); setFilterCenter('default') }} style={{ padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-              ✕ Limpiar
+              {t('adminProfessors.clearBtn')}
             </button>
           )}
           <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-            {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
+            {filtered.length} {filtered.length !== 1 ? t('adminProfessors.resultPlural') : t('adminProfessors.resultSingular')}
           </span>
         </div>
 
@@ -397,15 +404,15 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
           {loading ? (
             <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🎓</div>
-              <p style={{ color: 'rgba(255,255,255,0.4)', margin: 0 }}>Cargando profesors...</p>
+              <p style={{ color: 'rgba(255,255,255,0.4)', margin: 0 }}>{t('adminProfessors.loading')}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{searchQuery || filterCenter ? '🔍' : '🎓'}</div>
-              <h3 style={{ margin: '0 0 0.5rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{searchQuery || filterCenter ? 'Sin resultados' : 'No hay profesors aún'}</h3>
-              <p style={{ margin: '0 0 1.5rem', color: 'rgba(255,255,255,0.35)', fontSize: '0.88rem' }}>{searchQuery || filterCenter ? 'Prueba con otros filtros.' : 'Crea el primer profesor para comenzar.'}</p>
+              <h3 style={{ margin: '0 0 0.5rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{searchQuery || filterCenter ? t('adminProfessors.noResultsTitle') : t('adminProfessors.noProfessorsTitle')}</h3>
+              <p style={{ margin: '0 0 1.5rem', color: 'rgba(255,255,255,0.35)', fontSize: '0.88rem' }}>{searchQuery || filterCenter ? t('adminProfessors.noResultsDesc') : t('adminProfessors.noProfessorsDesc')}</p>
               {!searchQuery && !filterCenter && isAdmin && (
-                <button onClick={() => setShowAddModal(true)} style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: '#fff', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(168,85,247,0.35)' }}>➕ Nuevo Profesor</button>
+                <button onClick={() => setShowAddModal(true)} style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: '#fff', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(168,85,247,0.35)' }}>{t('adminProfessors.newProfessorBtn')}</button>
               )}
             </div>
           ) : (
@@ -413,11 +420,11 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
               <table className="professors-admin-table">
                 <thead>
                   <tr style={{ background: 'rgba(192,132,252,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    <Th>Profesor</Th>
-                    <Th>Correo Electrónico</Th>
-                    <Th>Centros Inscritos</Th>
-                    <Th>Tiempo en plataforma</Th>
-                    {isAdmin && <Th>Acciones</Th>}
+                    <Th>{t('adminProfessors.thProfessor')}</Th>
+                    <Th>{t('adminProfessors.thEmail')}</Th>
+                    <Th>{t('adminProfessors.thCenters')}</Th>
+                    <Th>{t('adminProfessors.thTime')}</Th>
+                    {isAdmin && <Th>{t('adminProfessors.thActions')}</Th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -439,7 +446,7 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
                           </div>
                           <div>
                             <div style={{ fontWeight: 600, fontSize: '0.93rem', color: '#fff' }}>{professor.name}</div>
-                            {professor.created_at && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)' }}>Desde {new Date(professor.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short' })}</div>}
+                            {professor.created_at && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)' }}>{t('adminProfessors.since')} {new Date(professor.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short' })}</div>}
                           </div>
                         </div>
                       </td>
@@ -451,7 +458,7 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
 
                       {/* Centers */}
                       <td style={tdStyle}>
-                        {professor.centers.length === 0 ? <span style={{ color: '#fbbf24', fontSize: '0.85rem' }}>⚠️ Sin inscripción</span> : (
+                        {professor.centers.length === 0 ? <span style={{ color: '#fbbf24', fontSize: '0.85rem' }}>{t('adminProfessors.noEnrollmentBadge')}</span> : (
                           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                             {professor.centers.map(c => (
                               <span key={c.id} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '2px 8px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
@@ -466,9 +473,9 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
                       </td>
                       <td style={tdStyle}>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <ActionButton label="Actividad" bg="rgba(192,132,252,0.15)" hoverBg="rgba(192,132,252,0.25)" textColor="#d8b4fe" border="1px solid rgba(192,132,252,0.3)" onClick={() => { setSelectedProfessorId(professor.id); setSelectedProfessorName(professor.name) }} />
-                          <ActionButton label="✏️ Editar" bg="rgba(255,255,255,0.05)" hoverBg="rgba(255,255,255,0.1)" textColor="#fff" border="1px solid rgba(255,255,255,0.15)" onClick={() => setEditingProfessor(professor)} />
-                          <ActionButton label="🗑️" bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => setDeletingProfessor(professor)} />
+                          <ActionButton label={t('adminProfessors.activityBtn')} bg="rgba(192,132,252,0.15)" hoverBg="rgba(192,132,252,0.25)" textColor="#d8b4fe" border="1px solid rgba(192,132,252,0.3)" onClick={() => { setSelectedProfessorId(professor.id); setSelectedProfessorName(professor.name) }} />
+                          <ActionButton label={t('adminProfessors.editBtn')} bg="rgba(255,255,255,0.05)" hoverBg="rgba(255,255,255,0.1)" textColor="#fff" border="1px solid rgba(255,255,255,0.15)" onClick={() => setEditingProfessor(professor)} />
+                          <ActionButton label={t('adminProfessors.deleteBtnIcon')} bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => setDeletingProfessor(professor)} />
                         </div>
                       </td>
                     </tr>

@@ -1,11 +1,13 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import NavbarProfileControls from './NavbarProfileControls'
+import LanguageToggle from './general/LanguageToggle'
 import logoImage from '../assets/epic2.png'
 import './TopNavigation.css'
 
 interface NavItem {
   key: string
-  label: string
+  labelKey: string
   path: string
   disabled?: boolean
 }
@@ -25,25 +27,25 @@ interface TopNavigationProps {
 
 // Admin navigation items
 const ADMIN_NAV_ITEMS: NavItem[] = [
-  { key: 'admin-home', label: 'Inicio', path: '/dashboard' },
-  { key: 'schools', label: 'Centros', path: '/admin' },
-  { key: 'students', label: 'Alumnos', path: '/students' },
-  { key: 'professors', label: 'Profesores', path: '/professors' },
+  { key: 'admin-home', labelKey: 'topnav.home', path: '/dashboard' },
+  { key: 'schools', labelKey: 'topnav.schools', path: '/admin' },
+  { key: 'students', labelKey: 'topnav.students', path: '/students' },
+  { key: 'professors', labelKey: 'topnav.professors', path: '/professors' },
 ]
 
 // Professor navigation items (current default)
 const PROFESSOR_NAV_ITEMS: NavItem[] = [
-  { key: 'home', label: 'Inicio', path: '/dashboard' },
-  { key: 'my-courses', label: 'Mis materias', path: '/professor/assignments/courses' },
-  { key: 'schedule', label: 'Horario', path: '/schedule' },
+  { key: 'home', labelKey: 'topnav.home', path: '/dashboard' },
+  { key: 'my-courses', labelKey: 'topnav.myCourses', path: '/professor/assignments/courses' },
+  { key: 'schedule', labelKey: 'topnav.schedule', path: '/schedule' },
 ]
 
 // Student navigation items
 const STUDENT_NAV_ITEMS: NavItem[] = [
-  { key: 'home', label: 'Inicio', path: '/dashboard' },
-  { key: 'my-courses', label: 'Mis materias', path: '/assignments' },
-  { key: 'schedule', label: 'Horario', path: '/schedule' },
-  { key: 'calendar', label: 'Calendario', path: '/calendar' },
+  { key: 'home', labelKey: 'topnav.home', path: '/dashboard' },
+  { key: 'my-courses', labelKey: 'topnav.myCourses', path: '/assignments' },
+  { key: 'schedule', labelKey: 'topnav.schedule', path: '/schedule' },
+  { key: 'calendar', labelKey: 'topnav.calendar', path: '/calendar' },
 ]
 
 const TopNavigation: React.FC<TopNavigationProps> = ({
@@ -58,6 +60,8 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
   logoDestination = '/dashboard',
   backgroundColor,
 }) => {
+  const { t } = useTranslation()
+
   // Select navigation items based on role
   const navItems =
     userRole === 'admin' ? ADMIN_NAV_ITEMS
@@ -107,7 +111,7 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
                     onClick={() => handleNavClick(item)}
                     disabled={item.disabled}
                   >
-                    {item.label}
+                    {t(item.labelKey)}
                   </button>
                 )
               })}
@@ -115,6 +119,7 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
           </div>
 
           <div className="top-navigation__right" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <LanguageToggle />
             <NavbarProfileControls
               userDisplayName={userDisplayName}
               onNavigate={onNavigate}

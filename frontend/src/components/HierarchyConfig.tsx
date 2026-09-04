@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Pencil, Trash2 } from 'lucide-react'
 import {
     getCenters,
@@ -29,6 +30,7 @@ interface HierarchyConfigProps {
 
 const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
     const navigate = useNavigate()
+    const { t } = useTranslation()
 
     // State for deletion
     const [confirmDeleteCenter, setConfirmDeleteCenter] = useState<EducationalCenter | null>(null)
@@ -152,7 +154,7 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                 <div className="prof-main-col" style={{ width: '100%' }}>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                        <h2 className="section-title-modern" style={{ color: 'white' }}>Centros educativos</h2>
+                        <h2 className="section-title-modern" style={{ color: 'white' }}>{t('adminCenters.title')}</h2>
                         <div className="add-dropdown-container" style={{ position: 'relative' }}>
                             <button
                                 onClick={() => handleCreateCenter()}
@@ -171,16 +173,16 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                                 }}
                             >
-                                Nuevo centro
+                                {t('adminCenters.newCenter')}
                             </button>
                         </div>
                     </div>
 
                     <div className="classes-grid" style={{ marginTop: '1.5rem' }}>
                         {loading && !centers.length ? (
-                            <p style={{ gridColumn: '1 / -1' }}>Cargando centros...</p>
+                            <p style={{ gridColumn: '1 / -1' }}>{t('adminCenters.loading')}</p>
                         ) : centers.length === 0 ? (
-                            <p style={{ gridColumn: '1 / -1', color: '#64748b' }}>No tienes centros registrados actualmente.</p>
+                            <p style={{ gridColumn: '1 / -1', color: '#64748b' }}>{t('adminCenters.noCenters')}</p>
                         ) : (
                             centers.map(center => (
                                 <div key={center.id} className="class-card" style={{ position: 'relative', background: 'white', color: '#310041c0' }} onClick={() => navigate(`/admin/school/${center.id}`)}>
@@ -189,19 +191,19 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                                     </div>
                                     <div className="class-stats">
                                         <div className="stat-row">
-                                            <span>{center.address || "Dirección no registrada"}</span>
+                                            <span>{center.address || t('adminCenters.noAddress')}</span>
                                         </div>
                                     </div>
                                     <div className="class-stats">
                                         <div className="stat-row">
                                             <span className="stat-icon">📞</span>
-                                            <span>{center.phone || "Teléfono no registrado"}</span>
+                                            <span>{center.phone || t('adminCenters.noPhone')}</span>
                                         </div>
                                     </div>
                                     <div className="class-stats">
                                         <div className="stat-row">
                                             <span className="stat-icon">✉️</span>
-                                            <span>{center.email || "Correo electrónico no registrado"}</span>
+                                            <span>{center.email || t('adminCenters.noEmail')}</span>
                                         </div>
                                     </div>
                                     <div className="item-actions" style={{ position: 'absolute', bottom: '1rem', right: '1rem', display: 'flex', gap: '0.5rem' }}>
@@ -211,7 +213,7 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                                                 e.stopPropagation()
                                                 handleEditCenter(center)
                                             }}
-                                            title="Editar"
+                                            title={t('adminCenters.editTooltip')}
                                             style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', padding: '0.5rem', cursor: 'pointer', color: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                         >
                                             <Pencil size={16} />
@@ -222,7 +224,7 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                                                 e.stopPropagation()
                                                 setConfirmDeleteCenter(center)
                                             }}
-                                            title="Eliminar"
+                                            title={t('adminCenters.deleteTooltip')}
                                             style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', padding: '0.5rem', cursor: 'pointer', color: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                         >
                                             <Trash2 size={16} />
@@ -243,59 +245,59 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                                 <div className="modal-icon">
                                     {editingCenter ? '✏️' : '🏫'}
                                 </div>
-                                <h2>{editingCenter ? 'Editar Centro' : 'Nuevo Centro'}</h2>
-                                <p>Ingresa los datos del centro educativo a continuación.</p>
+                                <h2>{editingCenter ? t('adminCenters.editCenterTitle') : t('adminCenters.newCenterTitle')}</h2>
+                                <p>{t('adminCenters.modalSubtitle')}</p>
                             </div>
 
                             <div className="form-grid">
                                 <div className="form-group">
-                                    <label>Nombre *</label>
+                                    <label>{t('adminCenters.nameLabel')}</label>
                                     <input
                                         type="text"
                                         value={centerForm.name}
                                         onChange={(e) => setCenterForm({ ...centerForm, name: e.target.value })}
-                                        placeholder="Ej: Colegio IPDC"
+                                        placeholder={t('adminCenters.namePlaceholder')}
                                         className="modern-input"
                                         autoFocus
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label>Dirección</label>
+                                    <label>{t('adminCenters.addressLabel')}</label>
                                     <input
                                         type="text"
                                         value={centerForm.address}
                                         onChange={(e) => setCenterForm({ ...centerForm, address: e.target.value })}
-                                        placeholder="Ej: Av. Principal 123"
+                                        placeholder={t('adminCenters.addressPlaceholder')}
                                         className="modern-input"
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label>Teléfono</label>
+                                    <label>{t('adminCenters.phoneLabel')}</label>
                                     <input
                                         type="text"
                                         value={centerForm.phone}
                                         onChange={(e) => setCenterForm({ ...centerForm, phone: e.target.value })}
-                                        placeholder="Ej: 555-1234"
+                                        placeholder={t('adminCenters.phonePlaceholder')}
                                         className="modern-input"
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label>Email</label>
+                                    <label>{t('adminCenters.emailLabel')}</label>
                                     <input
                                         type="email"
                                         value={centerForm.email}
                                         onChange={(e) => setCenterForm({ ...centerForm, email: e.target.value })}
-                                        placeholder="Ej: contacto@colegio.com"
+                                        placeholder={t('adminCenters.emailPlaceholder')}
                                         className="modern-input"
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label>Código VR</label>
+                                    <label>{t('adminCenters.vrCodeLabel')}</label>
                                     <input
                                         type="text"
                                         value={centerForm.vr_code}
                                         onChange={(e) => setCenterForm({ ...centerForm, vr_code: e.target.value })}
-                                        placeholder="Ej: https://itch.io..."
+                                        placeholder={t('adminCenters.vrCodePlaceholder')}
                                         className="modern-input"
                                     />
                                 </div>
@@ -303,14 +305,14 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
 
                             <div className="modal-actions">
                                 <button className="btn-cancel-modern" onClick={() => setShowCenterModal(false)}>
-                                    Cancelar
+                                    {t('adminCenters.cancel')}
                                 </button>
                                 <button
                                     className="btn-save-modern"
                                     onClick={handleSaveCenter}
                                     disabled={!centerForm.name || loading}
                                 >
-                                    {loading ? 'Guardando...' : 'Guardar'}
+                                    {loading ? t('adminCenters.saving') : t('adminCenters.save')}
                                 </button>
                             </div>
                         </div>
@@ -319,10 +321,10 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
 
                 { confirmDeleteCenter !== null && (
                     <ConfirmModal
-                        message={`¿Estás seguro de eliminar este centro? Se eliminarán todos los grados, secciones y materias asociadas.`}
+                        message={t('adminCenters.deleteConfirmMsg')}
                         onConfirm={()=>handleDeleteCenter(confirmDeleteCenter.id)}
                         onCancel={() => setConfirmDeleteCenter(null)}
-                        confirmLabel='Sí, eliminar'
+                        confirmLabel={t('adminCenters.deleteConfirmBtn')}
                         danger
                     />
                 )}
