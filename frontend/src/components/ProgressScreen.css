@@ -380,7 +380,6 @@
   }
 }
 
-/* Sección "Mis cursos" para profesores */
 .professor-courses-section {
   max-width: 1800px;
   margin: 60px auto 0;
@@ -428,8 +427,6 @@
 .upload-content-btn:active {
   transform: translateY(0);
 }
-
-/* --- Styles adapted from CourseMapScreen.css for Detail View --- */
 
 /* Contenedor del mapa en detalle */
 .detail-map-container {

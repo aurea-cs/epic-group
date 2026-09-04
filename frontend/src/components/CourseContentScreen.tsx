@@ -61,6 +61,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     const [centerProfessors, setCenterProfessors] = useState<any[]>([])
     const [showProfessorModal, setShowProfessorModal] = useState(false)
     const [professorLoading, setProfessorLoading] = useState(false)
+    const [selectedProfessorIds, setSelectedProfessorIds] = useState<string[]>([])
 
     // Modals state
     const [showModuleModal, setShowModuleModal] = useState(false)
@@ -324,20 +325,42 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     }
 
     const handleOpenProfessorModal = async () => {
+        setSelectedProfessorIds([])
         await loadCenterProfessors()
         setShowProfessorModal(true)
     }
 
-    const handleAssignProfessor = async (userId: string) => {
+    const handleToggleSelectProfessor = (profId: string) => {
+        setSelectedProfessorIds(prev =>
+            prev.includes(profId) ? prev.filter(id => id !== profId) : [...prev, profId]
+        )
+    }
+
+    const handleToggleSelectAllProfessors = (availableProfs: any[]) => {
+        if (selectedProfessorIds.length === availableProfs.length) {
+            setSelectedProfessorIds([])
+        } else {
+            setSelectedProfessorIds(availableProfs.map(p => p.id))
+        }
+    }
+
+    const handleAssignProfessor = async (userIds?: string | string[]) => {
         if (!courseId) return
+        const idsToAssign = userIds
+            ? (Array.isArray(userIds) ? userIds : [userIds])
+            : selectedProfessorIds
+
+        if (idsToAssign.length === 0) return
+
         try {
             setProfessorLoading(true)
-            await assignSubjectProfessor(courseId, userId)
+            await assignSubjectProfessor(courseId, idsToAssign)
             const updated = await getSubjectProfessors(courseId)
             setSubjectProfessors(updated)
+            setSelectedProfessorIds([])
             setShowProfessorModal(false)
         } catch (err: any) {
-            alert(err.message || 'Error al asignar profesor')
+            alert(err.message || 'Error al asignar profesor(es)')
         } finally {
             setProfessorLoading(false)
         }
@@ -473,7 +496,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                             <h1 style={{ margin: 0, fontSize: '2rem', color: 'white' }}>
                                 {subject?.name}
                             </h1>
-                            <p style={{ color: 'white', marginTop: '0.5rem', opacity: 0.8 }}>Contenido de la Asignatura</p>
+                            <p style={{ color: 'white', marginTop: '0.5rem', opacity: 0.8 }}>Contenido de la Materia</p>
                         </div>
                         <div className="header-action-right" style={{ width: '150px', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                             <button
@@ -1092,70 +1115,123 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                 </div>
             )}
             {/* PROFESSOR ASSIGNMENT MODAL */}
-            {showProfessorModal && (
-                <div className="modal-overlay" onClick={() => setShowProfessorModal(false)}>
-                    <div className="school-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '550px' }}>
-                        <div className="modal-header">
-                            <div className="modal-icon">👨‍🏫</div>
-                            <h2>Asignar Profesor a la Materia</h2>
-                        </div>
-                        <div style={{ padding: '0 0 1rem 0' }}>
-                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', margin: '0 0 1rem 0' }}>
-                                Selecciona un profesor del centro para asignarlo a esta materia.
-                            </p>
-                            {professorLoading ? (
-                                <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '2rem' }}>Cargando...</p>
-                            ) : centerProfessors.filter(p => !subjectProfessors.some(sp => sp.id === p.id)).length === 0 ? (
-                                <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', padding: '2rem', fontStyle: 'italic' }}>
-                                    {centerProfessors.length === 0
-                                        ? 'No hay profesores asignados al centro todavía.'
-                                        : 'Todos los profesores del centro ya están asignados a esta materia.'}
+            {showProfessorModal && (() => {
+                const availableProfessors = centerProfessors.filter(p => !subjectProfessors.some(sp => sp.id === p.id))
+                const allSelected = availableProfessors.length > 0 && selectedProfessorIds.length === availableProfessors.length
+
+                return (
+                    <div className="modal-overlay" onClick={() => { setShowProfessorModal(false); setSelectedProfessorIds([]); }}>
+                        <div className="school-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '550px' }}>
+                            <div className="modal-header">
+                                <div className="modal-icon">👨‍🏫</div>
+                                <h2>Asignar Profesor a la Materia</h2>
+                            </div>
+                            <div style={{ padding: '0 0 1rem 0' }}>
+                                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', margin: '0 0 1rem 0' }}>
+                                    Selecciona uno o varios profesores del centro para asignarlos a esta materia.
                                 </p>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '350px', overflowY: 'auto' }}>
-                                    {centerProfessors
-                                        .filter(p => !subjectProfessors.some(sp => sp.id === p.id))
-                                        .map(prof => (
-                                            <div key={prof.id} style={{
-                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.04)',
-                                                borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)'
+                                {professorLoading ? (
+                                    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '2rem' }}>Cargando...</p>
+                                ) : availableProfessors.length === 0 ? (
+                                    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', padding: '2rem', fontStyle: 'italic' }}>
+                                        {centerProfessors.length === 0
+                                            ? 'No hay profesores asignados al centro todavía.'
+                                            : 'Todos los profesores del centro ya están asignados a esta materia.'}
+                                    </p>
+                                ) : (
+                                    <>
+                                        <div style={{
+                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                            marginBottom: '0.75rem', padding: '0 0.25rem'
+                                        }}>
+                                            <label style={{
+                                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem', cursor: 'pointer', userSelect: 'none'
                                             }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                    <div style={{
-                                                        width: '36px', height: '36px', borderRadius: '50%',
-                                                        background: '#6c5ce7', display: 'flex', alignItems: 'center',
-                                                        justifyContent: 'center', fontWeight: 'bold', color: '#fff', fontSize: '0.85rem'
-                                                    }}>
-                                                        {(prof.full_name || prof.email || 'P').substring(0, 2).toUpperCase()}
+                                                <input
+                                                    type="checkbox"
+                                                    checked={allSelected}
+                                                    onChange={() => handleToggleSelectAllProfessors(availableProfessors)}
+                                                    style={{ cursor: 'pointer', accentColor: '#6c5ce7', width: '16px', height: '16px' }}
+                                                />
+                                                Seleccionar todos ({availableProfessors.length})
+                                            </label>
+                                            {selectedProfessorIds.length > 0 && (
+                                                <span style={{ fontSize: '0.85rem', color: '#a29bfe', fontWeight: 500 }}>
+                                                    {selectedProfessorIds.length} seleccionado(s)
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '350px', overflowY: 'auto' }}>
+                                            {availableProfessors.map(prof => {
+                                                const isSelected = selectedProfessorIds.includes(prof.id)
+                                                return (
+                                                    <div
+                                                        key={prof.id}
+                                                        onClick={() => handleToggleSelectProfessor(prof.id)}
+                                                        style={{
+                                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                            padding: '0.75rem 1rem',
+                                                            background: isSelected ? 'rgba(108, 92, 231, 0.15)' : 'rgba(255,255,255,0.04)',
+                                                            borderRadius: '8px',
+                                                            border: isSelected ? '1px solid #6c5ce7' : '1px solid rgba(255,255,255,0.08)',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.15s ease'
+                                                        }}
+                                                    >
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={() => { }}
+                                                                style={{ cursor: 'pointer', accentColor: '#6c5ce7', width: '16px', height: '16px' }}
+                                                            />
+                                                            <div style={{
+                                                                width: '36px', height: '36px', borderRadius: '50%',
+                                                                background: '#6c5ce7', display: 'flex', alignItems: 'center',
+                                                                justifyContent: 'center', fontWeight: 'bold', color: '#fff', fontSize: '0.85rem'
+                                                            }}>
+                                                                {(prof.full_name || prof.email || 'P').substring(0, 2).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontWeight: '500', color: '#fff' }}>{prof.full_name || 'Sin nombre'}</div>
+                                                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>{prof.email}</div>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <div style={{ fontWeight: '500', color: '#fff' }}>{prof.full_name || 'Sin nombre'}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>{prof.email}</div>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleAssignProfessor(prof.id)}
-                                                    disabled={professorLoading}
-                                                    style={{
-                                                        background: '#6c5ce7', color: '#fff', border: 'none',
-                                                        borderRadius: '6px', padding: '0.4rem 0.9rem',
-                                                        cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500'
-                                                    }}
-                                                >
-                                                    Asignar
-                                                </button>
-                                            </div>
-                                        ))}
-                                </div>
-                            )}
-                        </div>
-                        <div className="modal-actions">
-                            <button className="btn-cancel-modern" onClick={() => setShowProfessorModal(false)}>Cerrar</button>
+                                                )
+                                            })}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                            <div className="modal-actions">
+                                <button
+                                    className="btn-cancel-modern"
+                                    onClick={() => { setShowProfessorModal(false); setSelectedProfessorIds([]); }}
+                                    disabled={professorLoading}
+                                >
+                                    Cancelar
+                                </button>
+                                {availableProfessors.length > 0 && (
+                                    <button
+                                        className="btn-save-modern"
+                                        onClick={() => handleAssignProfessor()}
+                                        disabled={professorLoading || selectedProfessorIds.length === 0}
+                                        style={{
+                                            opacity: selectedProfessorIds.length === 0 ? 0.5 : 1,
+                                            cursor: selectedProfessorIds.length === 0 ? 'not-allowed' : 'pointer'
+                                        }}
+                                    >
+                                        {professorLoading ? 'Asignando...' : `Asignar ${selectedProfessorIds.length > 0 ? `(${selectedProfessorIds.length})` : ''}`}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            })()}
 
             {confirmDeleteModule !== null && (
                 <ConfirmModal

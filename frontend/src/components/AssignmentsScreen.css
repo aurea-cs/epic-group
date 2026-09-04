@@ -4,18 +4,28 @@
   position: fixed;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 9999;
-  background: linear-gradient(135deg, var(--space-blue, #1a0b2e) 0%, var(--space-purple, #3a0254) 100%);
+  background-color:#040118;
   overflow: hidden;
   font-family: 'Arial', sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
 /* Contenedor del mapa */
 .map-container {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 .course-map-header {
@@ -24,6 +34,7 @@
   text-align: center;
   color: #f8fafc;
   padding: 16px 24px 32px;
+  margin: 0;
 }
 
 .course-map-header h1 {
@@ -39,14 +50,17 @@
   opacity: 0.85;
 }
 
-/* Fondo espacial */
+/* Fondo espacial — fijo, no se desplaza con el mapa */
 .space-background {
   position: absolute;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
   height: 100%;
   z-index: 1;
+  pointer-events: none;
 }
 
 .stars {
@@ -76,7 +90,7 @@
   animation: nebulaFloat 8s ease-in-out infinite alternate;
 }
 
-/* Terreno alienígena */
+/* Terreno alienígena — fijo, no se desplaza con el mapa */
 .alien-terrain {
   position: absolute;
   bottom: 0;
@@ -92,6 +106,51 @@
     70% 70%, 85% 75%, 100% 65%, 100% 100%
   );
   z-index: 2;
+  pointer-events: none;
+}
+
+/* Pista horizontal desplazable — contiene planetas y líneas de conexión */
+.map-scroll-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.map-content {
+  position: relative;
+  height: 100%;
+  min-width: 100%;
+}
+
+/* Scrollbar personalizado (WebKit) */
+.map-scroll-track::-webkit-scrollbar {
+  height: 8px;
+}
+
+.map-scroll-track::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.map-scroll-track::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.map-scroll-track::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Scrollbar personalizado (Firefox) */
+.map-scroll-track {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.05);
 }
 
 /* Líneas de conexión */
@@ -99,29 +158,25 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
   z-index: 3;
   pointer-events: none;
 }
 
 .main-path {
-  stroke-dasharray: 4, 4;
   animation: pathGlow 3s ease-in-out infinite alternate;
 }
 
 .secondary-path {
-  stroke-dasharray: 2, 2;
   animation: pathGlow 3s ease-in-out infinite alternate 0.5s;
 }
 
-/* Contenedor de planetas */
+/* Contenedor de planetas — posicionado en px vía estilo inline (left/top) */
 .planet-container {
   position: absolute;
   transform: translate(-50%, -50%);
   z-index: 10;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease;
 }
 
 .planet-container:hover {
@@ -202,13 +257,14 @@
   background: rgba(255, 255, 255, 0.6);
 }
 
-/* Cohete y Botón Start */
+/* Cohete y Botón Start — anclados al viewport, no se desplazan con el mapa */
 .rocket-container {
   position: absolute;
   top: 50%;
   right: 10%;
   transform: translateY(-50%);
   z-index: 20;
+  pointer-events: none;
 }
 
 .rocket {
@@ -431,5 +487,52 @@
     left: 15px;
     padding: 8px 15px;
     font-size: 12px;
+  }
+}
+
+/* Skeleton Loading Animation */
+.planet-skeleton {
+  pointer-events: none;
+}
+
+.skeleton-frame {
+  opacity: 0.7;
+}
+
+.planet-skeleton-circle {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08) 25%, rgba(255, 255, 255, 0.22) 50%, rgba(255, 255, 255, 0.08) 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+}
+
+.planet-skeleton-title {
+  width: 90px;
+  height: 14px;
+  border-radius: 6px;
+  margin-top: 8px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08) 25%, rgba(255, 255, 255, 0.22) 50%, rgba(255, 255, 255, 0.08) 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+}
+
+.planet-skeleton-stars {
+  width: 60px;
+  height: 10px;
+  border-radius: 4px;
+  margin-top: 6px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08) 25%, rgba(255, 255, 255, 0.22) 50%, rgba(255, 255, 255, 0.08) 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }

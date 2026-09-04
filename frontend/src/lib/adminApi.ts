@@ -343,12 +343,13 @@ export const getSubjectProfessors = async (subjectId: string): Promise<any[]> =>
     }
 }
 
-export const assignSubjectProfessor = async (subjectId: string, userId: string): Promise<any> => {
+export const assignSubjectProfessor = async (subjectId: string, userId: string | string[]): Promise<any> => {
     try {
+        const body = Array.isArray(userId) ? { userIds: userId } : { userId }
         const response = await fetch(`${API_URL}/api/subjects/${subjectId}/professors`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId }),
+            body: JSON.stringify(body),
         })
         if (!response.ok) {
             const errorData = await response.json()

@@ -223,14 +223,12 @@ router.post('/api/centers/:centerId/professors', async (req, res) => {
 
         const { data, error } = await supabase
             .from('center_professors')
-            .insert({ center_id: centerId, user_id: userId })
-            .select()
-            .single();
+            .upsert({ center_id: centerId, user_id: userId }, { ignoreDuplicates: true })
+            .select();
 
         if (error) {
-            // Check for duplicate key error (already assigned)
             if (error.code === '23505') {
-                return res.status(400).json({ error: 'Professor already assigned to this center' });
+                return res.status(200).json({ message: 'Professor already assigned to this center' });
             }
             throw error;
         }
