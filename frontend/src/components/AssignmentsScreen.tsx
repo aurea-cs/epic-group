@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from 'react'
 import { User } from '@supabase/supabase-js'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { getStudentReadItems } from '../lib/api'
 import './AssignmentsScreen.css'
 import { getUserRole } from '../utils/getUserRole'
@@ -72,6 +73,7 @@ const buildConnectionPath = (points: { x: number; y: number }[]) => {
 }
 
 const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const userRole = getUserRole(user)
   const { vrCode, openVrCode } = useVrCode(user)
@@ -118,9 +120,9 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
         // Mock fallback if no courses are assigned so the UI is still visible
         if (!coursesToRender || coursesToRender.length === 0) {
           coursesToRender = [
-            { id: 'mock1', title: 'Matemáticas Avanzadas', name: 'Matemáticas Avanzadas' },
-            { id: 'mock2', title: 'Física Cuántica', name: 'Física Cuántica' },
-            { id: 'mock3', title: 'Química Orgánica', name: 'Química Orgánica' },
+            { id: 'mock1', title: t('assignments.mockMath'), name: t('assignments.mockMath') },
+            { id: 'mock2', title: t('assignments.mockPhysics'), name: t('assignments.mockPhysics') },
+            { id: 'mock3', title: t('assignments.mockChemistry'), name: t('assignments.mockChemistry') },
           ];
         }
 
@@ -279,9 +281,10 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
   }, [loading, coursePlanets])
 
   const handlePlanetClick = useCallback((course: any) => {
-    const courseTitle = course.title || course.name;
+    const rawTitle = course.title || course.name;
+    const courseTitle = t(`dynamicSubjects.${rawTitle}`, { defaultValue: rawTitle })
     navigate(`/course/${course.id}/planet/1`, { state: { title: courseTitle, courseTitle: courseTitle } })
-  }, [navigate])
+  }, [navigate, t])
 
   const handleStartCourse = useCallback(() => {
     if (coursePlanets.length > 0) {
@@ -296,12 +299,12 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
           onClick={() => navigate('/dashboard')}
           className="assignments-back-button"
         >
-          ← Inicio
+          {t('assignments.backHome')}
         </button>
 
         <div className="course-map-header">
-          <h1>Mis materias</h1>
-          <p>Selecciona un planeta para ver el contenido.</p>
+          <h1>{t('assignments.title')}</h1>
+          <p>{t('assignments.subtitle')}</p>
         </div>
 
         {/* Fondo espacial con estrellas — fixed, does not scroll */}
@@ -374,13 +377,13 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
                     {/* Imagen del planeta */}
                     <img
                       src={planet.image}
-                      alt={`Planeta ${planet.number}`}
+                      alt={`${t('assignments.planetAlt')} ${planet.number}`}
                       className="planet-image"
                     />
 
                     {/* Título debajo del planeta */}
                     <div className="course-planet-title">
-                      {planet.title}
+                      {t(`dynamicSubjects.${planet.title}`, { defaultValue: planet.title })}
                     </div>
 
                     {/* Estrellas */}
@@ -420,7 +423,7 @@ const AssignmentsScreen: React.FC<AssignmentsScreenProps> = ({ user }) => {
             className="start-button"
             onClick={vrCode ? openVrCode : handleStartCourse}
           >
-            CAMPUS VR
+            {t('assignments.campusVr')}
           </button>
         </div>
 

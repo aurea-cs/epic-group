@@ -1,6 +1,7 @@
 // ScheduleScreen.tsx
 import React, { useEffect, useMemo, useState } from 'react'
 import { User } from '@supabase/supabase-js'
+import { useTranslation } from 'react-i18next'
 import './ScheduleScreen.css'
 import { getUserRole } from '../utils/getUserRole'
 
@@ -66,10 +67,24 @@ function colorForSubject(subjectId: string): string {
 }
 
 const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ user }) => {
+  const { t } = useTranslation()
   const [subjects, setSubjects] = useState<SubjectSchedule[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [now, setNow] = useState(new Date())
+
+  const translateDay = (dayStr: string) => {
+    switch (dayStr) {
+      case 'Lunes': return t('schedule.monday')
+      case 'Martes': return t('schedule.tuesday')
+      case 'Miércoles': return t('schedule.wednesday')
+      case 'Jueves': return t('schedule.thursday')
+      case 'Viernes': return t('schedule.friday')
+      case 'Sábado': return t('schedule.saturday')
+      case 'Domingo': return t('schedule.sunday')
+      default: return dayStr
+    }
+  }
 
   useEffect(() => {
     const fetchSchedule = async () => {
@@ -79,12 +94,12 @@ const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ user }) => {
         const role = getUserRole(user)
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
         const response = await fetch(`${apiUrl}/api/schedule/${user.id}?role=${role}`)
-        if (!response.ok) throw new Error('Error al cargar el horario')
+        if (!response.ok) throw new Error(t('schedule.fetchError'))
         const data = await response.json()
         setSubjects(data)
       } catch (err) {
         console.error('Error fetching schedule:', err)
-        setError('No se pudo cargar el horario.')
+        setError(t('schedule.loadError'))
       } finally {
         setLoading(false)
       }
@@ -186,20 +201,20 @@ const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ user }) => {
               </div>
             </div>
             <div className="user-info">
-              <h2>{user.user_metadata?.full_name || user.email || 'Usuario'}</h2>
-              <p>{getUserRole(user) === 'professor' ? 'Profesor' : 'Estudiante'}</p>
+              <h2>{user.user_metadata?.full_name || user.email || t('schedule.defaultUser')}</h2>
+              <p>{getUserRole(user) === 'professor' ? t('schedule.roleProfessor') : t('schedule.roleStudent')}</p>
             </div>
           </div>
 
           <div className="today-panel">
             <div className="today-panel-header">
-              <span>Clases de hoy</span>
+              <span>{t('schedule.todayClasses')}</span>
               <span className="today-count">{todaysClasses.length}</span>
             </div>
 
             {todaysClasses.length === 0 ? (
               <div className="empty-state">
-                <p>No hay clases hoy.</p>
+                <p>{t('schedule.noClassesToday')}</p>
               </div>
             ) : (
               <div className="today-list">
@@ -218,15 +233,15 @@ const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ user }) => {
           </div>
 
           <div className="week-summary">
-            <span className="week-summary-header">Total semanal</span>
-            <span className="week-summary-count">{classBlocks.length} clases</span>
+            <span className="week-summary-header">{t('schedule.weeklyTotal')}</span>
+            <span className="week-summary-count">{classBlocks.length} {t('schedule.classesCount')}</span>
           </div>
         </aside>
 
         {/* Weekly grid */}
         <main className="schedule-main">
           {loading ? (
-            <div className="empty-state-main"><p>Cargando horario...</p></div>
+            <div className="empty-state-main"><p>{t('schedule.loading')}</p></div>
           ) : error ? (
             <div className="empty-state-main"><p>{error}</p></div>
           ) : (
@@ -235,7 +250,7 @@ const ScheduleScreen: React.FC<ScheduleScreenProps> = ({ user }) => {
                 <div className="time-gutter-header" />
                 {DAYS_ORDER.map(day => (
                   <div key={day} className={`day-header ${day === todayName ? 'is-today' : ''}`}>
-                    {day}
+                    {translateDay(day)}
                   </div>
                 ))}
               </div>

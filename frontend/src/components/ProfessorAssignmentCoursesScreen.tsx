@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
+import { useTranslation } from 'react-i18next'
 import { getProfessorCourses } from '../lib/api'
 import './DashboardScreen.css'
 
@@ -22,10 +23,10 @@ interface Course {
 // - Primaria (1-6): "1er de Primaria", "2do de Primaria", ... "6to de Primaria"
 // - Secundaria (1-3): "1er de Secundaria", "2do de Secundaria", "3er de Secundaria"
 // - Preparatoria / Bachillerato (1-6): "1er Semestre de Preparatoria", ... "6to Semestre de Preparatoria"
-const formatGradeDisplayName = (rawName?: string, levelVal?: number | string | null): string => {
-  if (!rawName) return 'Sin Grado'
+const formatGradeDisplayName = (t: any, rawName?: string, levelVal?: number | string | null): string => {
+  if (!rawName) return t('professorCourses.noGrade')
   const name = rawName.trim()
-  if (!name) return 'Sin Grado'
+  if (!name) return t('professorCourses.noGrade')
 
   const levelNum = (levelVal !== undefined && levelVal !== null && levelVal !== '') ? parseInt(String(levelVal), 10) : NaN
   if (isNaN(levelNum)) {
@@ -34,25 +35,25 @@ const formatGradeDisplayName = (rawName?: string, levelVal?: number | string | n
 
   const nameLower = name.toLowerCase()
 
-  if (levelNum === 0) return `General ${name}`
+  if (levelNum === 0) return `${t('professorCourses.general')} ${name}`
 
   // Preparatoria / Prepa / Bachillerato -> Semestres 1-6
   if (nameLower.includes('prepa') || nameLower.includes('bachillerato')) {
-    const ordinal = levelNum === 1 ? '1er' : levelNum === 2 ? '2do' : levelNum === 3 ? '3er' : `${levelNum}to`
-    return `${ordinal} Semestre de ${name}`
+    const ordinal = levelNum === 1 ? t('professorCourses.ordinal1') : levelNum === 2 ? t('professorCourses.ordinal2') : levelNum === 3 ? t('professorCourses.ordinal3') : `${levelNum}${t('professorCourses.ordinalOther')}`
+    return `${ordinal} ${t('professorCourses.semesterOf')} ${name}`
   }
 
   // Primaria (1-6), Secundaria (1-3), or default level
-  let suffix = 'º'
-  if (levelNum === 1) suffix = 'er'
-  else if (levelNum === 2) suffix = 'do'
-  else if (levelNum === 3) suffix = 'er'
-  else if (levelNum >= 4) suffix = 'to'
+  let suffix = t('professorCourses.ordinalOther')
+  if (levelNum === 1) suffix = t('professorCourses.ordinal1').replace('1', '')
+  else if (levelNum === 2) suffix = t('professorCourses.ordinal2').replace('2', '')
+  else if (levelNum === 3) suffix = t('professorCourses.ordinal3').replace('3', '')
 
-  return `${levelNum}${suffix} de ${name}`
+  return `${levelNum}${suffix} ${t('professorCourses.of')} ${name}`
 }
 
 const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScreenProps> = ({ user }) => {
+  const { t } = useTranslation()
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedGrades, setExpandedGrades] = useState<Record<string, boolean>>({})
@@ -88,9 +89,9 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
     const centersMap: Record<string, Record<string, Course[]>> = {}
 
     courses.forEach(course => {
-      const center = course.centerName || 'Centro Educativo'
-      const gradeRaw = course.gradeName || course.description || 'General / Sin Grado'
-      const gradeDisplay = formatGradeDisplayName(gradeRaw, course.level)
+      const center = course.centerName || t('professorCourses.defaultCenter')
+      const gradeRaw = course.gradeName || course.description || t('professorCourses.defaultGrade')
+      const gradeDisplay = formatGradeDisplayName(t, gradeRaw, course.level)
 
       if (!centersMap[center]) {
         centersMap[center] = {}
@@ -102,7 +103,7 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
     })
 
     return centersMap
-  }, [courses])
+  }, [courses, t])
 
   const getSortLevel = (coursesList: Course[]) => {
     const first = coursesList.find(c => c.level !== undefined && c.level !== null)
@@ -122,10 +123,10 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
       <div style={{ width: '100%' }}>
 
         {courses.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#1f295a', marginTop: '2rem', background: 'transparent', padding: '3rem'}}>
+          <div style={{ textAlign: 'center', color: '#ffffffff', marginTop: '2rem', background: 'transparent', padding: '3rem' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📚</div>
-            <h3 style={{ margin: '0 0 0.5rem 0', color: '#1f295a' }}>No tienes materias asignadas</h3>
-            <p style={{ margin: 0, color: 'rgba(31, 41, 90, 0.6)', fontSize: '0.9rem' }}>Ponte en contacto con el administrador de tu centro para asignarte materias.</p>
+            <h3 style={{ margin: '0 0 0.5rem 0', color: '#ffffffff' }}>{t('professorCourses.noCoursesTitle')}</h3>
+            <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem' }}>{t('professorCourses.noCoursesDesc')}</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
@@ -147,7 +148,7 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
                   <div>
                     <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: '#fff' }}>{centerName}</h2>
                     <span style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 500 }}>
-                      {Object.values(gradesMap).reduce((acc, list) => acc + list.length, 0)} materias en total
+                      {Object.values(gradesMap).reduce((acc, list) => acc + list.length, 0)} {t('professorCourses.totalCourses')}
                     </span>
                   </div>
                 </div>
@@ -198,7 +199,7 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
                                 borderRadius: '999px',
                                 fontWeight: 600
                               }}>
-                                {subjectList.length} {subjectList.length === 1 ? 'materia' : 'materias'}
+                                {subjectList.length} {subjectList.length === 1 ? t('professorCourses.courseSingle') : t('professorCourses.coursePlural')}
                               </span>
                             </div>
 
@@ -211,7 +212,7 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
                               fontWeight: 500,
                               opacity: 0.9
                             }}>
-                              <span style={{ fontSize: '0.8rem' }}>{isExpanded ? 'Ocultar' : 'Ver materias'}</span>
+                              <span style={{ fontSize: '0.8rem' }}>{isExpanded ? t('professorCourses.hide') : t('professorCourses.viewCourses')}</span>
                               <span style={{
                                 display: 'inline-block',
                                 transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -261,7 +262,7 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
                                 >
                                   <div>
                                     <h4 style={{ color: '#1f295a', margin: '0 0 0.4rem 0', fontSize: '1.1rem', fontWeight: 600, lineHeight: 1.3 }}>
-                                      {course.title}
+                                      {t(`dynamicSubjects.${course.title}`, { defaultValue: course.title })}
                                     </h4>
                                     {course.campoFormativo && (
                                       <div style={{
@@ -289,7 +290,7 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
                                     color: '#6c5ce7',
                                     fontWeight: 600
                                   }}>
-                                    <span>Ver contenido</span>
+                                    <span>{t('professorCourses.viewContent')}</span>
                                     <span>→</span>
                                   </div>
                                 </div>
