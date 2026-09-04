@@ -432,7 +432,7 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                                     </div>
                                 </div>
                             </div>
-                )}
+                            ){'}'}
                             <div className="modal-actions">
                                 <button className="btn-cancel-modern" onClick={() => setShowCenterModal(false)}>
                                     Cancelar
