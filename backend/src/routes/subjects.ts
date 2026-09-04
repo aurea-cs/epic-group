@@ -51,6 +51,136 @@ router.post('/api/subjects', async (req, res) => {
     }
 });
 
+// Clone subject and all its modules, items, and VR codes
+router.post('/api/subjects/:subjectId/clone', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+        const { target_grade_id, name } = req.body;
+
+        if (!target_grade_id) {
+            return res.status(400).json({ error: 'target_grade_id is required' });
+        }
+
+        // 1. Fetch source subject
+        const { data: sourceSubject, error: subjectFetchError } = await supabase
+            .from('subjects')
+            .select('*')
+            .eq('id', subjectId)
+            .single();
+
+        if (subjectFetchError || !sourceSubject) {
+            return res.status(404).json({ error: 'Source subject not found' });
+        }
+
+        // 2. Insert new cloned subject
+        const { data: newSubject, error: subjectInsertError } = await supabase
+            .from('subjects')
+            .insert({
+                name: name || sourceSubject.name,
+                short_name: sourceSubject.short_name,
+                description: sourceSubject.description,
+                start_date: sourceSubject.start_date,
+                end_date: sourceSubject.end_date,
+                visibility: sourceSubject.visibility || 'active',
+                max_students: sourceSubject.max_students || 30,
+                grade_id: target_grade_id,
+                schedule_days: sourceSubject.schedule_days,
+                schedule_start_time: sourceSubject.schedule_start_time,
+                schedule_end_time: sourceSubject.schedule_end_time,
+                campo_formativo: sourceSubject.campo_formativo
+            })
+            .select()
+            .single();
+
+        if (subjectInsertError) throw subjectInsertError;
+
+        // 3. Fetch modules from source subject
+        const { data: sourceModules, error: modulesFetchError } = await supabase
+            .from('modules')
+            .select('*')
+            .eq('subject_id', subjectId)
+            .order('order_index', { ascending: true });
+
+        if (modulesFetchError) throw modulesFetchError;
+
+        if (sourceModules && sourceModules.length > 0) {
+            for (const sourceMod of sourceModules) {
+                // 3a. Insert new module
+                const { data: newMod, error: modInsertError } = await supabase
+                    .from('modules')
+                    .insert({
+                        subject_id: newSubject.id,
+                        title: sourceMod.title,
+                        description: sourceMod.description,
+                        order_index: sourceMod.order_index
+                    })
+                    .select()
+                    .single();
+
+                if (modInsertError) throw modInsertError;
+
+                // 3b. Fetch & clone module items
+                const { data: sourceItems, error: itemsFetchError } = await supabase
+                    .from('module_items')
+                    .select('*')
+                    .eq('module_id', sourceMod.id);
+
+                if (itemsFetchError) throw itemsFetchError;
+
+                if (sourceItems && sourceItems.length > 0) {
+                    const itemsToInsert = sourceItems.map(item => ({
+                        module_id: newMod.id,
+                        type: item.type,
+                        title: item.title,
+                        description: item.description,
+                        content_url: item.content_url,
+                        image_url: item.image_url,
+                        order_index: item.order_index,
+                        show_student: item.show_student ?? true,
+                        show_teacher: item.show_teacher ?? true,
+                        is_editable: item.is_editable ?? false
+                    }));
+
+                    const { error: itemsInsertError } = await supabase
+                        .from('module_items')
+                        .insert(itemsToInsert);
+
+                    if (itemsInsertError) throw itemsInsertError;
+                }
+
+                // 3c. Fetch & clone VR room entries
+                const { data: sourceVrCodes, error: vrFetchError } = await supabase
+                    .from('module_vr_code')
+                    .select('*')
+                    .eq('module_id', sourceMod.id);
+
+                if (vrFetchError) throw vrFetchError;
+
+                if (sourceVrCodes && sourceVrCodes.length > 0) {
+                    const vrToInsert = sourceVrCodes.map(vr => ({
+                        module_id: newMod.id,
+                        code: vr.code,
+                        title: vr.title,
+                        description: vr.description,
+                        image_url: vr.image_url
+                    }));
+
+                    const { error: vrInsertError } = await supabase
+                        .from('module_vr_code')
+                        .insert(vrToInsert);
+
+                    if (vrInsertError) throw vrInsertError;
+                }
+            }
+        }
+
+        res.status(201).json(newSubject);
+    } catch (error: any) {
+        console.error('Error cloning subject:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Update subject
 router.put('/api/subjects/:id', async (req, res) => {
     try {

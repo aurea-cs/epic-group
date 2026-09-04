@@ -101,10 +101,34 @@ export const createCenter = async (
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
         })
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
         return await response.json()
     } catch (error) {
         console.error('Error creating center:', error)
+        throw error
+    }
+}
+
+export const cloneCenter = async (
+    sourceCenterId: string,
+    data: Partial<EducationalCenter>
+): Promise<EducationalCenter> => {
+    try {
+        const response = await fetch(`${API_URL}/api/centers/${sourceCenterId}/clone`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error cloning center:', error)
         throw error
     }
 }
@@ -119,7 +143,10 @@ export const updateCenter = async (
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
         })
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
         return await response.json()
     } catch (error) {
         console.error('Error updating center:', error)
@@ -248,6 +275,29 @@ export const updateGrade = async (
     }
 }
 
+export const cloneGrade = async (
+    sourceGradeId: string,
+    targetCenterId: string,
+    name?: string,
+    level?: number
+): Promise<GradeLevel> => {
+    try {
+        const response = await fetch(`${API_URL}/api/grades/${sourceGradeId}/clone`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_center_id: targetCenterId, name, level }),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error cloning grade:', error)
+        throw error
+    }
+}
+
 export const deleteGrade = async (id: string): Promise<void> => {
     try {
         const response = await fetch(`${API_URL}/api/grades/${id}`, {
@@ -306,6 +356,28 @@ export const createSubject = async (
         return await response.json()
     } catch (error) {
         console.error('Error creating subject:', error)
+        throw error
+    }
+}
+
+export const cloneSubject = async (
+    sourceSubjectId: string,
+    targetGradeId: string,
+    name?: string
+): Promise<Subject> => {
+    try {
+        const response = await fetch(`${API_URL}/api/subjects/${sourceSubjectId}/clone`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_grade_id: targetGradeId, name }),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error cloning subject:', error)
         throw error
     }
 }
