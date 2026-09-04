@@ -289,18 +289,18 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
                     if (options.length > 0) {
                       radioGroup.select(options[0])
                     }
-                  } catch (err) {}
+                  } catch (err) { }
                 }
               }
             } else {
               try {
                 form.getTextField(name).setText(element.value || '')
-              } catch (e) {}
+              } catch (e) { }
             }
           } else if (element instanceof HTMLTextAreaElement) {
             try {
               form.getTextField(name).setText(element.value || '')
-            } catch (e) {}
+            } catch (e) { }
           }
         } catch (err) {
           console.warn(`Could not set field ${name}`, err)
@@ -401,29 +401,29 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
       const blob = new Blob([finalPdfBytes as unknown as BlobPart], { type: 'application/pdf' })
       await onSave(blob)
       onClose()
-    } catch (err) {
-      console.error('Error saving PDF', err)
-      alert('Hubo un error al guardar el documento.')
-    } finally {
-      setIsSaving(false)
-    }
+  } catch (err) {
+    console.error('Error saving PDF', err)
+    alert('Hubo un error al guardar el documento.')
+  } finally {
+    setIsSaving(false)
   }
+}
 
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        backgroundColor: '#000',
-        display: 'flex',
-        flexDirection: 'column',
-        zIndex: 9999,
-      }}
-    >
-      <style>{`
+return (
+  <div
+    style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: '#000',
+      display: 'flex',
+      flexDirection: 'column',
+      zIndex: 9999,
+    }}
+  >
+    <style>{`
         /* Allow form interactions on editable pages */
         .react-pdf__Page__annotations, .annotationLayer {
           z-index: 5;
@@ -444,180 +444,108 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
         }
       `}</style>
 
-      {/* Close Button */}
+    {/* Close Button */}
+    <button
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        background: 'rgba(255,255,255,0.15)',
+        border: 'none',
+        borderRadius: '50%',
+        width: '34px',
+        height: '34px',
+        color: 'white',
+        fontSize: '1.1rem',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 100,
+      }}
+      onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
+      onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+    >
+      ✕
+    </button>
+
+    {/* Save Button */}
+    {onSave && (
       <button
-        onClick={onClose}
+        onClick={handleSave}
+        disabled={isSaving}
         style={{
           position: 'fixed',
           top: '20px',
-          right: '20px',
-          background: 'rgba(255,255,255,0.15)',
+          right: '70px',
+          background: isSaving ? '#6b7280' : '#8b5cf6',
           border: 'none',
-          borderRadius: '50%',
-          width: '34px',
-          height: '34px',
+          borderRadius: '8px',
+          padding: '8px 16px',
           color: 'white',
-          fontSize: '1.1rem',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          fontSize: '1rem',
+          fontWeight: 600,
+          cursor: isSaving ? 'not-allowed' : 'pointer',
           zIndex: 100,
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
         }}
-        onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
-        onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
       >
-        ✕
+        {isSaving ? 'Guardando...' : 'Guardar y Enviar'}
       </button>
+    )}
 
-      {/* Save Button */}
-      {onSave && (
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          style={{
-            position: 'fixed',
-            top: '20px',
-            right: '70px',
-            background: isSaving ? '#6b7280' : '#8b5cf6',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '8px 16px',
-            color: 'white',
-            fontSize: '1rem',
-            fontWeight: 600,
-            cursor: isSaving ? 'not-allowed' : 'pointer',
-            zIndex: 100,
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          }}
+    {/* Main PDF Canvas Scroll View */}
+    <div
+      style={{
+        flex: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        backgroundColor: '#000',
+      }}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {error ? (
+        <p style={{ color: '#fca5a5', textAlign: 'center', paddingTop: '40vh', fontSize: '1rem' }}>
+          {error}
+        </p>
+      ) : (
+        <Document
+          file={url}
+          options={options}
+          onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={onDocumentLoadError}
+          loading={
+            <p style={{ color: 'white', textAlign: 'center', paddingTop: '40vh', fontSize: '1rem' }}>
+              Cargando documento...
+            </p>
+          }
         >
-          {isSaving ? 'Guardando...' : 'Guardar y Enviar'}
-        </button>
-      )}
+          {Array.from(new Array(numPages), (_el, index) => {
+            const pageNum = index + 1
 
-      {/* Main PDF Canvas Scroll View */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          backgroundColor: '#000',
-        }}
-        onContextMenu={(e) => e.preventDefault()}
-      >
-        {error ? (
-          <p style={{ color: '#fca5a5', textAlign: 'center', paddingTop: '40vh', fontSize: '1rem' }}>
-            {error}
-          </p>
-        ) : (
-          <Document
-            file={url}
-            options={options}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-            loading={
-              <p style={{ color: 'white', textAlign: 'center', paddingTop: '40vh', fontSize: '1rem' }}>
-                Cargando documento...
-              </p>
-            }
-          >
-            {Array.from(new Array(numPages), (_el, index) => {
-              const pageNum = index + 1
+            // Find if this page belongs to a previously-submitted range
+            const submittedInfo = (submittedRanges ?? []).find(
+              r => isPageAssigned(pageNum, r.pages)
+            )
+            const lockedBySubmittedRange = !!submittedInfo
 
-              // Find if this page belongs to a previously-submitted range
-              const submittedInfo = (submittedRanges ?? []).find(
-                r => isPageAssigned(pageNum, r.pages)
-              )
-              const lockedBySubmittedRange = !!submittedInfo
+            const pageEditable =
+              isEditable &&
+              !!onSave &&
+              isPageAssigned(pageNum, assignedPages) &&
+              !lockedBySubmittedRange
 
-              const pageEditable =
-                isEditable &&
-                !!onSave &&
-                isPageAssigned(pageNum, assignedPages) &&
-                !lockedBySubmittedRange
-
-              const lockLabel = !onSave
-                ? '🔒 Entregado'
-                : lockedBySubmittedRange
+            const lockLabel = !onSave
+              ? '🔒 Entregado'
+              : lockedBySubmittedRange
                 ? '🔒 Ya entregado'
                 : '📄 Solo lectura'
 
-              // For submitted pages: render from the flattened submitted PDF so the
-              // student can see their previous answers. The page is always locked
-              // (pointer-events: none via class) and the submitted PDF's URL is used.
-              if (lockedBySubmittedRange && submittedInfo?.signed_url) {
-                return (
-                  <div
-                    key={`page_${pageNum}`}
-                    style={{
-                      position: 'relative',
-                      marginBottom: '10px',
-                      display: 'flex',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <div className="pdf-page-locked" style={{ position: 'relative' }}>
-                      {/* Nested Document: loads the submitted (flattened) PDF for this page */}
-                      <Document
-                        file={submittedInfo.signed_url}
-                        options={options}
-                        loading={
-                          <div style={{
-                            width: pageWidth,
-                            height: Math.round(pageWidth * 1.414),
-                            background: '#111',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#888',
-                            fontSize: '0.85rem'
-                          }}>
-                            Cargando página entregada...
-                          </div>
-                        }
-                      >
-                        <Page
-                          pageNumber={getPageOffsetInSubmittedRange(pageNum, submittedInfo.pages)}
-                          width={pageWidth}
-                          renderAnnotationLayer={false}
-                          renderForms={false}
-                          renderTextLayer={false}
-                        />
-                      </Document>
-                      {/* Locked badge */}
-                      <div
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          backgroundColor: 'rgba(0,0,0,0.08)',
-                          zIndex: 25,
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          justifyContent: 'flex-end',
-                          padding: '6px',
-                          pointerEvents: 'none',
-                        }}
-                      >
-                        <span
-                          style={{
-                            background: 'rgba(0,0,0,0.55)',
-                            color: '#86efac',
-                            borderRadius: '6px',
-                            padding: '2px 8px',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.04em',
-                          }}
-                        >
-                          🔒 Ya entregado
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )
-              }
-
-              // For all other pages: render from the primary (original) document
+            // For submitted pages: render from the flattened submitted PDF so the
+            // student can see their previous answers. The page is always locked
+            // (pointer-events: none via class) and the submitted PDF's URL is used.
+            if (lockedBySubmittedRange && submittedInfo?.signed_url) {
               return (
                 <div
                   key={`page_${pageNum}`}
@@ -628,113 +556,185 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
                     justifyContent: 'center',
                   }}
                 >
-                  <div
-                    className={pageEditable ? '' : 'pdf-page-locked'}
-                    style={{ position: 'relative' }}
-                  >
-                    <Page
-                      pageNumber={pageNum}
-                      width={pageWidth}
-                      renderAnnotationLayer={true}
-                      renderForms={true}
-                      renderTextLayer={true}
-                    />
-
-                    {/* Locked-page visual overlay */}
-                    {isEditable && !pageEditable && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          backgroundColor: 'rgba(0,0,0,0.18)',
-                          zIndex: 25,
+                  <div className="pdf-page-locked" style={{ position: 'relative' }}>
+                    {/* Nested Document: loads the submitted (flattened) PDF for this page */}
+                    <Document
+                      file={submittedInfo.signed_url}
+                      options={options}
+                      loading={
+                        <div style={{
+                          width: pageWidth,
+                          height: Math.round(pageWidth * 1.414),
+                          background: '#111',
                           display: 'flex',
-                          alignItems: 'flex-start',
-                          justifyContent: 'flex-end',
-                          padding: '6px',
-                          pointerEvents: 'none',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#888',
+                          fontSize: '0.85rem'
+                        }}>
+                          Cargando página entregada...
+                        </div>
+                      }
+                    >
+                      <Page
+                        pageNumber={getPageOffsetInSubmittedRange(pageNum, submittedInfo.pages)}
+                        width={pageWidth}
+                        renderAnnotationLayer={false}
+                        renderForms={false}
+                        renderTextLayer={false}
+                      />
+                    </Document>
+                    {/* Locked badge */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backgroundColor: 'rgba(0,0,0,0.08)',
+                        zIndex: 25,
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'flex-end',
+                        padding: '6px',
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      <span
+                        style={{
+                          background: 'rgba(0,0,0,0.55)',
+                          color: '#86efac',
+                          borderRadius: '6px',
+                          padding: '2px 8px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.04em',
                         }}
                       >
-                        <span
-                          style={{
-                            background: 'rgba(0,0,0,0.55)',
-                            color: '#fca5a5',
-                            borderRadius: '6px',
-                            padding: '2px 8px',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.04em',
-                          }}
-                        >
-                          {lockLabel}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Drawing boxes — only on editable pages */}
-                    {pageEditable &&
-                      detectedBoxes
-                        .filter((box) => box.pageIndex === index)
-                        .map((box) => (
-                          <div
-                            key={box.name}
-                            onClick={() => setActiveDrawField(box.name)}
-                            style={{
-                              position: 'absolute',
-                              left: `${box.leftPercent}%`,
-                              top: `${box.topPercent}%`,
-                              width: `${box.widthPercent}%`,
-                              height: `${box.heightPercent}%`,
-                              border: '2px dashed #8b5cf6',
-                              borderRadius: '6px',
-                              backgroundColor: drawings[box.name]
-                                ? 'rgba(139, 92, 246, 0.22)'
-                                : 'rgba(139, 92, 246, 0.14)',
-                              backgroundImage: drawings[box.name] ? `url(${drawings[box.name]})` : 'none',
-                              backgroundSize: 'contain',
-                              backgroundRepeat: 'no-repeat',
-                              backgroundPosition: 'center',
-                              cursor: 'pointer',
-                              zIndex: 20,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#6d28d9',
-                              fontSize: '0.8rem',
-                              fontWeight: 600,
-                              backdropFilter: 'blur(2px)',
-                              boxSizing: 'border-box',
-                              boxShadow: '0 2px 6px rgba(139, 92, 246, 0.25)',
-                              transition: 'all 0.2s ease',
-                            }}
-                            title={`Clic para dibujar (${box.name})`}
-                          >
-                            {!drawings[box.name] && '✍️ Clic para dibujar / firmar'}
-                          </div>
-                        ))}
+                        🔒 Ya entregado
+                      </span>
+                    </div>
                   </div>
                 </div>
               )
-            })}
-          </Document>
-        )}
-      </div>
+            }
 
-      {/* Drawing Modal Dialog */}
-      <DrawingModal
-        isOpen={!!activeDrawField}
-        fieldName={activeDrawField || ''}
-        initialDataUrl={activeDrawField ? drawings[activeDrawField] : undefined}
-        onClose={() => setActiveDrawField(null)}
-        onSave={(fieldName, dataUrl) => {
-          setDrawings((prev) => ({
-            ...prev,
-            [fieldName]: dataUrl,
-          }))
-        }}
-      />
+            // For all other pages: render from the primary (original) document
+            return (
+              <div
+                key={`page_${pageNum}`}
+                style={{
+                  position: 'relative',
+                  marginBottom: '10px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                }}
+              >
+                <div
+                  className={pageEditable ? '' : 'pdf-page-locked'}
+                  style={{ position: 'relative' }}
+                >
+                  <Page
+                    pageNumber={pageNum}
+                    width={pageWidth}
+                    renderAnnotationLayer={true}
+                    renderForms={true}
+                    renderTextLayer={true}
+                  />
+
+                  {/* Locked-page visual overlay */}
+                  {isEditable && !pageEditable && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backgroundColor: 'rgba(0,0,0,0.18)',
+                        zIndex: 25,
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'flex-end',
+                        padding: '6px',
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      <span
+                        style={{
+                          background: 'rgba(0,0,0,0.55)',
+                          color: '#fca5a5',
+                          borderRadius: '6px',
+                          padding: '2px 8px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        {lockLabel}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Drawing boxes — only on editable pages */}
+                  {pageEditable &&
+                    detectedBoxes
+                      .filter((box) => box.pageIndex === index)
+                      .map((box) => (
+                        <div
+                          key={box.name}
+                          onClick={() => setActiveDrawField(box.name)}
+                          style={{
+                            position: 'absolute',
+                            left: `${box.leftPercent}%`,
+                            top: `${box.topPercent}%`,
+                            width: `${box.widthPercent}%`,
+                            height: `${box.heightPercent}%`,
+                            border: '2px dashed #8b5cf6',
+                            borderRadius: '6px',
+                            backgroundColor: drawings[box.name]
+                              ? 'rgba(139, 92, 246, 0.22)'
+                              : 'rgba(139, 92, 246, 0.14)',
+                            backgroundImage: drawings[box.name] ? `url(${drawings[box.name]})` : 'none',
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            cursor: 'pointer',
+                            zIndex: 20,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#6d28d9',
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            backdropFilter: 'blur(2px)',
+                            boxSizing: 'border-box',
+                            boxShadow: '0 2px 6px rgba(139, 92, 246, 0.25)',
+                            transition: 'all 0.2s ease',
+                          }}
+                          title={`Clic para dibujar (${box.name})`}
+                        >
+                          {!drawings[box.name] && '✍️ Clic para dibujar / firmar'}
+                        </div>
+                      ))}
+                </div>
+              </div>
+            )
+          })}
+        </Document>
+      )}
     </div>
-  )
+
+    {/* Drawing Modal Dialog */}
+    <DrawingModal
+      isOpen={!!activeDrawField}
+      fieldName={activeDrawField || ''}
+      initialDataUrl={activeDrawField ? drawings[activeDrawField] : undefined}
+      onClose={() => setActiveDrawField(null)}
+      onSave={(fieldName, dataUrl) => {
+        setDrawings((prev) => ({
+          ...prev,
+          [fieldName]: dataUrl,
+        }))
+      }}
+    />
+  </div>
+)
 }
 
 export default PdfViewerModal

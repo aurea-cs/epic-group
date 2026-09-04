@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { auth } from '../lib/supabase';
 import './LoginScreen.css';
 import epicLogo from '../assets/epic2.png';
 
 const LoginScreen: React.FC = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -17,7 +19,7 @@ const LoginScreen: React.FC = () => {
 
       if (error) {
         console.error('Error al iniciar sesión:', error.message);
-        alert('Error al iniciar sesión: ' + error.message);
+        alert(t('login.loginError') + ': ' + error.message);
       } else {
         console.log('Login exitoso:', data.user);
         // La redirección se maneja automáticamente por el App.tsx
@@ -25,7 +27,7 @@ const LoginScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Error inesperado:', error);
-      alert('Error inesperado al iniciar sesión');
+      alert(t('login.unexpectedError'));
     } finally {
       setIsLoading(false);
     }
@@ -64,31 +66,31 @@ const LoginScreen: React.FC = () => {
       <div className="floating-form-container">
         <div className="floating-form">
           <div className="form-header">
-            <h2>Bienvenido</h2>
-            <p>Inicia sesión en tu cuenta</p>
+            <h2>{t('login.welcome')}</h2>
+            <p>{t('login.signInToYourAccount')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
             <div className="input-group">
-              <label htmlFor="email">Correo electrónico</label>
+              <label htmlFor="email">{t('login.emailLabel')}</label>
               <input
                 type="email"
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@email.com"
+                placeholder={t('login.emailPlaceholder')}
                 required
               />
             </div>
 
             <div className="input-group">
-              <label htmlFor="password">Contraseña</label>
+              <label htmlFor="password">{t('login.passwordLabel')}</label>
               <input
                 type="password"
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder={t('login.passwordPlaceholder')}
                 required
               />
             </div>
@@ -97,13 +99,13 @@ const LoginScreen: React.FC = () => {
               {isLoading ? (
                 <div className="loading-spinner"></div>
               ) : (
-                'Iniciar Sesión'
+                t('login.signInButton')
               )}
             </button>
           </form>
 
           <div className="form-footer">
-            <p>¿No tienes cuenta? <b>Contacta a un administrador</b></p>
+            <p>{t('login.noAccount')} <b>{t('login.contactAdmin')}</b></p>
           </div>
         </div>
       </div>

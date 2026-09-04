@@ -23,12 +23,14 @@ import TeacherManagement from './TeacherManagement'
 import ContentManagement from './ContentManagement'
 import './HierarchyConfig.css'
 import ConfirmModal from './general/ConfirmModal'
+import { useTranslation } from 'react-i18next'
 
 interface SchoolDetailScreenProps {
     user: User
 }
 
 const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
+    const { t } = useTranslation()
     const { centerId } = useParams<{ centerId: string }>()
     const navigate = useNavigate()
 
@@ -469,7 +471,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                                         {subject.campo_formativo}
                                                     </span>
                                                 )}
-                                                <span className="course-name">{subject.name}</span>
+                                                <span className="course-name">{t(`dynamicSubjects.${subject.name}`, { defaultValue: subject.name })}</span>
                                             </div>
                                         </div>
                                         <div className="col-code">

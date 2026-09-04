@@ -1,5 +1,6 @@
 import React from 'react'
 import { User } from '@supabase/supabase-js'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { getUserRole } from '../utils/getUserRole'
 import { useVrCode } from '../hooks/useVrCode'
@@ -16,6 +17,7 @@ interface DashboardScreenProps {
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const userRole = getUserRole(user)
   const isAdmin = ['admin'].includes(userRole)
@@ -27,25 +29,20 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
         <div className="welcome-section">
           <div className="welcome-content">
             <div className="welcome-text">
-              <h1 className="welcome-title">¡Bienvenid@!</h1>
+              <h1 className="welcome-title">{t('dashboard.welcome')}</h1>
               <h2>{user.user_metadata?.full_name || user.email || 'Usuario'}</h2>
               <br></br>
               <div className="progress-info" onClick={() => navigate(isAdmin ? '/admin' : '/assignments')}>
                 <img src={medallaIcon} alt="Medalla" className="medal-icon-img" />
-                <span className="grades-text">{isAdmin ? 'Ver centros educativos >' : 'Ver materias >'}</span>
+                <span className="grades-text">{isAdmin ? t('dashboard.adminSchools') : t('dashboard.studentCourses')}</span>
               </div>
               <p className="agenda-text">
                 {isAdmin ? (
-                  'Haz click para administrar los centros educativos y su contenido.'
+                  t('dashboard.adminDesc')
                 ) : userRole === 'professor' ? (
-                  <>
-                    Haz click para checar a tus materias, su contenido, <br />asignar tareas, y ver entregas de los alumnos.
-                  </>
+                  <div dangerouslySetInnerHTML={{ __html: t('dashboard.professorDesc') }} />
                 ) : (
-                  <>
-                    Haz click para ver tus horarios de clase,<br />
-                    ¡Accede a tu agenda!
-                  </>
+                  <div dangerouslySetInnerHTML={{ __html: t('dashboard.studentAgendaDesc') }} />
                 )}
               </p>
               <button
@@ -60,7 +57,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
                   }
                 }}
               >
-                {isAdmin ? 'Ver alumnos' : vrCode ? 'Campus VR' : 'Horario'}
+                {isAdmin ? t('dashboard.viewStudents') : vrCode ? t('dashboard.campusVr') : t('dashboard.schedule')}
               </button>
             </div>
           </div>

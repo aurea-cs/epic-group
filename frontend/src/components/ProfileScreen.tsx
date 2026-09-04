@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import type { User } from '@supabase/supabase-js'
+import { useTranslation } from 'react-i18next'
 import userTeacherUrl from '../assets/user_teacher.png'
 import './ProfileScreen.css'
 
@@ -14,6 +15,7 @@ interface ProfileScreenProps {
 }
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
+  const { t } = useTranslation()
   const [uploading, setUploading] = useState(false)
   const [uploadFeedback, setUploadFeedback] = useState<{ status: 'success' | 'error'; message: string } | null>(null)
   const [studentData, setStudentData] = useState<StudentData | null>(null)
@@ -26,10 +28,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
 
   const getRoleDisplay = () => {
     const role = getUserRole(user)
-    if (role === 'admin') return 'Admin'
-    if (role === 'professor') return 'Profesor'
-    if (role === 'tutor') return 'Tutor'
-    return 'Alumno'
+    if (role === 'admin') return t('profile.roleAdmin')
+    if (role === 'professor') return t('profile.roleProfessor')
+    if (role === 'tutor') return t('profile.roleTutor')
+    return t('profile.roleStudent')
   }
 
   const [profileDetails, setProfileDetails] = useState<{ centers: string, grades: string, subjects: string } | null>(null)
@@ -50,7 +52,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
       const uploads = await Promise.all(
         Array.from(files).map(async (file) => {
           if (file.type !== 'application/pdf') {
-            return { fileName: file.name, error: new Error('Solo se permiten archivos PDF') }
+            return { fileName: file.name, error: new Error(t('profile.pdfOnlyError')) }
           }
           const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
           const filePath = `professors/${user.id}/${timestamp}-${file.name}`
@@ -69,17 +71,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
       if (failedUploads.length === uploads.length) {
         setUploadFeedback({
           status: 'error',
-          message: 'No se pudieron subir los archivos seleccionados.',
+          message: t('profile.uploadFailed'),
         })
       } else {
         setUploadFeedback({
           status: 'success',
-          message: 'Cursos subidos correctamente.',
+          message: t('profile.uploadSuccess'),
         })
       }
     } catch (error) {
       console.error('Error al subir los cursos:', error)
-      setUploadFeedback({ status: 'error', message: 'Error inesperado al subir.' })
+      setUploadFeedback({ status: 'error', message: t('profile.uploadError') })
     } finally {
       setUploading(false)
     }
@@ -120,8 +122,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
       {/* Header */}
       <div className="profile-page-header">
         <div>
-          <h1 className="profile-page-title">Configuración del Perfil</h1>
-          <p className="profile-page-subtitle">Gestiona tu información y preferencias</p>
+          <h1 className="profile-page-title">{t('profile.pageTitle')}</h1>
+          <p className="profile-page-subtitle">{t('profile.pageSubtitle')}</p>
         </div>
       </div>
 
@@ -133,11 +135,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
             <img src={user.user_metadata?.avatar_url || userTeacherUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1e293b', margin: 0 }}>{user.user_metadata?.full_name || user.email || 'Usuario'}</h2>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1e293b', margin: 0 }}>{user.user_metadata?.full_name || user.email || t('profile.defaultUserName')}</h2>
           <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>{user.email}</p>
           
           <div style={{ background: '#eff6ff', color: '#2563eb', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: vrCode ? '1rem' : '1.5rem', border: '1px solid #bfdbfe' }}>
-            Rol: {getRoleDisplay()}
+            {t('profile.roleLabel')} {getRoleDisplay()}
           </div>
 
           {vrCode && (
@@ -162,7 +164,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
               onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
               onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
             >
-              🚀 Campus VR
+              {t('profile.vrCampusBtn')}
             </button>
           )}
         </div>
@@ -173,23 +175,23 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
           {/* Details Card */}
           <div style={{ background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
             <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>ℹ️</span> Información Académica
+              {t('profile.academicInfoTitle')}
             </h3>
             
             <div className="profile-info-grid">
               <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Centros Educativos</div>
-                <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.centers : 'Cargando...'}</div>
+                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{t('profile.centersLabel')}</div>
+                <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.centers : t('profile.loading')}</div>
               </div>
 
               <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Grados</div>
-                <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.grades : 'Cargando...'}</div>
+                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{t('profile.gradesLabel')}</div>
+                <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.grades : t('profile.loading')}</div>
               </div>
 
               <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9', gridColumn: '1 / -1' }}>
-                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Materias</div>
-                <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.subjects : 'Cargando...'}</div>
+                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{t('profile.subjectsLabel')}</div>
+                <div style={{ fontWeight: 'bold', color: '#334155' }}>{profileDetails ? profileDetails.subjects : t('profile.loading')}</div>
               </div>
             </div>
           </div>
@@ -198,17 +200,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
           {(!isProfessor ) && (
             <div style={{ background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
               <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>📊</span> Tu Progreso
+                {t('profile.progressTitle')}
               </h3>
               
               {userRole === 'admin' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <p style={{ color: '#64748b' }}>Sube materiales PDF para los cursos de la plataforma.</p>
+                  <p style={{ color: '#64748b' }}>{t('profile.uploadPdfDesc')}</p>
                   <button 
                     style={{ background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '12px', padding: '1rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', width: 'fit-content' }} 
                     onClick={handleUploadClick}
                   >
-                    {uploading ? 'Subiendo...' : 'Subir Cursos PDF'}
+                    {uploading ? t('profile.uploadingBtn') : t('profile.uploadBtn')}
                   </button>
                   <input type="file" ref={fileInputRef} hidden accept="application/pdf" multiple onChange={handlePdfUpload} />
                   {uploadFeedback && (
@@ -220,7 +222,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user }) => {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                   {!studentData || studentData.courses.length === 0 ? (
-                    <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>No hay cursos activos para mostrar progreso.</p>
+                    <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>{t('profile.noActiveCourses')}</p>
                   ) : (
                     studentData.courses.map(course => (
                       <div key={course.id}>

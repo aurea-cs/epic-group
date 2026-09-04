@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { User } from '@supabase/supabase-js'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import './StudentsAdminScreen.css'
 import CustomSelect from './general/CustomSelect'
@@ -116,20 +117,21 @@ function avatarColor(name: string): string {
 
 // ─── Add Student Modal ────────────────────────────────────────────────────────
 const AddStudentModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
+  const { t } = useTranslation()
   const [form, setForm] = useState({ fullName: '', email: '', password: 'ingles2025' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.fullName || !form.email || !form.password) { setError('Todos los campos son requeridos.'); return }
+    if (!form.fullName || !form.email || !form.password) { setError(t('adminStudents.requiredFields')); return }
     setSubmitting(true); setError('')
     try {
       const res = await fetch(`${API}/api/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: form.email, password: form.password, fullName: form.fullName, role: 'student' }) })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error al crear alumno')
+      if (!res.ok) throw new Error(data.error || t('adminStudents.createError'))
       onSuccess(); onClose()
-    } catch (err: any) { setError(err.message || 'Error desconocido') }
+    } catch (err: any) { setError(err.message || t('adminStudents.unknownError')) }
     finally { setSubmitting(false) }
   }
 
@@ -138,25 +140,25 @@ const AddStudentModal: React.FC<{ onClose: () => void; onSuccess: () => void }> 
       <div style={modalStyle}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#c084fc' }}>➕ Nuevo Alumno</h3>
-            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)' }}>Crea una cuenta de alumno en la plataforma</p>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#c084fc' }}>{t('adminStudents.newStudentBtn')}</h3>
+            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)' }}>{t('adminStudents.newStudentSubtitle')}</p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '1.6rem', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>
         </div>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <FormField label="Nombre Completo *">
-            <input type="text" style={inputStyle} placeholder="Ej: María García López" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} autoFocus />
+          <FormField label={t('adminStudents.fullNameLabel')}>
+            <input type="text" style={inputStyle} placeholder={t('adminStudents.fullNamePlaceholder')} value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} autoFocus />
           </FormField>
-          <FormField label="Correo Electrónico *">
-            <input type="email" style={inputStyle} placeholder="alumno@ejemplo.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+          <FormField label={t('adminStudents.emailLabel')}>
+            <input type="email" style={inputStyle} placeholder={t('adminStudents.emailPlaceholder')} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
           </FormField>
-          <FormField label="Contraseña *">
-            <input type="text" style={inputStyle} placeholder="Contraseña temporal" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+          <FormField label={t('adminStudents.passwordLabel')}>
+            <input type="text" style={inputStyle} placeholder={t('adminStudents.passwordPlaceholder')} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
           </FormField>
           {error && <ErrorBanner message={error} />}
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
-            <button type="button" onClick={onClose} style={cancelBtnStyle}>Cancelar</button>
-            <button type="submit" disabled={submitting} style={submitBtnStyle(submitting)}>{submitting ? 'Creando...' : '✓ Crear Alumno'}</button>
+            <button type="button" onClick={onClose} style={cancelBtnStyle}>{t('adminStudents.cancelBtn')}</button>
+            <button type="submit" disabled={submitting} style={submitBtnStyle(submitting)}>{submitting ? t('adminStudents.creatingBtn') : t('adminStudents.createBtn')}</button>
           </div>
         </form>
       </div>
@@ -166,6 +168,7 @@ const AddStudentModal: React.FC<{ onClose: () => void; onSuccess: () => void }> 
 
 // ─── Edit Student Modal ───────────────────────────────────────────────────────
 const EditStudentModal: React.FC<{ student: Student; allCenters: Center[]; onClose: () => void; onSuccess: () => void }> = ({ student, allCenters, onClose, onSuccess }) => {
+  const { t } = useTranslation()
   const [form, setForm] = useState({ fullName: student.name, email: student.email })
   const [selectedCenterIds, setSelectedCenterIds] = useState<string[]>(student.centers.map(c => c.id))
   const [submitting, setSubmitting] = useState(false)
@@ -175,14 +178,14 @@ const EditStudentModal: React.FC<{ student: Student; allCenters: Center[]; onClo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.fullName || !form.email) { setError('Nombre y correo son requeridos.'); return }
+    if (!form.fullName || !form.email) { setError(t('adminStudents.nameEmailRequired')); return }
     setSubmitting(true); setError('')
     try {
       const res = await fetch(`${API}/api/users/${student.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fullName: form.fullName, email: form.email, centerIds: selectedCenterIds }) })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error al actualizar alumno')
+      if (!res.ok) throw new Error(data.error || t('adminStudents.updateError'))
       onSuccess(); onClose()
-    } catch (err: any) { setError(err.message || 'Error desconocido') }
+    } catch (err: any) { setError(err.message || t('adminStudents.unknownError')) }
     finally { setSubmitting(false) }
   }
 
@@ -191,25 +194,25 @@ const EditStudentModal: React.FC<{ student: Student; allCenters: Center[]; onClo
       <div style={{ ...modalStyle, maxWidth: '520px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#c084fc' }}>✏️ Editar Alumno</h3>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#c084fc' }}>{t('adminStudents.editStudentTitle')}</h3>
             <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)' }}>
-              Modificando a <strong style={{ color: 'rgba(255,255,255,0.7)' }}>{student.name}</strong>
+              {t('adminStudents.modifyingPrefix')} <strong style={{ color: 'rgba(255,255,255,0.7)' }}>{student.name}</strong>
             </p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '1.6rem', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>
         </div>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <FormField label="Nombre Completo *">
+          <FormField label={t('adminStudents.fullNameLabel')}>
             <input type="text" style={inputStyle} value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} autoFocus />
           </FormField>
-          <FormField label="Correo Electrónico *">
+          <FormField label={t('adminStudents.emailLabel')}>
             <input type="email" style={inputStyle} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
           </FormField>
 
           <div>
-            <label style={labelStyle}>Centros Inscritos</label>
+            <label style={labelStyle}>{t('adminStudents.enrolledCenters')}</label>
             {allCenters.length === 0
-              ? <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', margin: '6px 0 0' }}>No hay centros disponibles.</p>
+              ? <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', margin: '6px 0 0' }}>{t('adminStudents.noCentersAvailable')}</p>
               : <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem', maxHeight: '160px', overflowY: 'auto', paddingRight: '4px' }}>
                   {allCenters.map(center => {
                     const checked = selectedCenterIds.includes(center.id)
@@ -222,13 +225,13 @@ const EditStudentModal: React.FC<{ student: Student; allCenters: Center[]; onClo
                   })}
                 </div>
             }
-            <p style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.3)', margin: '6px 0 0' }}>Desmarcar un centro elimina las inscripciones del alumno en ese centro.</p>
+            <p style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.3)', margin: '6px 0 0' }}>{t('adminStudents.uncheckCenterWarning')}</p>
           </div>
 
           {error && <ErrorBanner message={error} />}
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
-            <button type="button" onClick={onClose} style={cancelBtnStyle}>Cancelar</button>
-            <button type="submit" disabled={submitting} style={submitBtnStyle(submitting)}>{submitting ? 'Guardando...' : '✓ Guardar Cambios'}</button>
+            <button type="button" onClick={onClose} style={cancelBtnStyle}>{t('adminStudents.cancelBtn')}</button>
+            <button type="submit" disabled={submitting} style={submitBtnStyle(submitting)}>{submitting ? t('adminStudents.savingBtn') : t('adminStudents.saveChangesBtn')}</button>
           </div>
         </form>
       </div>
@@ -237,28 +240,32 @@ const EditStudentModal: React.FC<{ student: Student; allCenters: Center[]; onClo
 }
 
 // ─── Delete Confirm Modal ─────────────────────────────────────────────────────
-const DeleteConfirmModal: React.FC<{ student: Student; onClose: () => void; onConfirm: () => void; deleting: boolean }> = ({ student, onClose, onConfirm, deleting }) => (
-  <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-    <div style={{ ...modalStyle, maxWidth: '420px', textAlign: 'center' }}>
-      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
-      <h3 style={{ margin: '0 0 0.5rem', color: '#f87171', fontSize: '1.2rem' }}>Eliminar Alumno</h3>
-      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', margin: '0 0 1.5rem', lineHeight: 1.6 }}>
-        ¿Estás seguro de que quieres eliminar a{' '}<strong style={{ color: '#fff' }}>{student.name}</strong>?
-        Esta acción es <span style={{ color: '#f87171', fontWeight: 600 }}>irreversible</span> y eliminará todas sus inscripciones y datos.
-      </p>
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <button onClick={onClose} style={cancelBtnStyle} disabled={deleting}>Cancelar</button>
-        <button onClick={onConfirm} disabled={deleting} style={{ flex: 2, padding: '10px 16px', background: deleting ? 'rgba(239,68,68,0.4)' : 'linear-gradient(135deg, #ef4444, #dc2626)', border: 'none', borderRadius: '8px', color: '#fff', cursor: deleting ? 'not-allowed' : 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
-          {deleting ? 'Eliminando...' : '🗑️ Sí, Eliminar'}
-        </button>
+const DeleteConfirmModal: React.FC<{ student: Student; onClose: () => void; onConfirm: () => void; deleting: boolean }> = ({ student, onClose, onConfirm, deleting }) => {
+  const { t } = useTranslation()
+  return (
+    <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ ...modalStyle, maxWidth: '420px', textAlign: 'center' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+        <h3 style={{ margin: '0 0 0.5rem', color: '#f87171', fontSize: '1.2rem' }}>{t('adminStudents.deleteStudentTitle')}</h3>
+        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', margin: '0 0 1.5rem', lineHeight: 1.6 }}>
+          {t('adminStudents.deleteConfirmPrefix')}{' '}<strong style={{ color: '#fff' }}>{student.name}</strong>?
+          {t('adminStudents.deleteWarning')}
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button onClick={onClose} style={cancelBtnStyle} disabled={deleting}>{t('adminStudents.cancelBtn')}</button>
+          <button onClick={onConfirm} disabled={deleting} style={{ flex: 2, padding: '10px 16px', background: deleting ? 'rgba(239,68,68,0.4)' : 'linear-gradient(135deg, #ef4444, #dc2626)', border: 'none', borderRadius: '8px', color: '#fff', cursor: deleting ? 'not-allowed' : 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
+            {deleting ? t('adminStudents.deletingBtn') : t('adminStudents.confirmDeleteBtn')}
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-)
+  )
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [students, setStudents] = useState<Student[]>([])
   const [allCenters, setAllCenters] = useState<Center[]>([])
   const [loading, setLoading] = useState(true)
@@ -301,10 +308,10 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
     try {
       const res = await fetch(`${API}/api/users/${deletingStudent.id}`, { method: 'DELETE' })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error al eliminar')
+      if (!res.ok) throw new Error(data.error || t('adminStudents.deleteError'))
       setStudents(prev => prev.filter(s => s.id !== deletingStudent.id))
       setDeletingStudent(null)
-    } catch (err: any) { alert(err.message || 'Error al eliminar') }
+    } catch (err: any) { alert(err.message || t('adminStudents.deleteError')) }
     finally { setIsDeleting(false) }
   }
 
@@ -326,10 +333,10 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
         <div className="students-admin-header">
           <div>
             <h1 style={{ margin: 0, fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-0.5px', background: 'linear-gradient(135deg, #c084fc 0%, #a855f7 40%, #7c3aed 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              Gestión de Alumnos
+              {t('adminStudents.pageTitle')}
             </h1>
             <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.45)', fontSize: '0.92rem' }}>
-              Administra, edita y organiza todos los alumnos de la plataforma
+              {t('adminStudents.pageSubtitle')}
             </p>
           </div>
           {isAdmin && (
@@ -339,42 +346,42 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 25px rgba(168,85,247,0.55)' }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(168,85,247,0.4)' }}
             >
-              ➕ Nuevo Alumno
+              {t('adminStudents.newStudentBtn')}
             </button>
           )}
         </div>
 
         {/* Stats */}
         <div className="students-admin-stats">
-          <StatCard icon="🎓" value={students.length} label="Total Alumnos" color="#a855f7" />
-          <StatCard icon="🏫" value={allCenters.length} label="Centros" color="#06b6d4" />
-          <StatCard icon="🔗" value={students.filter(s => s.centers.length > 0).length} label="Con inscripción" color="#10b981" />
-          <StatCard icon="⚠️" value={students.filter(s => s.centers.length === 0).length} label="Sin centro" color="#f59e0b" />
+          <StatCard icon="🎓" value={students.length} label={t('adminStudents.totalStudents')} color="#a855f7" />
+          <StatCard icon="🏫" value={allCenters.length} label={t('adminStudents.centers')} color="#06b6d4" />
+          <StatCard icon="🔗" value={students.filter(s => s.centers.length > 0).length} label={t('adminStudents.withEnrollment')} color="#10b981" />
+          <StatCard icon="⚠️" value={students.filter(s => s.centers.length === 0).length} label={t('adminStudents.withoutCenter')} color="#f59e0b" />
         </div>
 
         {/* Filters */}
         <div className="students-admin-filters">
           <div style={{ position: 'relative', flex: '1 1 260px' }}>
             <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '1rem', pointerEvents: 'none' }}>🔍</span>
-            <input type="text" placeholder="Buscar por nombre o correo..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ ...inputStyle, paddingLeft: '36px', width: '100%', background: 'rgba(255,255,255,0.06)' }} />
+            <input type="text" placeholder={t('adminStudents.searchPlaceholder')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ ...inputStyle, paddingLeft: '36px', width: '100%', background: 'rgba(255,255,255,0.06)' }} />
           </div>
           <div style={{ flex: '1 1 220px' }}>
             <CustomSelect
               value={filterCenter || 'default'}
               onChange={setFilterCenter}
               options={[
-                { value: 'default', label: 'Todos los centros' },
+                { value: 'default', label: t('adminStudents.allCenters') },
                 ...allCenters.map(c => ({ value: c.id, label: c.name }))
               ]}
             />
           </div>
           {(searchQuery || (filterCenter && filterCenter !== 'default')) && (
             <button onClick={() => { setSearchQuery(''); setFilterCenter('default') }} style={{ padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-              ✕ Limpiar
+              {t('adminStudents.clearBtn')}
             </button>
           )}
           <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-            {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
+            {filtered.length} {filtered.length !== 1 ? t('adminStudents.resultPlural') : t('adminStudents.resultSingular')}
           </span>
         </div>
 
@@ -383,15 +390,15 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
           {loading ? (
             <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🎓</div>
-              <p style={{ color: 'rgba(255,255,255,0.4)', margin: 0 }}>Cargando alumnos...</p>
+              <p style={{ color: 'rgba(255,255,255,0.4)', margin: 0 }}>{t('adminStudents.loading')}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{searchQuery || filterCenter ? '🔍' : '🎓'}</div>
-              <h3 style={{ margin: '0 0 0.5rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{searchQuery || filterCenter ? 'Sin resultados' : 'No hay alumnos aún'}</h3>
-              <p style={{ margin: '0 0 1.5rem', color: 'rgba(255,255,255,0.35)', fontSize: '0.88rem' }}>{searchQuery || filterCenter ? 'Prueba con otros filtros.' : 'Crea el primer alumno para comenzar.'}</p>
+              <h3 style={{ margin: '0 0 0.5rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{searchQuery || filterCenter ? t('adminStudents.noResultsTitle') : t('adminStudents.noStudentsTitle')}</h3>
+              <p style={{ margin: '0 0 1.5rem', color: 'rgba(255,255,255,0.35)', fontSize: '0.88rem' }}>{searchQuery || filterCenter ? t('adminStudents.noResultsDesc') : t('adminStudents.noStudentsDesc')}</p>
               {!searchQuery && !filterCenter && isAdmin && (
-                <button onClick={() => setShowAddModal(true)} style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: '#fff', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(168,85,247,0.35)' }}>➕ Nuevo Alumno</button>
+                <button onClick={() => setShowAddModal(true)} style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: '#fff', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(168,85,247,0.35)' }}>{t('adminStudents.newStudentBtn')}</button>
               )}
             </div>
           ) : (
@@ -399,10 +406,10 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
               <table className="students-admin-table">
                 <thead>
                   <tr style={{ background: 'rgba(192,132,252,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    <Th>Alumno</Th>
-                    <Th>Correo Electrónico</Th>
-                    <Th>Centros Inscritos</Th>
-                    {isAdmin && <Th align="right">Acciones</Th>}
+                    <Th>{t('adminStudents.thStudent')}</Th>
+                    <Th>{t('adminStudents.thEmail')}</Th>
+                    <Th>{t('adminStudents.thCenters')}</Th>
+                    {isAdmin && <Th align="right">{t('adminStudents.thActions')}</Th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -424,7 +431,7 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
                           </div>
                           <div>
                             <div style={{ fontWeight: 600, fontSize: '0.93rem', color: '#fff' }}>{student.name}</div>
-                            {student.created_at && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)' }}>Desde {new Date(student.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short' })}</div>}
+                            {student.created_at && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)' }}>{t('adminStudents.since')} {new Date(student.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short' })}</div>}
                           </div>
                         </div>
                       </td>
@@ -437,7 +444,7 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
                       {/* Centers */}
                       <td style={tdStyle}>
                         {student.centers.length === 0
-                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#fbbf24', fontSize: '0.78rem', fontWeight: 500 }}>⚠️ Sin inscripción</span>
+                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#fbbf24', fontSize: '0.78rem', fontWeight: 500 }}>{t('adminStudents.noEnrollmentBadge')}</span>
                           : <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                               {student.centers.map(c => (
                                 <span key={c.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.25)', color: '#67e8f9', fontSize: '0.78rem', fontWeight: 500 }}>
@@ -452,8 +459,8 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
                       {isAdmin && (
                         <td style={{ ...tdStyle, textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                            <ActionButton label="✏️ Editar" bg="rgba(192,132,252,0.13)" hoverBg="rgba(192,132,252,0.25)" textColor="#e9d5ff" border="1px solid rgba(192,132,252,0.3)" onClick={() => setEditingStudent(student)} />
-                            <ActionButton label="🗑️" bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => setDeletingStudent(student)} />
+                            <ActionButton label={t('adminStudents.editBtn')} bg="rgba(192,132,252,0.13)" hoverBg="rgba(192,132,252,0.25)" textColor="#e9d5ff" border="1px solid rgba(192,132,252,0.3)" onClick={() => setEditingStudent(student)} />
+                            <ActionButton label={t('adminStudents.deleteBtnIcon')} bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => setDeletingStudent(student)} />
                           </div>
                         </td>
                       )}
