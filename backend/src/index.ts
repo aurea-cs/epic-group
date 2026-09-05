@@ -18,6 +18,7 @@ import {
     calendarRouter,
     commentsRouter,
     uploadRouter,
+    exitTicketsRouter
 } from './routes';
 
 dotenv.config();
@@ -44,6 +45,7 @@ app.use(submissionsRouter);
 app.use(calendarRouter);
 app.use(commentsRouter);
 app.use(uploadRouter);
+app.use('/api/exit-tickets',exitTicketsRouter)
 
 // ── Utility Routes ─────────────────────────────────────────────────────────────
 

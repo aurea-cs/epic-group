@@ -66,6 +66,110 @@ export interface GradeContent {
     download_url?: string
 }
 
+
+export interface ModuleItem {
+    id: string
+    module_id: string
+    type: 'pdf' | 'video' | 'link' | 'assignment'
+    title: string
+    description?: string
+    content_url?: string
+    order_index: number
+    is_visible: boolean
+    show_student?: boolean
+    show_teacher?: boolean
+    created_at: string
+    updated_at: string
+    image_url?: string
+    is_editable?: boolean
+}
+
+export interface CourseModule {
+    id: string
+    subject_id: string
+    title: string
+    order_index: number
+    is_active: boolean
+    created_at: string
+    updated_at: string
+    items: ModuleItem[]
+}
+
+export interface VrCodeEntry {
+    id: string
+    module_id: string
+    code: string
+    created_at: string
+    image_url?: string
+    description?: string
+    title?: string
+    order_index?: number
+}
+
+export interface ExitTicketQuestion {
+    id: string
+    exit_ticket_id: string
+    question_order: number
+    type: 'multiple_choice' | 'text' | 'rating' | string
+    title: string
+    description?: string
+    config?: Record<string, any>
+    required: boolean
+    created_at: string
+}
+
+export interface ExitTicketTemplate {
+    id: string
+    title: string
+    description?: string
+    is_active: boolean
+    available_from?: string
+    due_at?: string
+    created_at: string
+    updated_at: string
+    questions?: ExitTicketQuestion[]
+    exit_ticket_questions?: [{ count: number }] // present on list view (admin GET /)
+}
+
+export interface ModuleExitTicketAttachment {
+    id: string
+    module_id: string
+    exit_ticket_id: string
+    attached_at: string
+    created_at: string
+}
+
+export interface StudentExitTicketAnswer {
+    id: string
+    response_id: string
+    question_id: string
+    answer: any
+    created_at: string
+    updated_at: string
+    exit_ticket_questions?: {
+        title: string
+        type: string
+        config?: Record<string, any>
+    }
+}
+
+export interface StudentExitTicketResponse {
+    id: string
+    exit_ticket_id: string
+    student_id: string
+    status: 'in_progress' | 'submitted'
+    started_at?: string
+    submitted_at?: string
+    created_at: string
+    updated_at: string
+    student_exit_ticket_answers?: StudentExitTicketAnswer[]
+    users?: {
+        id: string
+        full_name: string
+        email: string
+    }
+}
+
 // ============================================
 // EDUCATIONAL CENTERS
 // ============================================
@@ -542,47 +646,6 @@ export const deleteGradeContent = async (contentId: string): Promise<void> => {
 // COURSE MODULES & ITEMS
 // ============================================
 
-export interface ModuleItem {
-    id: string
-    module_id: string
-    type: 'pdf' | 'video' | 'link' | 'assignment'
-    title: string
-    description?: string
-    content_url?: string
-    order_index: number
-    is_visible: boolean
-    show_student?: boolean
-    show_teacher?: boolean
-    created_at: string
-    updated_at: string
-    image_url?: string
-    is_editable?: boolean
-}
-
-export interface CourseModule {
-    id: string
-    subject_id: string
-    title: string
-    order_index: number
-    is_active: boolean
-    created_at: string
-    updated_at: string
-    items: ModuleItem[]
-}
-
-// MODULES
-
-export interface VrCodeEntry {
-    id: string
-    module_id: string
-    code: string
-    created_at: string
-    image_url?: string
-    description?: string
-    title?: string
-    order_index?: number
-}
-
 export const getModuleVrCode = async (moduleId: string): Promise<VrCodeEntry[]> => {
     try {
         const response = await fetch(`${API_URL}/api/modules/${moduleId}/vr-code`)
@@ -880,6 +943,250 @@ export const reorderModuleVrCodes = async (
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
     } catch (error) {
         console.error('Error reordering VR entries:', error)
+        throw error
+    }
+}
+
+// ============================================
+// EXIT TICKETS - TEMPLATE CRUD
+// ============================================
+
+export const getExitTickets = async (): Promise<ExitTicketTemplate[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/exit-tickets`)
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching exit tickets:', error)
+        throw error
+    }
+}
+
+export const getExitTicket = async (id: string): Promise<ExitTicketTemplate> => {
+    try {
+        const response = await fetch(`${API_URL}/api/exit-tickets/${id}`)
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching exit ticket:', error)
+        throw error
+    }
+}
+
+export interface CreateExitTicketPayload {
+    title: string
+    description?: string
+    is_active?: boolean
+    available_from?: string
+    due_at?: string
+    questions?: Omit<ExitTicketQuestion, 'id' | 'exit_ticket_id' | 'created_at'>[]
+}
+
+export const createExitTicket = async (
+    payload: CreateExitTicketPayload
+): Promise<ExitTicketTemplate> => {
+    try {
+        const response = await fetch(`${API_URL}/api/exit-tickets`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error creating exit ticket:', error)
+        throw error
+    }
+}
+
+export interface UpdateExitTicketPayload {
+    title?: string
+    description?: string
+    is_active?: boolean
+    available_from?: string
+    due_at?: string
+}
+
+export const updateExitTicket = async (
+    id: string,
+    payload: UpdateExitTicketPayload
+): Promise<ExitTicketTemplate> => {
+    try {
+        const response = await fetch(`${API_URL}/api/exit-tickets/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error updating exit ticket:', error)
+        throw error
+    }
+}
+
+export const deleteExitTicket = async (id: string): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/exit-tickets/${id}`, {
+            method: 'DELETE',
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    } catch (error) {
+        console.error('Error deleting exit ticket:', error)
+        throw error
+    }
+}
+
+// ============================================
+// EXIT TICKETS - QUESTION CRUD
+// ============================================
+
+export interface CreateExitTicketQuestionPayload {
+    question_order?: number
+    type: string
+    title: string
+    description?: string
+    config?: Record<string, any>
+    required?: boolean
+}
+
+export const addExitTicketQuestion = async (
+    exitTicketId: string,
+    payload: CreateExitTicketQuestionPayload
+): Promise<ExitTicketQuestion> => {
+    try {
+        const response = await fetch(`${API_URL}/api/exit-tickets/${exitTicketId}/questions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error adding exit ticket question:', error)
+        throw error
+    }
+}
+
+export interface UpdateExitTicketQuestionPayload {
+    question_order?: number
+    type?: string
+    title?: string
+    description?: string
+    config?: Record<string, any>
+    required?: boolean
+}
+
+export const updateExitTicketQuestion = async (
+    questionId: string,
+    payload: UpdateExitTicketQuestionPayload
+): Promise<ExitTicketQuestion> => {
+    try {
+        const response = await fetch(`${API_URL}/api/exit-tickets/questions/${questionId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error updating exit ticket question:', error)
+        throw error
+    }
+}
+
+export const deleteExitTicketQuestion = async (questionId: string): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/exit-tickets/questions/${questionId}`, {
+            method: 'DELETE',
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    } catch (error) {
+        console.error('Error deleting exit ticket question:', error)
+        throw error
+    }
+}
+
+// ============================================
+// EXIT TICKETS - MODULE ATTACHMENT
+// ============================================
+
+export const getModuleExitTickets = async (
+    moduleId: string
+): Promise<ExitTicketTemplate[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/exit-tickets/modules/${moduleId}`)
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching module exit tickets:', error)
+        throw error
+    }
+}
+
+export const attachExitTicketsToModule = async (
+    moduleId: string,
+    exitTicketIds: string[]
+): Promise<ModuleExitTicketAttachment[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/exit-tickets/modules/${moduleId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ exit_ticket_ids: exitTicketIds }),
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error attaching exit ticket to module:', error)
+        throw error
+    }
+}
+
+export const detachExitTicketFromModule = async (
+    moduleId: string,
+    exitTicketId: string
+): Promise<void> => {
+    try {
+        const response = await fetch(
+            `${API_URL}/api/exit-tickets/modules/${moduleId}/${exitTicketId}`,
+            { method: 'DELETE' }
+        )
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    } catch (error) {
+        console.error('Error detaching exit ticket from module:', error)
+        throw error
+    }
+}
+
+// ============================================
+// EXIT TICKETS - RESPONSES (teacher/admin view)
+// ============================================
+
+export const getExitTicketResponsesForModule = async (
+    moduleId: string,
+    exitTicketId: string
+): Promise<StudentExitTicketResponse[]> => {
+    try {
+        const response = await fetch(
+            `${API_URL}/api/exit-tickets/modules/${moduleId}/${exitTicketId}/responses`
+        )
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching exit ticket responses:', error)
+        throw error
+    }
+}
+
+export const getExitTicketResponse = async (
+    responseId: string
+): Promise<StudentExitTicketResponse> => {
+    try {
+        const response = await fetch(`${API_URL}/api/exit-tickets/responses/${responseId}`)
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching exit ticket response:', error)
         throw error
     }
 }
