@@ -580,6 +580,7 @@ export interface VrCodeEntry {
     image_url?: string
     description?: string
     title?: string
+    order_index?: number
 }
 
 export const getModuleVrCode = async (moduleId: string): Promise<VrCodeEntry[]> => {
@@ -847,4 +848,38 @@ export const uploadImage = async (file: File): Promise<string> => {
     if (!response.ok) throw new Error(`Upload failed: ${response.status}`)
     const data = await response.json()
     return data.url
+}
+
+export const reorderModuleItems = async (
+    moduleId: string,
+    order: { id: string; order_index: number }[]
+): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/modules/${moduleId}/items/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order }),
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    } catch (error) {
+        console.error('Error reordering module items:', error)
+        throw error
+    }
+}
+
+export const reorderModuleVrCodes = async (
+    moduleId: string,
+    order: { id: string; order_index: number }[]
+): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/modules/${moduleId}/vr-entries/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order }),
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    } catch (error) {
+        console.error('Error reordering VR entries:', error)
+        throw error
+    }
 }

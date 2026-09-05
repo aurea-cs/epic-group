@@ -322,11 +322,20 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
     }
   }
 
-  // Filter contenidos: items with show_student === true
-  const contenidos = (moduleData?.items || []).filter(item => item.show_student === true)
+  // Filter contenidos: items with show_student === true, sorted by order_index
+  const contenidos = (moduleData?.items || [])
+    .filter(item => item.show_student === true)
+    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
 
-  // Filter recursos: items with show_teacher === true
-  const recursos = (moduleData?.items || []).filter(item => item.show_teacher === true)
+  // Filter recursos: items with show_teacher === true, sorted by order_index
+  const recursos = (moduleData?.items || [])
+    .filter(item => item.show_teacher === true)
+    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+
+  // VR Entries sorted by order_index
+  const sortedVrEntries = vrEntries
+    .slice()
+    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
 
   if (loading) {
     return (
@@ -439,7 +448,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
             scrollbarWidth: 'thin',
             scrollbarColor: 'rgba(255,255,255,0.3) transparent'
           }}>
-            {vrEntries.map((entry) => (
+            {sortedVrEntries.map((entry) => (
               <VrCard key={entry.id} vrEntry={entry} />
             ))}
           </div>

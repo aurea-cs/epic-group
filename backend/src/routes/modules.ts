@@ -13,6 +13,7 @@ router.get('/api/modules/:moduleId/vr-code', async (req, res) => {
             .from('module_vr_code')
             .select('*')
             .eq('module_id', moduleId)
+            .order('order_index', { ascending: true, nullsFirst: false })
             .order('created_at', { ascending: true });
 
         if (error) throw error;
@@ -226,3 +227,39 @@ router.post('/api/modules/:moduleId/items/upload', upload.single('file'), async 
 });
 
 export default router;
+
+// POST /api/admin/modules/:moduleId/items/reorder
+// body: { order: [{ id, order_index }, ...] }
+router.post('/api/modules/:moduleId/items/reorder', async (req, res) => {
+  const { moduleId } = req.params
+  const { order } = req.body
+
+  if (!Array.isArray(order) || order.length === 0) {
+    return res.status(400).json({ error: 'Invalid order payload' })
+  }
+
+  const { error } = await supabase.rpc('reorder_module_items', {
+    p_module_id: moduleId,
+    p_order: order,
+  })
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.status(204).end()
+})
+
+router.post('/api/modules/:moduleId/vr-entries/reorder', async (req, res) => {
+    const { moduleId } = req.params
+    const { order } = req.body
+
+    if (!Array.isArray(order) || order.length === 0) {
+        return res.status(400).json({ error: 'Invalid order payload' })
+    }
+
+    const { error } = await supabase.rpc('reorder_module_vr_code', {
+        p_module_id: moduleId,
+        p_order: order,
+    })
+
+    if (error) return res.status(500).json({ error: error.message })
+    res.status(204).end()
+})
