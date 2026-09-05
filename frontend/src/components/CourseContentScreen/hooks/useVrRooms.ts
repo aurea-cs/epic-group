@@ -16,7 +16,7 @@ interface VrForm {
 const emptyForm: VrForm = { code: '', image_url: '', title: '', description: '' }
 
 export function useVrRooms(
-    vrEntriesByModule: Record<string, VrCodeEntry[]>,
+    _vrEntriesByModule: Record<string, VrCodeEntry[]>,
     setVrEntriesByModule: React.Dispatch<React.SetStateAction<Record<string, VrCodeEntry[]>>>
 ) {
     const [showModal, setShowModal] = useState(false)
