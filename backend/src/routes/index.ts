@@ -12,3 +12,4 @@ export { default as submissionsRouter } from './submissions';
 export { default as calendarRouter } from './calendar';
 export { default as commentsRouter } from './comments';
 export { default as uploadRouter } from './uploadRoutes';
+export { default as exitTicketsRouter } from './exitTickets';

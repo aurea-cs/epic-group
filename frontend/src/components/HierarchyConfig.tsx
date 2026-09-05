@@ -248,206 +248,204 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
 
                 </div>
 
-                {/* Styled Type Form Modal */}
-                {showCenterModal && (
-                    <div className="modal-overlay" onClick={() => setShowCenterModal(false)}>
-                        <div className="school-modal-content" onClick={(e) => e.stopPropagation()}>
-                            <div className="modal-header">
-                                <div className="modal-icon">
-                                    {editingCenter ? '✏️' : '🏫'}
-                                </div>
-                                <h2>{editingCenter ? t('adminCenters.editCenterTitle') : t('adminCenters.newCenterTitle')}</h2>
-                                <p>{t('adminCenters.modalSubtitle')}</p>
-                            </div>
-                            <div className="modal-overlay" onClick={() => setShowCenterModal(false)}>
-                                <div className="school-modal-content" onClick={(e) => e.stopPropagation()}>
-                                    <div className="modal-header">
-                                        <div className="modal-icon">
-                                            {editingCenter ? '✏️' : '🏫'}
-                                        </div>
-                                        <h2>{editingCenter ? 'Editar Centro' : 'Nuevo Centro'}</h2>
-                                        <p>Ingresa los datos del centro educativo a continuación.</p>
-                                    </div>
+                ```tsx
+{showCenterModal && (
+    <div
+        className="modal-overlay"
+        onClick={() => setShowCenterModal(false)}
+    >
+        <div
+            className="school-modal-content"
+            onClick={(e) => e.stopPropagation()}
+        >
+            <div className="modal-header">
+                <div className="modal-icon">
+                    {editingCenter ? '✏️' : '🏫'}
+                </div>
 
-                                    <div className="form-grid">
-                                        <div className="form-group">
-                                            <label>{t('adminCenters.nameLabel')}</label>
-                                            <input
-                                                type="text"
-                                                value={centerForm.name}
-                                                onChange={(e) => setCenterForm({ ...centerForm, name: e.target.value })}
-                                                placeholder={t('adminCenters.namePlaceholder')}
-                                                className="modern-input"
-                                                autoFocus
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>{t('adminCenters.addressLabel')}</label>
-                                            <input
-                                                type="text"
-                                                value={centerForm.address}
-                                                onChange={(e) => setCenterForm({ ...centerForm, address: e.target.value })}
-                                                placeholder={t('adminCenters.addressPlaceholder')}
-                                                className="modern-input"
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>{t('adminCenters.phoneLabel')}</label>
-                                            <input
-                                                type="text"
-                                                value={centerForm.phone}
-                                                onChange={(e) => setCenterForm({ ...centerForm, phone: e.target.value })}
-                                                placeholder={t('adminCenters.phonePlaceholder')}
-                                                className="modern-input"
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>{t('adminCenters.emailLabel')}</label>
-                                            <input
-                                                type="email"
-                                                value={centerForm.email}
-                                                onChange={(e) => setCenterForm({ ...centerForm, email: e.target.value })}
-                                                placeholder={t('adminCenters.emailPlaceholder')}
-                                                className="modern-input"
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>{t('adminCenters.vrCodeLabel')}</label>
-                                            <input
-                                                type="text"
-                                                value={centerForm.vr_code}
-                                                onChange={(e) => setCenterForm({ ...centerForm, vr_code: e.target.value })}
-                                                placeholder={t('adminCenters.vrCodePlaceholder')}
-                                                className="modern-input"
-                                            />
-                                        </div>
-                                    </div>
-                                    {centerModalError && (
-                                        <div style={{
-                                            backgroundColor: '#fee2e2',
-                                            border: '1px solid #fca5a5',
-                                            color: '#b91c1c',
-                                            padding: '0.75rem 1rem',
-                                            borderRadius: '8px',
-                                            marginBottom: '1rem',
-                                            fontSize: '0.9rem',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.5rem'
-                                        }}>
-                                            <span>⚠️</span>
-                                            <span>{centerModalError}</span>
-                                        </div>
-                                    )}
+                <h2>
+                    {editingCenter
+                        ? t('adminCenters.editCenterTitle')
+                        : t('adminCenters.newCenterTitle')}
+                </h2>
 
-                                    <div
-                                        className="form-grid"
-                                        style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '1fr 1fr',
-                                            gap: '1rem'
-                                        }}
-                                    >
-                                        <div className="form-group">
-                                            <label>Nombre *</label>
-                                            <input
-                                                type="text"
-                                                value={centerForm.name}
-                                                onChange={(e) => setCenterForm({ ...centerForm, name: e.target.value })}
-                                                placeholder="Ej: Colegio IPDC"
-                                                className="modern-input"
-                                                autoFocus
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Dirección</label>
-                                            <input
-                                                type="text"
-                                                value={centerForm.address}
-                                                onChange={(e) => setCenterForm({ ...centerForm, address: e.target.value })}
-                                                placeholder="Ej: Av. Principal 123"
-                                                className="modern-input"
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Teléfono</label>
-                                            <input
-                                                type="text"
-                                                value={centerForm.phone}
-                                                onChange={(e) => setCenterForm({ ...centerForm, phone: e.target.value })}
-                                                placeholder="Ej: 555-1234"
-                                                className="modern-input"
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Email</label>
-                                            <input
-                                                type="email"
-                                                value={centerForm.email}
-                                                onChange={(e) => setCenterForm({ ...centerForm, email: e.target.value })}
-                                                placeholder="Ej: contacto@colegio.com"
-                                                className="modern-input"
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Código VR</label>
-                                            <input
-                                                type="text"
-                                                value={centerForm.vr_code}
-                                                onChange={(e) => setCenterForm({ ...centerForm, vr_code: e.target.value })}
-                                                placeholder="Ej: https://itch.io..."
-                                                className="modern-input"
-                                            />
-                                        </div>
-                                        {!editingCenter && (
-                                            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                                <label>Copiar estructura y contenido de centro preexistente</label>
-                                                <select
-                                                    value={sourceCenterSelectId}
-                                                    onChange={(e) => setSourceCenterSelectId(e.target.value)}
-                                                    className="modern-input"
-                                                >
-                                                    <option value="">-- Ninguno (Crear desde cero) --</option>
-                                                    {centers.map((c) => (
-                                                        <option key={c.id} value={c.id}>
-                                                            {c.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        )}
-                                    </div>
+                <p>{t('adminCenters.modalSubtitle')}</p>
+            </div>
 
-                                    <div className="modal-actions">
-                                        <button className="btn-cancel-modern" onClick={() => setShowCenterModal(false)}>
-                                            {t('adminCenters.cancel')}
-                                        </button>
-                                        <button
-                                            className="btn-save-modern"
-                                            onClick={handleSaveCenter}
-                                            disabled={!centerForm.name || loading}
-                                        >
-                                            {loading ? t('adminCenters.saving') : t('adminCenters.save')}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            ){'}'}
-                            <div className="modal-actions">
-                                <button className="btn-cancel-modern" onClick={() => setShowCenterModal(false)}>
-                                    Cancelar
-                                </button>
-                                <button
-                                    className="btn-save-modern"
-                                    onClick={handleSaveCenter}
-                                    disabled={!centerForm.name || loading}
+            <div
+                className="form-grid"
+                style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '1rem',
+                }}
+            >
+                {/* Name */}
+                <div className="form-group">
+                    <label>{t('adminCenters.nameLabel')}</label>
+                    <input
+                        type="text"
+                        value={centerForm.name}
+                        onChange={(e) =>
+                            setCenterForm({
+                                ...centerForm,
+                                name: e.target.value,
+                            })
+                        }
+                        placeholder={t('adminCenters.namePlaceholder')}
+                        className="modern-input"
+                        autoFocus
+                    />
+                </div>
+
+                {/* Address */}
+                <div className="form-group">
+                    <label>{t('adminCenters.addressLabel')}</label>
+                    <input
+                        type="text"
+                        value={centerForm.address}
+                        onChange={(e) =>
+                            setCenterForm({
+                                ...centerForm,
+                                address: e.target.value,
+                            })
+                        }
+                        placeholder={t('adminCenters.addressPlaceholder')}
+                        className="modern-input"
+                    />
+                </div>
+
+                {/* Phone */}
+                <div className="form-group">
+                    <label>{t('adminCenters.phoneLabel')}</label>
+                    <input
+                        type="text"
+                        value={centerForm.phone}
+                        onChange={(e) =>
+                            setCenterForm({
+                                ...centerForm,
+                                phone: e.target.value,
+                            })
+                        }
+                        placeholder={t('adminCenters.phonePlaceholder')}
+                        className="modern-input"
+                    />
+                </div>
+
+                {/* Email */}
+                <div className="form-group">
+                    <label>{t('adminCenters.emailLabel')}</label>
+                    <input
+                        type="email"
+                        value={centerForm.email}
+                        onChange={(e) =>
+                            setCenterForm({
+                                ...centerForm,
+                                email: e.target.value,
+                            })
+                        }
+                        placeholder={t('adminCenters.emailPlaceholder')}
+                        className="modern-input"
+                    />
+                </div>
+
+                {/* VR Code */}
+                <div className="form-group">
+                    <label>{t('adminCenters.vrCodeLabel')}</label>
+                    <input
+                        type="text"
+                        value={centerForm.vr_code}
+                        onChange={(e) =>
+                            setCenterForm({
+                                ...centerForm,
+                                vr_code: e.target.value,
+                            })
+                        }
+                        placeholder={t('adminCenters.vrCodePlaceholder')}
+                        className="modern-input"
+                    />
+                </div>
+
+                {/* Clone existing center */}
+                {!editingCenter && (
+                    <div
+                        className="form-group"
+                        style={{ gridColumn: '1 / -1' }}
+                    >
+                        <label>
+                            {t('adminCenters.cloneCenterLabel')}
+                        </label>
+
+                        <select
+                            value={sourceCenterSelectId}
+                            onChange={(e) =>
+                                setSourceCenterSelectId(e.target.value)
+                            }
+                            className="modern-input"
+                        >
+                            <option value="">
+                                {t('adminCenters.cloneNoneOption')}
+                            </option>
+
+                            {centers.map((center) => (
+                                <option
+                                    key={center.id}
+                                    value={center.id}
                                 >
-                                    {loading ? 'Guardando...' : 'Guardar'}
-                                </button>
-                            </div>
-                        </div>
+                                    {center.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 )}
+            </div>
+
+            {/* Error */}
+            {centerModalError && (
+                <div
+                    style={{
+                        backgroundColor: '#fee2e2',
+                        border: '1px solid #fca5a5',
+                        color: '#b91c1c',
+                        padding: '0.75rem 1rem',
+                        borderRadius: '8px',
+                        marginTop: '1rem',
+                        marginBottom: '1rem',
+                        fontSize: '0.9rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                    }}
+                >
+                    <span>⚠️</span>
+                    <span>{centerModalError}</span>
+                </div>
+            )}
+
+            {/* Actions */}
+            <div className="modal-actions">
+                <button
+                    className="btn-cancel-modern"
+                    onClick={() => setShowCenterModal(false)}
+                >
+                    {t('adminCenters.cancel')}
+                </button>
+
+                <button
+                    className="btn-save-modern"
+                    onClick={handleSaveCenter}
+                    disabled={!centerForm.name || loading}
+                >
+                    {loading
+                        ? t('adminCenters.saving')
+                        : t('adminCenters.save')}
+                </button>
+            </div>
+        </div>
+    </div>
+)}
+```
+
 
                 {confirmDeleteCenter !== null && (
                     <ConfirmModal

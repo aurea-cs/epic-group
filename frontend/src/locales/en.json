@@ -24,6 +24,7 @@
     "schools": "Schools",
     "students": "Students",
     "professors": "Professors",
+    "content": "Content",
     "myCourses": "My Courses",
     "schedule": "Schedule",
     "calendar": "Calendar"
@@ -67,7 +68,9 @@
     "deleteConfirmMsg": "Are you sure you want to delete this center? All associated grades, sections, and subjects will be deleted.",
     "deleteConfirmBtn": "Yes, delete",
     "editTooltip": "Edit",
-    "deleteTooltip": "Delete"
+    "deleteTooltip": "Delete",
+    "cloneCenterLabel": "Copy structure and content from an existing center",
+    "cloneNoneOption": "-- None (Create from scratch) --"
   },
   "adminStudents": {
     "newStudentBtn": "➕ New Student",

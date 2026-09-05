@@ -24,6 +24,7 @@
     "schools": "Centros",
     "students": "Alumnos",
     "professors": "Profesores",
+    "content": "Contenido",
     "myCourses": "Mis materias",
     "schedule": "Horario",
     "calendar": "Calendario"
@@ -67,7 +68,9 @@
     "deleteConfirmMsg": "¿Estás seguro de eliminar este centro? Se eliminarán todos los grados, secciones y materias asociadas.",
     "deleteConfirmBtn": "Sí, eliminar",
     "editTooltip": "Editar",
-    "deleteTooltip": "Eliminar"
+    "deleteTooltip": "Eliminar",
+    "cloneCenterLabel": "Copiar estructura y contenido de un centro existente",
+    "cloneNoneOption": "-- Ninguno (Crear desde cero) --"
   },
   "adminStudents": {
     "newStudentBtn": "➕ Nuevo Alumno",
@@ -230,7 +233,7 @@
     "general": "General",
     "semesterOf": "Semestre de",
     "of": "de",
-    "ordinal1": "1er",
+    "ordinal1": "1ero",
     "ordinal2": "2do",
     "ordinal3": "3er",
     "ordinalOther": "to",

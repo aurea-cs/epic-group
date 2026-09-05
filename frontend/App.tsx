@@ -24,6 +24,7 @@ import PlanetDetailScreen from './src/components/PlanetDetailScreen'
 import MainLayout from './src/components/MainLayout'
 import ModuleDraftScreen from './src/components/ModuleDraftScreen'
 import StudentsAdminScreen from './src/components/StudentsAdminScreen'
+import ExtraContentScreen from './src/components/ExtraContentScreen'
 import ProfessorAssignmentCoursesScreen from './src/components/ProfessorAssignmentCoursesScreen'
 import ProfessorAssignmentContentScreen from './src/components/ProfessorAssignmentContentScreen'
 import PdfViewerPage from './src/components/PdfViewerPage'
@@ -126,6 +127,7 @@ function App() {
                     <Route path="/progress" element={<ProgressScreen user={user} />} />
                     <Route path="/students" element={<StudentsAdminScreen user={user} />} />
                     <Route path="/professors" element={<ProfessorsAdminScreen user={user} />} />
+                    <Route path="/content" element={<ExtraContentScreen user={user} />} />
                     <Route path="/schedule" element={<ScheduleScreen user={user} />} />
                     <Route path="/calendar" element={<CalendarScreen user={user} />} />
                     <Route path="/alumnos" element={<StudentsScreen user={user} />} />
