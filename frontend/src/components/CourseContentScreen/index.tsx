@@ -44,7 +44,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
 
     const itemCRUD = useItemCRUD(content.load)
 
-    const vr = useVrRooms(content.vrEntriesByModule, content.setVrEntriesByModule)
+    const vr = useVrRooms(content.vrEntriesByModule, content.setVrEntriesByModule, content.load)
 
     const professors = useProfessorAssignment(
         centerId,
@@ -210,7 +210,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                     loading={professors.loading}
                     onToggleSelect={professors.toggleSelect}
                     onToggleSelectAll={professors.toggleSelectAll}
-                    onAssign={professors.assign}
+                    onAssign={() => professors.assign()}
                     onClose={() => { professors.setShowModal(false); professors.setSelectedIds([]) }}
                 />
             )}
