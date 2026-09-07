@@ -123,7 +123,7 @@ const ProfessorAssignModal: React.FC<ProfessorAssignModalProps> = ({
                     {availableProfessors.length > 0 && (
                         <button
                             className="btn-save-modern"
-                            onClick={onAssign}
+                            onClick={() => onAssign()}
                             disabled={loading || selectedIds.length === 0}
                             style={{
                                 opacity: selectedIds.length === 0 ? 0.5 : 1,

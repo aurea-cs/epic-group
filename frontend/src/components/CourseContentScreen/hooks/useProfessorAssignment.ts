@@ -48,8 +48,9 @@ export function useProfessorAssignment(
 
     const assign = async (userIds?: string | string[]) => {
         if (!courseId) return
-        const idsToAssign = userIds
-            ? Array.isArray(userIds) ? userIds : [userIds]
+        const isStringOrArray = typeof userIds === 'string' || Array.isArray(userIds)
+        const idsToAssign = isStringOrArray
+            ? (Array.isArray(userIds) ? userIds : [userIds])
             : selectedIds
 
         if (idsToAssign.length === 0) return

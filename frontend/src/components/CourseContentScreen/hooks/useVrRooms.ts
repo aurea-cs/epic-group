@@ -17,7 +17,8 @@ const emptyForm: VrForm = { code: '', image_url: '', title: '', description: '' 
 
 export function useVrRooms(
     _vrEntriesByModule: Record<string, VrCodeEntry[]>,
-    setVrEntriesByModule: React.Dispatch<React.SetStateAction<Record<string, VrCodeEntry[]>>>
+    setVrEntriesByModule: React.Dispatch<React.SetStateAction<Record<string, VrCodeEntry[]>>>,
+    onSuccess?: () => Promise<void> | void
 ) {
     const [showModal, setShowModal] = useState(false)
     const [vrModuleId, setVrModuleId] = useState<string | null>(null)
@@ -84,6 +85,9 @@ export function useVrRooms(
                 }))
             }
             closeModal()
+            if (onSuccess) {
+                await onSuccess()
+            }
         } catch (err: any) {
             alert(err.message || 'Error al guardar código VR')
         } finally {
@@ -99,6 +103,9 @@ export function useVrRooms(
                 ...prev,
                 [moduleId]: (prev[moduleId] || []).filter(e => e.id !== entryId),
             }))
+            if (onSuccess) {
+                await onSuccess()
+            }
         } catch (err: any) {
             alert(err.message || 'Error al eliminar código VR')
         } finally {

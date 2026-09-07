@@ -979,7 +979,7 @@ export interface CreateExitTicketPayload {
     is_active?: boolean
     available_from?: string
     due_at?: string
-    questions?: Omit<ExitTicketQuestion, 'id' | 'exit_ticket_id' | 'created_at'>[]
+    questions?: CreateExitTicketQuestionPayload[]
 }
 
 export const createExitTicket = async (
