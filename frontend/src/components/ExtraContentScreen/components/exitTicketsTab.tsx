@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import ExitTicketFormModal from './exitTicketsFormModal'
 import ExitTicketViewModal from './exitTicketsViewModal'
 import ConfirmModal from '../../general/ConfirmModal'
@@ -13,6 +14,7 @@ interface ExitTicketsTabProps {
 }
 
 const ExitTicketsTab: React.FC<ExitTicketsTabProps> = ({ exitTickets, loading, error, reload, remove }) => {
+    const { t } = useTranslation()
     // 'new' = create modal open, a string id = edit modal open for that template, null = closed
     const [formModalId, setFormModalId] = useState<string | 'new' | null>(null)
     const [viewModalId, setViewModalId] = useState<string | null>(null)
@@ -23,7 +25,7 @@ const ExitTicketsTab: React.FC<ExitTicketsTabProps> = ({ exitTickets, loading, e
             await remove(templateId)
             setConfirmDeleteTemplate(null)
         } catch (err: any) {
-            alert(err.message || 'Error al eliminar plantilla')
+            alert(err.message || t('extraContent.errorDeleteTemplate'))
         }
     }
 
@@ -31,9 +33,9 @@ const ExitTicketsTab: React.FC<ExitTicketsTabProps> = ({ exitTickets, loading, e
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <div>
-                    <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#fff' }}>Plantillas Globales de Tickets de Salida</h2>
+                    <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#fff' }}>{t('extraContent.tabExitTickets')}</h2>
                     <p style={{ margin: '0.25rem 0 0 0', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
-                        Crea y gestiona cuestionarios predeterminados que se aplican a los módulos de aprendizaje.
+                        {t('extraContent.exitTicketsDesc')}
                     </p>
                 </div>
                 <button
@@ -41,7 +43,7 @@ const ExitTicketsTab: React.FC<ExitTicketsTabProps> = ({ exitTickets, loading, e
                     onClick={() => setFormModalId('new')}
                     style={{ width: 'auto', padding: '0.65rem 1.25rem' }}
                 >
-                    ➕ Nuevo Ticket de Salida
+                    {t('extraContent.btnNewExitTicket')}
                 </button>
             </div>
 
@@ -62,16 +64,16 @@ const ExitTicketsTab: React.FC<ExitTicketsTabProps> = ({ exitTickets, loading, e
             )}
 
             {loading ? (
-                <div className="notice-box">Cargando plantillas de tickets de salida...</div>
+                <div className="notice-box">{t('extraContent.loadingExitTickets')}</div>
             ) : exitTickets.length === 0 ? (
                 <div className="notice-box">
                     <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎟️</div>
-                    <h3>No hay plantillas de Tickets de Salida registradas</h3>
+                    <h3>{t('extraContent.noExitTickets')}</h3>
                     <p style={{ margin: '0.5rem 0 1.5rem 0', fontSize: '0.9rem' }}>
-                        Haz click en "Nuevo Ticket de Salida" para crear la primera plantilla global de evaluación.
+                        {t('extraContent.noExitTicketsDesc')}
                     </p>
                     <button className="btn-save-modern" onClick={() => setFormModalId('new')} style={{ width: 'auto', margin: '0 auto' }}>
-                        ➕ Crear Primera Plantilla
+                        {t('extraContent.btnCreateFirstTemplate')}
                     </button>
                 </div>
             ) : (
@@ -85,24 +87,24 @@ const ExitTicketsTab: React.FC<ExitTicketsTabProps> = ({ exitTickets, loading, e
                                     <div className="category-info">
                                         <h3>{template.title}</h3>
                                         <span className={`level-badge ${template.is_active ? 'primaria' : 'secundaria'}`}>
-                                            {template.is_active ? 'Activo' : 'Inactivo'}
+                                            {template.is_active ? t('extraContent.statusActive') : t('extraContent.statusInactive')}
                                         </span>
                                     </div>
                                 </div>
 
                                 <div className="category-card-body">
-                                    <p style={{ margin: '0 0 0.75rem 0' }}>{template.description || 'Sin descripción configurada.'}</p>
+                                    <p style={{ margin: '0 0 0.75rem 0' }}>{template.description || t('extraContent.noDescription')}</p>
                                     <div style={{ fontSize: '0.85rem', color: '#c084fc', fontWeight: '600' }}>
-                                        📋 {qCount} {qCount === 1 ? 'Pregunta' : 'Preguntas'} en este cuestionario
+                                        📋 {qCount} {qCount === 1 ? t('extraContent.questionSingle') : t('extraContent.questionPlural')} {t('extraContent.inThisQuiz')}
                                     </div>
                                 </div>
 
                                 <div className="category-card-actions" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
                                     <button className="btn-preview-category" onClick={() => setViewModalId(template.id)}>
-                                        👁️ Ver
+                                        {t('extraContent.btnView')}
                                     </button>
                                     <button className="btn-manage-category" onClick={() => setFormModalId(template.id)}>
-                                        ✏️ Editar
+                                        {t('extraContent.btnEdit')}
                                     </button>
                                     <button
                                         className="btn-preview-category"
@@ -143,11 +145,11 @@ const ExitTicketsTab: React.FC<ExitTicketsTabProps> = ({ exitTickets, loading, e
 
             {confirmDeleteTemplate && (
                 <ConfirmModal
-                    title="Eliminar Ticket de Salida"
-                    message={`¿Estás seguro de eliminar el ticket de salida "${confirmDeleteTemplate.title}"?`}
+                    title={t('extraContent.deleteTitle')}
+                    message={`${t('extraContent.deleteMessage')} "${confirmDeleteTemplate.title}"?`}
                     onConfirm={() => handleDelete(confirmDeleteTemplate.id)}
                     onCancel={() => setConfirmDeleteTemplate(null)}
-                    confirmLabel="Sí, eliminar"
+                    confirmLabel={t('extraContent.btnConfirmDelete')}
                     danger
                 />
             )}

@@ -59,7 +59,7 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
             }
         } catch (err: any) {
             console.error('Error loading grades for hardcoded center:', err)
-            setError(err.message || 'Error al cargar grados del centro')
+            setError(err.message || t('extraContent.errorLoadGrades'))
         } finally {
             setLoadingGrades(false)
         }
@@ -87,45 +87,44 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
         ? [
               {
                   id: 'comprueba',
-                  name: 'Comprueba lo que aprendiste',
+                  name: t('extraContent.catComprueba'),
                   icon: '📝',
-                  description: 'Actividades de verificación y cuestionarios de aprendizaje interactivos.',
-                  badgeText: 'Primaria',
+                  description: t('extraContent.descCompruebaPri'),
+                  badgeText: t('extraContent.badgePrimaria'),
                   badgeClass: 'primaria',
               },
               {
                   id: 'ticket',
-                  name: 'Ticket de salida',
+                  name: t('extraContent.catTicket'),
                   icon: '🎟️',
-                  description:
-                      'Pregunta o cuestionario global de cierre para evaluar la comprensión al finalizar la clase.',
-                  badgeText: 'Primaria',
+                  description: t('extraContent.descTicketPri'),
+                  badgeText: t('extraContent.badgePrimaria'),
                   badgeClass: 'primaria',
               },
           ]
         : [
               {
                   id: 'piensa',
-                  name: 'Piensa, experimenta, observa',
+                  name: t('extraContent.catPiensa'),
                   icon: '🔬',
-                  description: 'Módulos prácticos de indagación, hipótesis, experimentación y análisis crítico.',
-                  badgeText: 'Secundaria / Prepa',
+                  description: t('extraContent.descPiensaSec'),
+                  badgeText: t('extraContent.badgeSecundaria'),
                   badgeClass: 'secundaria',
               },
               {
                   id: 'comprueba',
-                  name: 'Comprueba lo que aprendiste',
+                  name: t('extraContent.catComprueba'),
                   icon: '📝',
-                  description: 'Evaluaciones objetivas y retos de consolidación de conceptos clave.',
-                  badgeText: 'Secundaria / Prepa',
+                  description: t('extraContent.descCompruebaSec'),
+                  badgeText: t('extraContent.badgeSecundaria'),
                   badgeClass: 'secundaria',
               },
               {
                   id: 'ticket',
-                  name: 'Ticket de salida',
+                  name: t('extraContent.catTicket'),
                   icon: '🎟️',
-                  description: 'Cuestionario global de salida para medir avance diario y conceptos retenidos.',
-                  badgeText: 'Secundaria / Prepa',
+                  description: t('extraContent.descTicketSec'),
+                  badgeText: t('extraContent.badgeSecundaria'),
                   badgeClass: 'secundaria',
               },
           ]
@@ -151,13 +150,13 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
             {/* STEP 1: Grade Level Selection */}
             <div className="section-label">
                 <span className="step-num">1</span>
-                <span>Selecciona el Grado</span>
+                <span>{t('extraContent.step1')}</span>
             </div>
 
             {loadingGrades ? (
-                <div className="notice-box">Cargando grados del centro...</div>
+                <div className="notice-box">{t('extraContent.loadingGrades')}</div>
             ) : grades.length === 0 ? (
-                <div className="notice-box">No se encontraron grados en el centro educativo base.</div>
+                <div className="notice-box">{t('extraContent.noGrades')}</div>
             ) : (
                 <div style={{ marginBottom: '2.5rem', maxWidth: '500px' }}>
                     <select
@@ -181,7 +180,7 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
                         }}
                     >
                         <option value="" disabled>
-                            -- Selecciona un grado --
+                            {t('extraContent.selectGrade')}
                         </option>
                         {grades.map((grade) => (
                             <option key={grade.id} value={grade.id} style={{ background: '#25164E', color: '#ffffff' }}>
@@ -197,13 +196,13 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
                 <>
                     <div className="section-label">
                         <span className="step-num">2</span>
-                        <span>Selecciona la Materia ({formatGradeDisplayName(t, selectedGrade.name, selectedGrade.level)})</span>
+                        <span>{t('extraContent.step2')} ({formatGradeDisplayName(t, selectedGrade.name, selectedGrade.level)})</span>
                     </div>
 
                     {loadingSubjects ? (
-                        <div className="notice-box">Cargando materias del grado...</div>
+                        <div className="notice-box">{t('extraContent.loadingSubjects')}</div>
                     ) : subjects.length === 0 ? (
-                        <div className="notice-box">No hay materias registradas en este grado.</div>
+                        <div className="notice-box">{t('extraContent.noSubjects')}</div>
                     ) : (
                         <div className="subjects-grid">
                             {subjects.map((subj) => {
@@ -214,9 +213,11 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
                                         className={`subject-card ${isActive ? 'active' : ''}`}
                                         onClick={() => setSelectedSubject(subj)}
                                     >
-                                        <div className="subject-card-title">{subj.name}</div>
+                                        <div className="subject-card-title">
+                                            {t(`dynamicSubjects.${subj.name}`, { defaultValue: subj.name })}
+                                        </div>
                                         <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
-                                            {subj.campo_formativo || 'Campo General'}
+                                            {subj.campo_formativo ? t(`dynamicSubjects.${subj.campo_formativo}`, { defaultValue: subj.campo_formativo }) : t('extraContent.generalField')}
                                         </div>
                                     </div>
                                 )
@@ -232,7 +233,7 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
                     <div className="section-label" style={{ marginTop: '2rem' }}>
                         <span className="step-num">3</span>
                         <span>
-                            Categorías de Contenido — {selectedSubject.name} (
+                            {t('extraContent.step3')} — {selectedSubject.name} (
                             {formatGradeDisplayName(t, selectedGrade.name, selectedGrade.level)})
                         </span>
                     </div>
@@ -261,10 +262,10 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
                                             }
                                         }}
                                     >
-                                        <span>{cat.id === 'ticket' ? '🎟️ Gestionar Plantillas' : '⚙️ Administrar'}</span>
+                                        <span>{cat.id === 'ticket' ? t('extraContent.btnManageTemplates') : t('extraContent.btnAdminister')}</span>
                                     </button>
                                     <button className="btn-preview-category" onClick={() => setManagingCategory(cat)}>
-                                        👁️ Vista Previa
+                                        {t('extraContent.btnPreview')}
                                     </button>
                                 </div>
                             </div>
