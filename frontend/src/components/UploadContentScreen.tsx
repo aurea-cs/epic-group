@@ -1,5 +1,6 @@
 import React from 'react'
 import { User } from '@supabase/supabase-js'
+import { useTranslation } from 'react-i18next'
 import './UploadContentScreen.css'
 import manoverde from '../assets/manoverde.png'
 import element from '../assets/element.png'
@@ -14,6 +15,7 @@ interface UploadContentScreenProps {
 }
 
 const UploadContentScreen: React.FC<UploadContentScreenProps> = () => {
+  const { t } = useTranslation()
 
   return (
     <div className="upload-content-screen">
@@ -80,14 +82,14 @@ const UploadContentScreen: React.FC<UploadContentScreenProps> = () => {
 
         {/* Lado derecho - Sección funcional */}
         <div className="upload-right-section">
-          <h1 className="upload-title">Materias</h1>
+          <h1 className="upload-title">{t('uploadContent.title')}</h1>
 
           {/* Grid de cursos/contenido */}
           <div className="courses-grid">
             <div className="course-item">
               <h3 className="course-item-title">LOREM IPSUM</h3>
               <p className="course-item-description">
-                Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod
+                {t('uploadContent.courseDescription')}
               </p>
               <div className="course-item-image">
                 <div className="image-placeholder">
@@ -102,7 +104,7 @@ const UploadContentScreen: React.FC<UploadContentScreenProps> = () => {
             <div className="course-item">
               <h3 className="course-item-title">LOREM IPSUM</h3>
               <p className="course-item-description">
-                Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod
+                {t('uploadContent.courseDescription')}
               </p>
               <div className="course-item-image">
                 <div className="image-placeholder">
@@ -117,7 +119,7 @@ const UploadContentScreen: React.FC<UploadContentScreenProps> = () => {
             <div className="course-item">
               <h3 className="course-item-title">LOREM IPSUM</h3>
               <p className="course-item-description">
-                Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod
+                {t('uploadContent.courseDescription')}
               </p>
               <div className="course-item-image">
                 <div className="image-placeholder">
@@ -132,14 +134,14 @@ const UploadContentScreen: React.FC<UploadContentScreenProps> = () => {
 
           {/* Sección de subir contenido */}
           <div className="upload-section">
-            <label className="upload-label">Subir contenido</label>
+            <label className="upload-label">{t('uploadContent.uploadLabel')}</label>
             <div className="upload-input-container">
               <input
                 type="text"
                 className="upload-input"
-                placeholder="Ingresa el contenido aquí..."
+                placeholder={t('uploadContent.uploadPlaceholder')}
               />
-              <button className="upload-button">Get started</button>
+              <button className="upload-button">{t('uploadContent.getStarted')}</button>
             </div>
           </div>
         </div>

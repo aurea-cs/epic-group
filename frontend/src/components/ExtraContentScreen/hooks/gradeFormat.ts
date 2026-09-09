@@ -29,8 +29,9 @@ export const formatGradeDisplayName = (
     }
 
     const nameLower = name.toLowerCase()
+    const translatedName = t(`dynamicSubjects.${name}`, { defaultValue: name })
 
-    if (levelNum === 0) return `${t('professorCourses.general', { defaultValue: 'General' })} ${name}`
+    if (levelNum === 0) return `${t('professorCourses.general', { defaultValue: 'General' })} ${translatedName}`
 
     // Preparatoria / Prepa / Bachillerato -> Semestres 1-6
     if (nameLower.includes('prepa') || nameLower.includes('bachillerato')) {
@@ -42,7 +43,7 @@ export const formatGradeDisplayName = (
                     : levelNum === 3
                         ? t('professorCourses.ordinal3', { defaultValue: '3er' })
                         : `${levelNum}${t('professorCourses.ordinalOther', { defaultValue: 'to' })}`
-        return `${ordinal} ${t('professorCourses.semesterOf', { defaultValue: 'Semestre de' })} ${name}`
+        return `${ordinal} ${t('professorCourses.semesterOf', { defaultValue: 'Semestre de' })} ${translatedName}`
     }
 
     // Primaria (1-6), Secundaria (1-3), or default level
@@ -51,5 +52,5 @@ export const formatGradeDisplayName = (
     else if (levelNum === 2) suffix = t('professorCourses.ordinal2', { defaultValue: '2do' }).replace('2', '')
     else if (levelNum === 3) suffix = t('professorCourses.ordinal3', { defaultValue: '3er' }).replace('3', '')
 
-    return `${levelNum}${suffix} ${t('professorCourses.of', { defaultValue: 'de' })} ${name}`
+    return `${levelNum}${suffix} ${t('professorCourses.of', { defaultValue: 'de' })} ${translatedName}`
 }
