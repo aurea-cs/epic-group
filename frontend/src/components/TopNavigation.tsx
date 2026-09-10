@@ -31,6 +31,7 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
   { key: 'schools', labelKey: 'topnav.schools', path: '/admin' },
   { key: 'students', labelKey: 'topnav.students', path: '/students' },
   { key: 'professors', labelKey: 'topnav.professors', path: '/professors' },
+  { key: 'content', labelKey: 'topnav.content', path: '/content' },
 ]
 
 // Professor navigation items (current default)
