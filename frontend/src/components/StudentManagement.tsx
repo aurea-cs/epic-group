@@ -5,13 +5,24 @@ interface UserData {
     email: string
     password: string
     full_name: string
+    grade_level: string
+}
+
+export interface DetailedStudentResult {
+    email: string
+    fullName: string
+    accountStatus: 'created' | 'already_exists' | 'error'
+    accountMessage: string
+    gradeStatus: 'enrolled' | 'already_enrolled' | 'grade_not_found' | 'error' | 'skipped'
+    gradeMessage: string
+    gradeLevel: string
 }
 
 interface Results {
     success: number
     errors: number
     errorDetails: { email: string; error: string }[]
-    processed: { email: string; status: 'success' | 'error'; message: string }[]
+    processed: DetailedStudentResult[]
 }
 
 interface EnrolledStudent {
@@ -259,7 +270,7 @@ const TutorsListModal: React.FC<TutorsListModalProps> = ({ student, tutors, onCl
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-const StudentManagement: React.FC<StudentManagementProps> = ({ gradeId }) => {
+const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId }) => {
     // ── Registered students in this grade ──────────────────────────────
     const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>([])
     const [loadingEnrolled, setLoadingEnrolled] = useState(false)
@@ -283,7 +294,6 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ gradeId }) => {
     // ── CSV import ─────────────────────────────────────────────────────
     const [loading, setLoading] = useState(false)
     const [results, setResults] = useState<Results | null>(null)
-    const [, setFailedUsers] = useState<UserData[]>([])
     const [parsing, setParsing] = useState(false)
 
     // ── Delete ─────────────────────────────────────────────────────────
@@ -405,29 +415,43 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ gradeId }) => {
         }
     }
 
-    const importCustomUsers = async (users: UserData[]) => {
+    const importCsvStudents = async (users: UserData[]) => {
+        if (!centerId) {
+            alert('Este componente requiere un centerId para importar alumnos por CSV.')
+            return
+        }
         setLoading(true)
         setResults(null)
-        setFailedUsers([])
         const res: Results = { success: 0, errors: 0, errorDetails: [], processed: [] }
-        for (const user of users) {
-            try {
-                const createdUser = await createStudent({
-                    fullName: user.full_name,
-                    email: user.email,
-                    password: user.password
-                })
-                if (createdUser?.id) {
-                    await enrollStudent(createdUser.id)
+        try {
+            const response = await fetch(`${API}/api/students/csv-import`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ center_id: centerId, students: users })
+            })
+            const data = await response.json()
+            if (!response.ok) throw new Error(data.error || 'Error en importación')
+
+            const processed: DetailedStudentResult[] = data.results || []
+            for (const item of processed) {
+                const hasError =
+                    item.accountStatus === 'error' ||
+                    item.gradeStatus === 'error' ||
+                    item.gradeStatus === 'grade_not_found'
+                if (hasError) {
+                    res.errors++
+                    const msgs: string[] = []
+                    if (item.accountStatus === 'error') msgs.push(`Cuenta: ${item.accountMessage}`)
+                    if (item.gradeStatus === 'error' || item.gradeStatus === 'grade_not_found') msgs.push(`Grado: ${item.gradeMessage}`)
+                    res.errorDetails.push({ email: item.email, error: msgs.join(' | ') })
+                } else {
+                    res.success++
                 }
-                res.success++
-                res.processed.push({ email: user.email, status: 'success', message: 'OK' })
-            } catch (error: any) {
-                res.errors++
-                res.errorDetails.push({ email: user.email, error: error.message })
-                setFailedUsers(prev => [...prev, user])
+                res.processed.push(item)
             }
-            await new Promise(r => setTimeout(r, 100))
+        } catch (err: any) {
+            res.errors++
+            res.errorDetails.push({ email: 'General', error: err.message })
         }
         setResults(res)
         setLoading(false)
@@ -445,17 +469,38 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ gradeId }) => {
             const lines = text.split(/\r\n|\n/)
             const parsed: UserData[] = []
             let start = 0
-            if (lines[0].toLowerCase().includes('email')) start = 1
+
+            let emailCol = 0, passCol = 1, nameCol = 2, gradeCol = 3
+
+            if (lines[0].toLowerCase().includes('email')) {
+                start = 1
+                const headers = lines[0].toLowerCase().split(',').map(h => h.trim())
+                const eIdx = headers.findIndex(h => h.includes('email'))
+                const pIdx = headers.findIndex(h => h.includes('pass'))
+                const nIdx = headers.findIndex(h => h.includes('name') || h.includes('nombre'))
+                const gIdx = headers.findIndex(h => h.includes('grade') || h.includes('grado') || h.includes('nivel'))
+                if (eIdx !== -1) emailCol = eIdx
+                if (pIdx !== -1) passCol = pIdx
+                if (nIdx !== -1) nameCol = nIdx
+                if (gIdx !== -1) gradeCol = gIdx
+            }
+
             for (let i = start; i < lines.length; i++) {
                 const line = lines[i].trim()
                 if (!line) continue
                 const parts = line.split(',')
                 if (parts.length >= 3) {
-                    parsed.push({ email: parts[0].trim(), password: parts[1]?.trim() || 'ingles2025', full_name: parts[2].trim() })
+                    const email = parts[emailCol]?.trim() || ''
+                    const password = parts[passCol]?.trim() || 'ingles2025'
+                    const full_name = parts[nameCol]?.trim() || ''
+                    const grade_level = parts[gradeCol]?.trim() || ''
+                    if (email && full_name) {
+                        parsed.push({ email, password, full_name, grade_level })
+                    }
                 }
             }
-            if (confirm(`Se encontraron ${parsed.length} usuarios en el CSV. ¿Deseas insertarlos ahora?`)) {
-                await importCustomUsers(parsed)
+            if (confirm(`Se encontraron ${parsed.length} alumnos en el CSV. ¿Importar ahora?`)) {
+                await importCsvStudents(parsed)
             }
             setParsing(false)
             if (event.target) event.target.value = ''
@@ -585,29 +630,82 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ gradeId }) => {
                 {activeTab === 'csv' && (
                     <div className="csv-upload-subject">
                         <h4 style={{ color: '#ffffff', textAlign: 'center' }}>Subir Archivo CSV</h4>
-                        <div className="csv-helper-text" style={{ color: 'rgba(255,255,255,0.6)' }}>Formato requerido: <code style={{ color: '#a855f7', background: 'rgba(168,85,247,0.1)' }}>email, password, full_name, cohort</code></div>
-                        <input type="file" accept=".csv" onChange={handleFileUpload} className="modern-input" style={{ maxWidth: '400px', margin: '0 auto', background: 'rgba(255,255,255,0.07)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }} disabled={parsing || loading} />
+                        <div className="csv-helper-text" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                            Formato requerido: <code style={{ color: '#a855f7', background: 'rgba(168,85,247,0.1)' }}>email, password, full_name, grade_level</code>
+                        </div>
+                        <input
+                            type="file"
+                            accept=".csv"
+                            onChange={handleFileUpload}
+                            className="modern-input"
+                            style={{ maxWidth: '400px', margin: '0 auto', background: 'rgba(255,255,255,0.07)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }}
+                            disabled={parsing || loading}
+                        />
+                        {(parsing || loading) && (
+                            <p style={{ color: '#c084fc', textAlign: 'center', marginTop: '0.5rem', fontSize: '0.88rem' }}>
+                                {parsing ? 'Procesando archivo...' : 'Importando alumnos...'}
+                            </p>
+                        )}
                     </div>
                 )}
 
                 {/* ── Import Results ── */}
                 {results && (
-                    <div className="results-section">
-                        <h3 style={{ color: '#842fa0ff' }}>📈 Resultados de Importación</h3>
-                        <div className="results-summary">
-                            <div className="result-item success"><span className="result-number">{results.success}</span><span className="result-label">Creados</span></div>
-                            <div className="result-item error"><span className="result-number">{results.errors}</span><span className="result-label">Errores</span></div>
+                    <div className="results-section" style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        margin: '1.5rem 0',
+                        border: '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                        <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '1rem' }}>📈 Resultados de Importación</h3>
+                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                            <span style={{ padding: '0.35rem 0.9rem', borderRadius: '20px', background: 'rgba(16,185,129,0.15)', color: '#10b981', fontWeight: 700, fontSize: '0.9rem' }}>
+                                ✓ {results.success} exitosos
+                            </span>
+                            <span style={{ padding: '0.35rem 0.9rem', borderRadius: '20px', background: 'rgba(239,68,68,0.15)', color: '#f87171', fontWeight: 700, fontSize: '0.9rem' }}>
+                                ✕ {results.errors} con errores
+                            </span>
                         </div>
-                        {results.errorDetails.length > 0 && (
-                            <div className="errors-details">
-                                <h4 style={{ color: '#842fa0ff' }}>❌ Errores Detallados:</h4>
-                                <div className="error-list">
-                                    {results.errorDetails.map((e, i) => (
-                                        <div key={i} className="error-item" style={{ color: '#842fa0ff' }}><strong>{e.email}</strong>: {e.error}</div>
-                                    ))}
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '450px', overflowY: 'auto' }}>
+                            {results.processed.map((item, idx) => (
+                                <div key={idx} style={{
+                                    background: 'rgba(0,0,0,0.25)',
+                                    border: '1px solid rgba(255,255,255,0.08)',
+                                    borderRadius: '8px',
+                                    padding: '1rem'
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                                        <span style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.95rem' }}>{item.fullName || item.email}</span>
+                                        <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>{item.email}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.82rem', marginBottom: item.gradeLevel ? '0.5rem' : 0 }}>
+                                        {/* Account Badge */}
+                                        <span style={{
+                                            padding: '0.25rem 0.6rem', borderRadius: '4px', fontWeight: 500,
+                                            background: item.accountStatus === 'created' ? 'rgba(16,185,129,0.2)' : item.accountStatus === 'already_exists' ? 'rgba(59,130,246,0.2)' : 'rgba(239,68,68,0.2)',
+                                            color: item.accountStatus === 'created' ? '#10b981' : item.accountStatus === 'already_exists' ? '#60a5fa' : '#f87171'
+                                        }}>
+                                            Cuenta: {item.accountMessage}
+                                        </span>
+                                        {/* Grade Badge */}
+                                        <span style={{
+                                            padding: '0.25rem 0.6rem', borderRadius: '4px', fontWeight: 500,
+                                            background: item.gradeStatus === 'enrolled' ? 'rgba(16,185,129,0.2)' : item.gradeStatus === 'already_enrolled' ? 'rgba(59,130,246,0.2)' : item.gradeStatus === 'skipped' ? 'rgba(107,114,128,0.2)' : 'rgba(239,68,68,0.2)',
+                                            color: item.gradeStatus === 'enrolled' ? '#10b981' : item.gradeStatus === 'already_enrolled' ? '#60a5fa' : item.gradeStatus === 'skipped' ? '#9ca3af' : '#f87171'
+                                        }}>
+                                            Grado: {item.gradeMessage}
+                                        </span>
+                                    </div>
+                                    {item.gradeLevel && (
+                                        <div style={{ marginTop: '0.35rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>
+                                            Nivel solicitado: <code style={{ color: '#c084fc', background: 'rgba(192,132,252,0.1)', padding: '1px 5px', borderRadius: '3px' }}>{item.gradeLevel}</code>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        )}
+                            ))}
+                        </div>
                     </div>
                 )}
 
