@@ -1226,3 +1226,47 @@ export const getExitTicketResponse = async (
         throw error
     }
 }
+
+export const getMyExitTicketResponse = async (
+    ticketId: string,
+    moduleId: string,
+    studentId: string
+): Promise<StudentExitTicketResponse | null> => {
+    try {
+        const response = await fetch(
+            `${API_URL}/api/exit-tickets/${ticketId}/my-response?module_id=${moduleId}&student_id=${studentId}`
+        )
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching student response:', error)
+        return null
+    }
+}
+
+export const submitExitTicketResponse = async (
+    ticketId: string,
+    moduleId: string,
+    studentId: string,
+    answers: Array<{ question_id: string; answer: any }>
+): Promise<any> => {
+    try {
+        const response = await fetch(`${API_URL}/api/exit-tickets/${ticketId}/responses`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                module_id: moduleId,
+                student_id: studentId,
+                answers,
+            }),
+        })
+        const data = await response.json()
+        if (!response.ok) {
+            throw new Error(data.error || 'Error al enviar el cuestionario')
+        }
+        return data
+    } catch (error) {
+        console.error('Error submitting exit ticket response:', error)
+        throw error
+    }
+}

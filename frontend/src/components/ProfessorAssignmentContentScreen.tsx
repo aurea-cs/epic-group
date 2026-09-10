@@ -236,7 +236,6 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
 
     const [tickets, setTickets] = useState<StudentExitTicketResponse[]>([])
     const [ticketsLoading, setTicketsLoading] = useState(false)
-    const [showTicketModal, setShowTicketModal] = useState(false)
     
     const [error, setError] = useState<string | null>(null)
     const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState<string | null>(null)

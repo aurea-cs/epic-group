@@ -7,19 +7,6 @@ interface ExitTicketViewerScreenProps {
     onClose: () => void
 }
 
-const typeLabel = (type: string) => {
-    switch (type) {
-        case 'rating':
-            return '⭐ Calificación 1-5'
-        case 'text':
-            return '✍️ Respuesta abierta'
-        case 'multiple_choice':
-            return '🔘 Opción múltiple'
-        default:
-            return type
-    }
-}
-
 /**
  * Pure read-only preview of an exit ticket template: title, description,
  * and every question rendered with its real config (options / stars / text
