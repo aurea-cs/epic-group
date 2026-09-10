@@ -660,6 +660,94 @@ router.get('/api/subjects/:subjectId/calendar-events', async (req, res) => {
     }
 });
 
+// GET /api/subjects/:subjectId/tickets
+// Returns all student exit ticket responses for all modules within a subject
+router.get('/api/subjects/:subjectId/tickets', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+
+        // 1. Find all modules for this subject
+        const { data: modules, error: modErr } = await supabase
+            .from('modules')
+            .select('id, title')
+            .eq('subject_id', subjectId);
+
+        if (modErr) throw modErr;
+        if (!modules || modules.length === 0) return res.json([]);
+
+        const moduleIds = modules.map(m => m.id);
+        const moduleMap = new Map(modules.map(m => [m.id, m.title]));
+
+        // 2. Find attachments for these modules
+        const { data: attachments, error: attErr } = await supabase
+            .from('module_exit_ticket_attachments')
+            .select('exit_ticket_id, module_id')
+            .in('module_id', moduleIds);
+
+        if (attErr) throw attErr;
+        if (!attachments || attachments.length === 0) return res.json([]);
+
+        const exitTicketIds = [...new Set(attachments.map(a => a.exit_ticket_id))];
+        const ticketModuleMap = new Map(attachments.map(a => [a.exit_ticket_id, moduleMap.get(a.module_id)]));
+
+        // 3. Find responses for these exit tickets
+        const { data: responses, error: respErr } = await supabase
+            .from('student_exit_ticket_responses')
+            .select(`
+                *,
+                student_exit_ticket_answers(*, exit_ticket_questions(id, title, type, config)),
+                module_exit_tickets(id, title, description)
+            `)
+            .in('exit_ticket_id', exitTicketIds)
+            .order('submitted_at', { ascending: false });
+
+        if (respErr) throw respErr;
+        if (!responses || responses.length === 0) return res.json([]);
+
+        // 4. Fetch student details from users table
+        const studentIds = [...new Set(responses.map(r => r.student_id))];
+        const { data: users } = await supabase
+            .from('users')
+            .select('id, full_name, email')
+            .in('id', studentIds);
+
+        const userMap = new Map((users || []).map(u => [u.id, u]));
+
+        // 5. Format response payload
+        const formatted = responses.map(r => {
+            const user = userMap.get(r.student_id);
+            const ticket = r.module_exit_tickets;
+            const moduleTitle = ticketModuleMap.get(r.exit_ticket_id) || '';
+
+            return {
+                id: r.id,
+                exit_ticket_id: r.exit_ticket_id,
+                student_id: r.student_id,
+                student_name: user?.full_name || user?.email || r.student_id,
+                student_email: user?.email || '',
+                ticket_title: ticket?.title || 'Ticket de salida',
+                module_title: moduleTitle,
+                status: r.status || 'submitted',
+                started_at: r.started_at,
+                submitted_at: r.submitted_at,
+                created_at: r.created_at,
+                updated_at: r.updated_at,
+                responses: (r.student_exit_ticket_answers || []).map((a: any) => ({
+                    question_id: a.question_id,
+                    question_title: a.exit_ticket_questions?.title || 'Pregunta sin título',
+                    question_type: a.exit_ticket_questions?.type || 'text',
+                    answer_text: typeof a.answer === 'string' ? a.answer : JSON.stringify(a.answer || ''),
+                })),
+            };
+        });
+
+        res.json(formatted);
+    } catch (error: any) {
+        console.error('Error fetching subject tickets:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Helper: extract the bare storage path from a Supabase Storage URL
 function extractStoragePath(contentUrl: string, bucket: string): string {
     if (!contentUrl) return contentUrl
