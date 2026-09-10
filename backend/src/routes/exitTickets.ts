@@ -457,19 +457,25 @@ router.delete('/modules/:moduleId/:exitTicketId', async (req: Request, res: Resp
 // =============================================================================
 
 /**
- * GET /exit-tickets/:id/my-response
- * Returns the current student's response (if any) to this exit ticket,
- * including their previously given answers. Useful to resume/review.
+ * GET /exit-tickets/:id/my-response?module_id=...
+ * A student can now have a separate response per module the ticket is
+ * attached to, so module_id disambiguates which one to return.
  */
 router.get('/:id/my-response', async (req: Request, res: Response) => {
   const { id } = req.params;
+  const { module_id } = req.query;
   const user = (req as any).user;
+
+  if (!module_id) {
+    return res.status(400).json({ error: 'module_id query param is required' });
+  }
 
   const { data: response, error } = await supabase
     .from('student_exit_ticket_responses')
     .select('*, student_exit_ticket_answers(*)')
     .eq('exit_ticket_id', id)
     .eq('student_id', user.id)
+    .eq('module_id', module_id as string)
     .maybeSingle();
 
   if (error) return res.status(500).json({ error: error.message });
@@ -478,52 +484,71 @@ router.get('/:id/my-response', async (req: Request, res: Response) => {
 
 /**
  * POST /exit-tickets/:id/responses
- * Submit a response in one shot: creates the response row and its answers,
- * then marks it submitted. Body: { answers: [{ question_id, answer }] }
- *
- * If you want a "save as draft, submit later" flow, split this into:
- *   POST /:id/responses            -> create with status='in_progress'
- *   PUT  /responses/:responseId    -> upsert answers, status stays in_progress
- *   POST /responses/:responseId/submit -> flips status to 'submitted'
- * The single-call version below covers the "fill and send" case from the spec.
+ * Body: { module_id, answers: [{ question_id, answer }] }
  */
 router.post('/:id/responses', async (req: Request, res: Response) => {
   const { id } = req.params; // exit_ticket_id
   const user = (req as any).user;
-  const { answers } = req.body;
+  const { module_id, answers } = req.body;
 
+  if (!module_id) {
+    return res.status(400).json({ error: 'module_id is required' });
+  }
   if (!Array.isArray(answers) || answers.length === 0) {
     return res.status(400).json({ error: 'answers must be a non-empty array' });
   }
 
-  // Prevent duplicate submissions.
+  // 1. Confirm this ticket is actually attached to that module.
+  const { data: attachment } = await supabase
+    .from('module_exit_ticket_attachments')
+    .select('id')
+    .eq('module_id', module_id)
+    .eq('exit_ticket_id', id)
+    .maybeSingle();
+
+  if (!attachment) {
+    return res.status(400).json({ error: 'This exit ticket is not attached to that module' });
+  }
+
+  // 2. Confirm the student is enrolled in the subject that owns the module.
+  const enrolled = await studentEnrolledInModule(user.id, module_id);
+  if (!enrolled) {
+    return res.status(403).json({ error: 'Not enrolled in this module' });
+  }
+
+  // 3. Prevent duplicate submissions for this specific module.
   const { data: existing } = await supabase
     .from('student_exit_ticket_responses')
     .select('id')
     .eq('exit_ticket_id', id)
     .eq('student_id', user.id)
+    .eq('module_id', module_id)
     .maybeSingle();
 
   if (existing) {
-    return res.status(409).json({ error: 'You have already submitted a response for this exit ticket' });
+    return res.status(409).json({ error: 'You have already submitted a response for this exit ticket in this module' });
   }
 
   const now = new Date().toISOString();
 
+  // 4. Create the response as in_progress FIRST — inserting it as
+  // 'submitted' directly trips the prevent_answer_edit_after_submit
+  // trigger once the answers are inserted below.
   const { data: response, error: respErr } = await supabase
     .from('student_exit_ticket_responses')
     .insert({
       exit_ticket_id: id,
       student_id: user.id,
-      status: 'submitted',
+      module_id,
+      status: 'in_progress',
       started_at: now,
-      submitted_at: now,
     })
     .select()
     .single();
 
   if (respErr) return res.status(500).json({ error: respErr.message });
 
+  // 5. Insert answers while still in_progress.
   const answerRows = answers.map((a: any) => ({
     response_id: response.id,
     question_id: a.question_id,
@@ -533,14 +558,22 @@ router.post('/:id/responses', async (req: Request, res: Response) => {
   const { error: ansErr } = await supabase.from('student_exit_ticket_answers').insert(answerRows);
 
   if (ansErr) {
-    // Roll back the orphaned response so retries don't hit the 409 above.
     await supabase.from('student_exit_ticket_responses').delete().eq('id', response.id);
     return res.status(500).json({ error: ansErr.message });
   }
 
-  res.status(201).json({ ...response, answers: answerRows });
-});
+  // 6. Only now flip it to submitted.
+  const { data: submitted, error: submitErr } = await supabase
+    .from('student_exit_ticket_responses')
+    .update({ status: 'submitted', submitted_at: new Date().toISOString() })
+    .eq('id', response.id)
+    .select()
+    .single();
 
+  if (submitErr) return res.status(500).json({ error: submitErr.message });
+
+  res.status(201).json({ ...submitted, answers: answerRows });
+});
 // =============================================================================
 // TEACHER — View responses from their subjects' modules
 // =============================================================================
@@ -577,6 +610,7 @@ router.get(
         '*, users:student_id(id, full_name, email), student_exit_ticket_answers(*, exit_ticket_questions(title, type))'
       )
       .eq('exit_ticket_id', exitTicketId)
+      .eq('module_id', moduleId)
       .order('submitted_at', { ascending: false });
 
     if (error) return res.status(500).json({ error: error.message });

@@ -10,8 +10,16 @@ interface TicketsTabProps {
 
 const TicketsTab: React.FC<TicketsTabProps> = ({ loading, tickets }) => {
     const [searchQuery, setSearchQuery] = useState('')
-    const [statusFilter, setStatusFilter] = useState<string>('default')
+    const [moduleFilter, setModuleFilter] = useState<string>('default')
     const [selectedTicket, setSelectedTicket] = useState<StudentExitTicketResponse | null>(null)
+
+    const moduleOptions = useMemo(() => {
+        const modules = Array.from(new Set(tickets.map(t => t.module_title).filter(Boolean))).sort()
+        return [
+            { value: 'default', label: 'Todos los módulos' },
+            ...modules.map(m => ({ value: m!, label: m! })),
+        ]
+    }, [tickets])
 
     const filtered = useMemo(() => {
         return tickets.filter(t => {
@@ -20,19 +28,16 @@ const TicketsTab: React.FC<TicketsTabProps> = ({ loading, tickets }) => {
                 !searchQuery ||
                 studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (t.student_email && t.student_email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                (t.ticket_title && t.ticket_title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                (t.module_title && t.module_title.toLowerCase().includes(searchQuery.toLowerCase()))
+                t.student_id.toLowerCase().includes(searchQuery.toLowerCase())
 
-            const matchesStatus =
-                !statusFilter ||
-                statusFilter === 'default' ||
-                (statusFilter === 'submitted' && t.status === 'submitted') ||
-                (statusFilter === 'graded' && t.status === 'graded') ||
-                (statusFilter === 'ungraded' && t.status !== 'graded')
+            const matchesModule =
+                !moduleFilter ||
+                moduleFilter === 'default' ||
+                t.module_title === moduleFilter
 
-            return matchesSearch && matchesStatus
+            return matchesSearch && matchesModule
         })
-    }, [tickets, searchQuery, statusFilter])
+    }, [tickets, searchQuery, moduleFilter])
 
     return (
         <>
@@ -42,25 +47,22 @@ const TicketsTab: React.FC<TicketsTabProps> = ({ loading, tickets }) => {
                     <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '1rem', pointerEvents: 'none' }}>🔍</span>
                     <input
                         type="text"
-                        placeholder="Buscar por alumno o ticket..."
+                        placeholder="Buscar por alumno..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         style={{ ...inputStyleAlt, paddingLeft: '36px', width: '100%', background: 'rgba(255,255,255,0.06)' }}
                     />
                 </div>
-                <div style={{ flex: '1 1 200px' }}>
+                <div style={{ flex: '1 1 220px' }}>
                     <CustomSelect
-                        value={statusFilter}
-                        onChange={setStatusFilter}
-                        options={[
-                            { value: 'default', label: 'Todas las entregas' },
-                            { value: 'submitted', label: 'Enviadas' },
-                        ]}
+                        value={moduleFilter}
+                        onChange={setModuleFilter}
+                        options={moduleOptions}
                     />
                 </div>
-                {(searchQuery || (statusFilter && statusFilter !== 'default')) && (
+                {(searchQuery || (moduleFilter && moduleFilter !== 'default')) && (
                     <button
-                        onClick={() => { setSearchQuery(''); setStatusFilter('default') }}
+                        onClick={() => { setSearchQuery(''); setModuleFilter('default') }}
                         style={{ padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
                     >
                         ✕ Limpiar
@@ -79,12 +81,12 @@ const TicketsTab: React.FC<TicketsTabProps> = ({ loading, tickets }) => {
                     </div>
                 ) : filtered.length === 0 ? (
                     <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{searchQuery || statusFilter ? '🔍' : '🎟️'}</div>
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{searchQuery || moduleFilter !== 'default' ? '🔍' : '🎟️'}</div>
                         <h3 style={{ margin: '0 0 0.5rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
-                            {searchQuery || statusFilter ? 'Sin resultados' : 'No hay respuestas registradas'}
+                            {searchQuery || moduleFilter !== 'default' ? 'Sin resultados' : 'No hay respuestas registradas'}
                         </h3>
                         <p style={{ margin: 0, color: 'rgba(255,255,255,0.35)', fontSize: '0.88rem' }}>
-                            {searchQuery || statusFilter ? 'Prueba con otros filtros.' : 'Aún ningún alumno ha respondido tickets de salida en esta materia.'}
+                            {searchQuery || moduleFilter !== 'default' ? 'Prueba con otros filtros.' : 'Aún ningún alumno ha respondido tickets de salida en esta materia.'}
                         </p>
                     </div>
                 ) : (
@@ -93,7 +95,6 @@ const TicketsTab: React.FC<TicketsTabProps> = ({ loading, tickets }) => {
                             <thead>
                                 <tr style={{ background: 'rgba(192,132,252,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                                     <th style={thStyle}>Alumno</th>
-                                    <th style={thStyle}>Ticket de Salida</th>
                                     <th style={thStyle}>Módulo</th>
                                     <th style={thStyle}>Fecha de entrega</th>
                                     <th style={thStyle}>Estado</th>
@@ -116,10 +117,6 @@ const TicketsTab: React.FC<TicketsTabProps> = ({ loading, tickets }) => {
                                                         {ticket.student_email}
                                                     </div>
                                                 )}
-                                            </td>
-
-                                            <td style={{ ...tdStyle, fontWeight: 500 }}>
-                                                {ticket.ticket_title || 'Ticket de salida'}
                                             </td>
 
                                             <td style={tdStyle}>

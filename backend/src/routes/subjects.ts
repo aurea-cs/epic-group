@@ -678,28 +678,32 @@ router.get('/api/subjects/:subjectId/tickets', async (req, res) => {
         const moduleIds = modules.map(m => m.id);
         const moduleMap = new Map(modules.map(m => [m.id, m.title]));
 
-        // 2. Find attachments for these modules
-        const { data: attachments, error: attErr } = await supabase
+        // 2. Find attachments for these modules (fallback for legacy responses without module_id)
+        const { data: attachments } = await supabase
             .from('module_exit_ticket_attachments')
             .select('exit_ticket_id, module_id')
             .in('module_id', moduleIds);
 
-        if (attErr) throw attErr;
-        if (!attachments || attachments.length === 0) return res.json([]);
+        const exitTicketIds = [...new Set((attachments || []).map(a => a.exit_ticket_id))];
+        const ticketModuleMap = new Map((attachments || []).map(a => [a.exit_ticket_id, moduleMap.get(a.module_id)]));
 
-        const exitTicketIds = [...new Set(attachments.map(a => a.exit_ticket_id))];
-        const ticketModuleMap = new Map(attachments.map(a => [a.exit_ticket_id, moduleMap.get(a.module_id)]));
-
-        // 3. Find responses for these exit tickets
-        const { data: responses, error: respErr } = await supabase
+        // 3. Find responses for modules in this subject (by module_id or by attached exit_ticket_id)
+        let responseQuery = supabase
             .from('student_exit_ticket_responses')
             .select(`
                 *,
                 student_exit_ticket_answers(*, exit_ticket_questions(id, title, type, config)),
-                module_exit_tickets(id, title, description)
-            `)
-            .in('exit_ticket_id', exitTicketIds)
-            .order('submitted_at', { ascending: false });
+                module_exit_tickets(id, title, description),
+                modules(id, title)
+            `);
+
+        if (exitTicketIds.length > 0) {
+            responseQuery = responseQuery.or(`module_id.in.(${moduleIds.join(',')}),exit_ticket_id.in.(${exitTicketIds.join(',')})`);
+        } else {
+            responseQuery = responseQuery.in('module_id', moduleIds);
+        }
+
+        const { data: responses, error: respErr } = await responseQuery.order('submitted_at', { ascending: false });
 
         if (respErr) throw respErr;
         if (!responses || responses.length === 0) return res.json([]);
@@ -713,20 +717,21 @@ router.get('/api/subjects/:subjectId/tickets', async (req, res) => {
 
         const userMap = new Map((users || []).map(u => [u.id, u]));
 
-        // 5. Format response payload
+        // 5. Format response payload with accurate module_id and module_title
         const formatted = responses.map(r => {
             const user = userMap.get(r.student_id);
             const ticket = r.module_exit_tickets;
-            const moduleTitle = ticketModuleMap.get(r.exit_ticket_id) || '';
+            const resolvedModuleTitle = r.modules?.title || moduleMap.get(r.module_id) || ticketModuleMap.get(r.exit_ticket_id) || 'Módulo';
 
             return {
                 id: r.id,
                 exit_ticket_id: r.exit_ticket_id,
+                module_id: r.module_id || null,
                 student_id: r.student_id,
                 student_name: user?.full_name || user?.email || r.student_id,
                 student_email: user?.email || '',
                 ticket_title: ticket?.title || 'Ticket de salida',
-                module_title: moduleTitle,
+                module_title: resolvedModuleTitle,
                 status: r.status || 'submitted',
                 started_at: r.started_at,
                 submitted_at: r.submitted_at,
