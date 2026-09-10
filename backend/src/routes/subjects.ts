@@ -678,7 +678,10 @@ router.get('/api/subjects/:subjectId/tickets', async (req, res) => {
         const moduleIds = modules.map(m => m.id);
         const moduleMap = new Map(modules.map(m => [m.id, m.title]));
 
-        // 2. Find attachments for these modules (fallback for legacy responses without module_id)
+        // 2. Find attachments for these modules so we can handle legacy responses
+        //    (responses stored with exit_ticket_id but no module_id).
+        //    We keep a Set of exit_ticket_ids that are legitimately attached to
+        //    THIS subject's modules — used for post-filter below.
         const { data: attachments } = await supabase
             .from('module_exit_ticket_attachments')
             .select('exit_ticket_id, module_id')
@@ -687,7 +690,12 @@ router.get('/api/subjects/:subjectId/tickets', async (req, res) => {
         const exitTicketIds = [...new Set((attachments || []).map(a => a.exit_ticket_id))];
         const ticketModuleMap = new Map((attachments || []).map(a => [a.exit_ticket_id, moduleMap.get(a.module_id)]));
 
-        // 3. Find responses for modules in this subject (by module_id or by attached exit_ticket_id)
+        // 3. Fetch responses scoped to this subject's modules.
+        //    PRIMARY filter: module_id.in.(moduleIds)  — direct, unambiguous link.
+        //    LEGACY fallback: responses with no module_id whose exit_ticket_id is
+        //    attached to one of this subject's modules. We broaden the DB query to
+        //    also grab these, but then post-filter in JS so we never accidentally
+        //    include responses from other subjects that share the same ticket template.
         let responseQuery = supabase
             .from('student_exit_ticket_responses')
             .select(`
@@ -698,15 +706,38 @@ router.get('/api/subjects/:subjectId/tickets', async (req, res) => {
             `);
 
         if (exitTicketIds.length > 0) {
+            // Fetch both direct (module_id) and potential legacy (exit_ticket_id) rows.
+            // We will discard any legacy row whose exit_ticket_id does NOT belong to
+            // this subject after the query.
             responseQuery = responseQuery.or(`module_id.in.(${moduleIds.join(',')}),exit_ticket_id.in.(${exitTicketIds.join(',')})`);
         } else {
             responseQuery = responseQuery.in('module_id', moduleIds);
         }
 
-        const { data: responses, error: respErr } = await responseQuery.order('submitted_at', { ascending: false });
+        const { data: rawResponses, error: respErr } = await responseQuery.order('submitted_at', { ascending: false });
 
         if (respErr) throw respErr;
-        if (!responses || responses.length === 0) return res.json([]);
+        if (!rawResponses || rawResponses.length === 0) return res.json([]);
+
+        // Post-filter: keep a response only when it is genuinely from this subject.
+        //   - Has module_id and that module belongs to this subject → always keep.
+        //   - Has no module_id (legacy) but exit_ticket_id is attached to one of
+        //     this subject's modules → keep (the broad OR caught these).
+        //   - Has module_id from a DIFFERENT subject that was also caught by the
+        //     exit_ticket_id branch → discard.
+        const subjectModuleIdSet = new Set(moduleIds);
+        const subjectExitTicketIdSet = new Set(exitTicketIds);
+
+        const responses = rawResponses.filter(r => {
+            if (r.module_id) {
+                // Only keep if the module belongs to this subject
+                return subjectModuleIdSet.has(r.module_id);
+            }
+            // Legacy: no module_id — only keep if exit_ticket attached here
+            return subjectExitTicketIdSet.has(r.exit_ticket_id);
+        });
+
+        if (responses.length === 0) return res.json([]);
 
         // 4. Fetch student details from users table
         const studentIds = [...new Set(responses.map(r => r.student_id))];

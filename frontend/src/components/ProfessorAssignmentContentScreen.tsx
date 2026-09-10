@@ -331,6 +331,15 @@ const loadStudents = useCallback(async () => {
                 .finally(() => setTicketsLoading(false))
     }, [courseId])
 
+    // Reload all tab data whenever the subject (courseId) changes
+    useEffect(() => {
+        setTickets([])
+        setAssignments([])
+        setSubmissions([])
+        setStudents([])
+        setEvents([])
+    }, [courseId])
+
     useEffect(() => {
         if (activeTab === 'assignments') loadAssignments()
         if (activeTab === 'reminders') loadEvents()
@@ -338,7 +347,7 @@ const loadStudents = useCallback(async () => {
         if (activeTab === 'submissions') {loadAssignments(); loadSubmissions()} 
         if (activeTab === 'tickets') loadTickets() 
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab])
+    }, [activeTab, courseId])
 
     // ---- handlers ----
 
