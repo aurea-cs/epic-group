@@ -10,7 +10,7 @@ import {
 import { getUserRole } from '../utils/getUserRole'
 import './HierarchyConfig.css'
 
-import type { Assignment, CalendarEvent, Student, ModuleWithItems, Center, Submission, TabKey } from './ProfessorContentScreen/types'
+import type { Assignment, CalendarEvent, Student, ModuleWithItems, Center, Submission, TabKey, StudentExitTicketResponse } from './ProfessorContentScreen/types'
 
 import { ActionButton, TabButton } from './general/SharedUI'
 import ContentTab from './ProfessorContentScreen/ContentTab'
@@ -23,6 +23,7 @@ import StudentsTab from './ProfessorContentScreen/StudentsTab'
 import StudentFormModal from './ProfessorContentScreen/StudentFormModal'
 import SubmissionsTab from './ProfessorContentScreen/SubmissionsTab'
 import GradingModal from './ProfessorContentScreen/GradingModal'
+import TicketsTab from './ProfessorContentScreen/TicketsTab'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -193,6 +194,14 @@ async function gradeStudentSubmission(
     return res.json()
 }
 
+// ---- tickets -------------------------------------------------------
+
+async function fetchTickets(subjectId: string): Promise<StudentExitTicketResponse[]> {
+    const res = await fetch(`${API_URL}/api/subjects/${subjectId}/tickets`)
+    if (!res.ok) throw new Error(`Error al cargar tickets: ${res.status}`)
+    return res.json()
+}
+
 
 const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScreenProps> = ({ user }) => {
     const { courseId } = useParams<{ courseId: string }>()
@@ -224,6 +233,9 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
     const [submissions, setSubmissions] = useState<Submission[]>([])
     const [submissionsLoading, setSubmissionsLoading] = useState(false)
     const [gradingSubmission, setGradingSubmission] = useState<Submission | null>(null)
+
+    const [tickets, setTickets] = useState<StudentExitTicketResponse[]>([])
+    const [ticketsLoading, setTicketsLoading] = useState(false)
     
     const [error, setError] = useState<string | null>(null)
     const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState<string | null>(null)
@@ -301,20 +313,30 @@ const loadStudents = useCallback(async () => {
 
     const loadSubmissions = useCallback(() => {
         if (!courseId) return
-        setSubmissionsLoading(true)
-        setError(null)
-        fetchSubmissions(courseId)
-            .then(setSubmissions)
-            .catch(e => setError(e.message))
-            .finally(() => setSubmissionsLoading(false))
+            setSubmissionsLoading(true)
+            setError(null)
+            fetchSubmissions(courseId)
+                .then(setSubmissions)
+                .catch(e => setError(e.message))
+                .finally(() => setSubmissionsLoading(false))
     }, [courseId])
 
+    const loadTickets = useCallback(() => {
+        if (!courseId) return
+            setTicketsLoading(true)
+            setError(null)
+            fetchTickets(courseId)
+                .then(setTickets)
+                .catch(e => setError(e.message))
+                .finally(() => setTicketsLoading(false))
+    }, [courseId])
 
     useEffect(() => {
         if (activeTab === 'assignments') loadAssignments()
         if (activeTab === 'reminders') loadEvents()
         if (activeTab === 'students') loadStudents()
         if (activeTab === 'submissions') {loadAssignments(); loadSubmissions()} 
+        if (activeTab === 'tickets') loadTickets() 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab])
 
@@ -465,8 +487,9 @@ const loadStudents = useCallback(async () => {
                 <TabButton label="📒 Contenido" active={activeTab === 'content'} onClick={() => setActiveTab('content')} />
                 <TabButton label="📂 Tareas" active={activeTab === 'assignments'} onClick={() => setActiveTab('assignments')} />
                 <TabButton label="📝 Entregas" active={activeTab === 'submissions'} onClick={() => setActiveTab('submissions')} />
+                <TabButton label="🎟️ Tickets" active={activeTab === 'tickets'} onClick={() => setActiveTab('tickets')} />
                 <TabButton label="📅 Eventos" active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} />
-                <TabButton label="👥 Alumnos inscritos" active={activeTab === 'students'} onClick={() => setActiveTab('students')} />
+                <TabButton label="👥 Alumnos" active={activeTab === 'students'} onClick={() => setActiveTab('students')} />
                 <TabButton label="🌕 Vista planetas" active={false} onClick={() => navigate(`/course/${courseId}/planet/1`, { state: { title: subject?.name, courseTitle: subject?.name } })} />
 
                 <div style={{ flex: 1 }} />
@@ -514,6 +537,13 @@ const loadStudents = useCallback(async () => {
                     modules={modules}
                     onEdit={a => { setEditingAssignment(a); setShowAssignmentModal(true) }}
                     onDelete={id => setConfirmDeleteAssignmentId(id)}
+                />
+            )}
+
+            {activeTab === 'tickets' && (
+                <TicketsTab
+                    loading={ticketsLoading}
+                    tickets={tickets}
                 />
             )}
 

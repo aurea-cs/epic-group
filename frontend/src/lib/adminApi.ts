@@ -135,7 +135,6 @@ export interface ModuleExitTicketAttachment {
     id: string
     module_id: string
     exit_ticket_id: string
-    attached_at: string
     created_at: string
 }
 
@@ -1107,6 +1106,43 @@ export const deleteExitTicketQuestion = async (questionId: string): Promise<void
     }
 }
 
+export interface BulkReplaceQuestionPayload {
+    type: string
+    title: string
+    description?: string
+    config?: Record<string, any>
+    required?: boolean
+}
+
+/**
+ * Atomically replaces ALL questions for a ticket with the supplied list.
+ * Internally: DELETE all existing → INSERT all new (ordered by array index).
+ * This avoids unique-constraint collisions on (exit_ticket_id, question_order).
+ */
+export const bulkReplaceExitTicketQuestions = async (
+    exitTicketId: string,
+    questions: BulkReplaceQuestionPayload[]
+): Promise<ExitTicketQuestion[]> => {
+    try {
+        const response = await fetch(
+            `${API_URL}/api/exit-tickets/${exitTicketId}/questions/bulk`,
+            {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ questions }),
+            }
+        )
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}))
+            throw new Error(err.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error bulk-replacing exit ticket questions:', error)
+        throw error
+    }
+}
+
 // ============================================
 // EXIT TICKETS - MODULE ATTACHMENT
 // ============================================
@@ -1187,6 +1223,50 @@ export const getExitTicketResponse = async (
         return await response.json()
     } catch (error) {
         console.error('Error fetching exit ticket response:', error)
+        throw error
+    }
+}
+
+export const getMyExitTicketResponse = async (
+    ticketId: string,
+    moduleId: string,
+    studentId: string
+): Promise<StudentExitTicketResponse | null> => {
+    try {
+        const response = await fetch(
+            `${API_URL}/api/exit-tickets/${ticketId}/my-response?module_id=${moduleId}&student_id=${studentId}`
+        )
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching student response:', error)
+        return null
+    }
+}
+
+export const submitExitTicketResponse = async (
+    ticketId: string,
+    moduleId: string,
+    studentId: string,
+    answers: Array<{ question_id: string; answer: any }>
+): Promise<any> => {
+    try {
+        const response = await fetch(`${API_URL}/api/exit-tickets/${ticketId}/responses`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                module_id: moduleId,
+                student_id: studentId,
+                answers,
+            }),
+        })
+        const data = await response.json()
+        if (!response.ok) {
+            throw new Error(data.error || 'Error al enviar el cuestionario')
+        }
+        return data
+    } catch (error) {
+        console.error('Error submitting exit ticket response:', error)
         throw error
     }
 }

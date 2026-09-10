@@ -370,7 +370,6 @@
 
 .btn-save-modern:hover:not(:disabled) {
     background: #7c3aed;
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
 }
 
 .btn-save-modern:disabled {
@@ -1221,6 +1220,12 @@
 .module-item-row.standard {
     background: #1f295a;
 }
+
+.module-item-row.exit-ticket {
+    background: linear-gradient(135deg, #430346 0%, #2c010c 100%);
+    border: 1px solid rgba(248, 113, 183, 0.3);
+}
+
 
 @media (max-width: 768px) {
     .module-item-row {

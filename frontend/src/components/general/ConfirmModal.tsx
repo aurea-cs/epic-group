@@ -26,7 +26,7 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
                 background: '#1a1625', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px',
                 padding: '1.75rem', 
                 width: '480px',        
-                height: '180px',       
+                minHeight: '180px',       
                 maxWidth: '480px', 
                 overflowY: 'auto',
                 boxShadow: '0 20px 60px rgba(0,0,0,0.5)',

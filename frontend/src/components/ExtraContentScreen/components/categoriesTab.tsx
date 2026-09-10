@@ -132,110 +132,79 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
     return (
         <>
             {error && (
-                <div
-                    style={{
-                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                        border: '1px solid rgba(239, 68, 68, 0.4)',
-                        color: '#f87171',
-                        padding: '1rem 1.5rem',
-                        borderRadius: '12px',
-                        marginBottom: '2rem',
-                        textAlign: 'center',
-                    }}
-                >
+                <div className="error-banner">
                     ⚠️ {error}
                 </div>
             )}
 
-            {/* STEP 1: Grade Level Selection */}
-            <div className="section-label">
-                <span className="step-num">1</span>
-                <span>{t('extraContent.step1')}</span>
+            {/* Compact selection bar: grade + subject live side by side instead of
+                two full-width stacked sections, so completed choices take up
+                minimal vertical space once made. */}
+            <div className="selection-bar">
+                <div className="selection-field">
+                    <label className="selection-label">{t('extraContent.step1')}</label>
+                    {loadingGrades ? (
+                        <div className="selection-skeleton">{t('extraContent.loadingGrades')}</div>
+                    ) : grades.length === 0 ? (
+                        <div className="selection-empty">{t('extraContent.noGrades')}</div>
+                    ) : (
+                        <select
+                            value={selectedGrade?.id || ''}
+                            onChange={(e) => {
+                                const found = grades.find((g) => g.id === e.target.value)
+                                if (found) setSelectedGrade(found)
+                            }}
+                            className="selection-select"
+                        >
+                            <option value="" disabled>
+                                {t('extraContent.selectGrade')}
+                            </option>
+                            {grades.map((grade) => (
+                                <option key={grade.id} value={grade.id}>
+                                    {formatGradeDisplayName(t, grade.name, grade.level)}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                </div>
+
+                {selectedGrade && (
+                    <>
+                        <div className="selection-divider">→</div>
+
+                        <div className="selection-field selection-field-grow">
+                            <label className="selection-label">{t('extraContent.step2')}</label>
+                            {loadingSubjects ? (
+                                <div className="selection-skeleton">{t('extraContent.loadingSubjects')}</div>
+                            ) : subjects.length === 0 ? (
+                                <div className="selection-empty">{t('extraContent.noSubjects')}</div>
+                            ) : (
+                                <div className="subject-chip-row">
+                                    {subjects.map((subj) => {
+                                        const isActive = selectedSubject?.id === subj.id
+                                        return (
+                                            <button
+                                                key={subj.id}
+                                                type="button"
+                                                className={`subject-chip ${isActive ? 'active' : ''}`}
+                                                onClick={() => setSelectedSubject(subj)}
+                                            >
+                                                {t(`dynamicSubjects.${subj.name}`, { defaultValue: subj.name })}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
             </div>
 
-            {loadingGrades ? (
-                <div className="notice-box">{t('extraContent.loadingGrades')}</div>
-            ) : grades.length === 0 ? (
-                <div className="notice-box">{t('extraContent.noGrades')}</div>
-            ) : (
-                <div style={{ marginBottom: '2.5rem', maxWidth: '500px' }}>
-                    <select
-                        value={selectedGrade?.id || ''}
-                        onChange={(e) => {
-                            const found = grades.find((g) => g.id === e.target.value)
-                            if (found) setSelectedGrade(found)
-                        }}
-                        className="modern-input"
-                        style={{
-                            width: '100%',
-                            padding: '0.85rem 1.25rem',
-                            fontSize: '1.05rem',
-                            fontWeight: '600',
-                            background: 'rgba(37, 22, 78, 0.85)',
-                            border: '1px solid rgba(192, 132, 252, 0.4)',
-                            color: '#ffffff',
-                            borderRadius: '12px',
-                            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        <option value="" disabled>
-                            {t('extraContent.selectGrade')}
-                        </option>
-                        {grades.map((grade) => (
-                            <option key={grade.id} value={grade.id} style={{ background: '#25164E', color: '#ffffff' }}>
-                                {formatGradeDisplayName(t, grade.name, grade.level)}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            )}
-
-            {/* STEP 2: Subject Selection */}
-            {selectedGrade && (
-                <>
-                    <div className="section-label">
-                        <span className="step-num">2</span>
-                        <span>{t('extraContent.step2')} ({formatGradeDisplayName(t, selectedGrade.name, selectedGrade.level)})</span>
-                    </div>
-
-                    {loadingSubjects ? (
-                        <div className="notice-box">{t('extraContent.loadingSubjects')}</div>
-                    ) : subjects.length === 0 ? (
-                        <div className="notice-box">{t('extraContent.noSubjects')}</div>
-                    ) : (
-                        <div className="subjects-grid">
-                            {subjects.map((subj) => {
-                                const isActive = selectedSubject?.id === subj.id
-                                return (
-                                    <div
-                                        key={subj.id}
-                                        className={`subject-card ${isActive ? 'active' : ''}`}
-                                        onClick={() => setSelectedSubject(subj)}
-                                    >
-                                        <div className="subject-card-title">
-                                            {t(`dynamicSubjects.${subj.name}`, { defaultValue: subj.name })}
-                                        </div>
-                                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
-                                            {subj.campo_formativo ? t(`dynamicSubjects.${subj.campo_formativo}`, { defaultValue: subj.campo_formativo }) : t('extraContent.generalField')}
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    )}
-                </>
-            )}
-
-            {/* STEP 3: Content Categories */}
+            {/* Categories: the actual destination content, given full visual weight */}
             {selectedGrade && selectedSubject && (
                 <>
-                    <div className="section-label" style={{ marginTop: '2rem' }}>
-                        <span className="step-num">3</span>
-                        <span>
-                            {t('extraContent.step3')} — {selectedSubject.name} (
-                            {formatGradeDisplayName(t, selectedGrade.name, selectedGrade.level)})
-                        </span>
+                    <div className="section-label">
+                        <span>{t('extraContent.step3')}</span>
                     </div>
 
                     <div className="categories-grid">

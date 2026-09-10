@@ -24,6 +24,29 @@ export interface Assignment {
     assigned_pages?: string | null
 }
 
+export interface StudentExitTicketResponse {
+    id: string
+    exit_ticket_id?: string
+    student_id: string
+    student_name?: string
+    student_email?: string
+    ticket_title?: string
+    module_title?: string
+    submitted_at: string 
+    created_at?: string | null
+    updated_at?: string | null
+    started_at?: string | null
+    status: string | null
+    responses?: StudentExitTicketResponseAnswer[]
+}
+
+export interface StudentExitTicketResponseAnswer {
+    question_id: string
+    question_title?: string
+    question_type?: string
+    answer_text: string
+}
+
 export interface CalendarEvent {
     id: string
     subject_id: string | null
@@ -50,7 +73,7 @@ export interface Center {
   name: string
 }
 
-export type TabKey = 'content' | 'assignments' | 'reminders' | 'students' | 'pov-students' | 'submissions'
+export type TabKey = 'content' | 'assignments' | 'reminders' | 'tickets' | 'students' | 'pov-students' | 'submissions'
 
 // ============================================================================
 // Local module item interface (content tab)
