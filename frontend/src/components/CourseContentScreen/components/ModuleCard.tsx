@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import {
     DndContext,
     closestCenter,
@@ -13,10 +13,21 @@ import {
     useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { type CourseModule, type ModuleItem, type VrCodeEntry } from '../../../lib/adminApi'
+import {
+    type CourseModule,
+    type ModuleItem,
+    type VrCodeEntry,
+    type ExitTicketTemplate,
+    getModuleExitTickets,
+    attachExitTicketsToModule,
+    detachExitTicketFromModule,
+} from '../../../lib/adminApi'
 import useReorderableList from '../hooks/useReorderableList'
 import ItemRow from './ItemRow'
 import VrRoomRow from './VrRoomRow'
+import ExitTicketRow from './ExitTicketRow'
+import SwitchExitTicketModal from './SwitchExitTicketModal'
+import ConfirmModal from '../../general/ConfirmModal'
 
 interface ModuleCardProps {
     module: CourseModule
@@ -93,6 +104,64 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
 
     const vrList = useReorderableList(vrEntries, (order) => onReorderVr(module.id, order))
     const itemList = useReorderableList(module.items ?? [], (order) => onReorderItems(module.id, order))
+
+    // Exit tickets attached to this module (non-sortable)
+    const [exitTickets, setExitTickets] = useState<ExitTicketTemplate[]>([])
+    const [loadingTickets, setLoadingTickets] = useState(true)
+    const [switchingTicket, setSwitchingTicket] = useState<ExitTicketTemplate | null>(null)
+    const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
+    const [ticketToDetach, setTicketToDetach] = useState<ExitTicketTemplate | null>(null)
+
+    const fetchExitTickets = useCallback(async () => {
+        try {
+            setLoadingTickets(true)
+            const tickets = await getModuleExitTickets(module.id)
+            setExitTickets(tickets)
+        } catch {
+            // Silently fail — exit tickets are supplementary info
+            setExitTickets([])
+        } finally {
+            setLoadingTickets(false)
+        }
+    }, [module.id])
+
+    useEffect(() => {
+        fetchExitTickets()
+    }, [fetchExitTickets])
+
+    const handleDetachTicket = (ticket: ExitTicketTemplate) => {
+        setTicketToDetach(ticket)
+    }
+
+    const handleConfirmDetachTicket = async () => {
+        if (!ticketToDetach) return
+        const ticket = ticketToDetach
+        setTicketToDetach(null)
+        try {
+            await detachExitTicketFromModule(module.id, ticket.id)
+            setExitTickets(prev => prev.filter(t => t.id !== ticket.id))
+        } catch (err: any) {
+            alert(err.message || 'Error al desconectar el ticket de salida')
+        }
+    }
+
+    const handleOpenAttachTicketModal = () => {
+        setSwitchingTicket(null)
+        setIsTicketModalOpen(true)
+    }
+
+    const handleOpenSwitchTicketModal = (ticket: ExitTicketTemplate) => {
+        setSwitchingTicket(ticket)
+        setIsTicketModalOpen(true)
+    }
+
+    const handleConfirmTicketSelect = async (selectedTicketId: string) => {
+        if (switchingTicket) {
+            await detachExitTicketFromModule(module.id, switchingTicket.id)
+        }
+        await attachExitTicketsToModule(module.id, [selectedTicketId])
+        await fetchExitTickets()
+    }
 
     const hasContent = itemList.items.length > 0 || vrList.items.length > 0
 
@@ -239,11 +308,35 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
                     </p>
                 )}
 
+                {/* Exit Tickets Section — non-sortable, rendered after all other content */}
+                {!loadingTickets && exitTickets.length > 0 && (
+                    <div style={{ marginTop: hasContent ? '0.75rem' : '0', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            paddingBottom: '0.35rem',
+                            borderBottom: '2px solid rgba(159, 121, 242, 0.2)',
+                            marginBottom: '0.25rem',
+                        }}>
+                        </div>
+                        {exitTickets.map(ticket => (
+                            <ExitTicketRow
+                                key={ticket.id}
+                                ticket={ticket}
+                                onDetach={handleDetachTicket}
+                                onSwitch={handleOpenSwitchTicketModal}
+                            />
+                        ))}
+                    </div>
+                )}
+
                 <div style={{
                     marginTop: '1rem',
                     display: 'flex',
                     gap: '0.5rem',
                     justifyContent: 'flex-end',
+                    flexWrap: 'wrap',
                 }}>
                     <button
                         onClick={() => onAddItem(module.id)}
@@ -271,8 +364,44 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
                     >
                         🚀 Agregar sala
                     </button>
+                    <button
+                        onClick={handleOpenAttachTicketModal}
+                        style={{
+                            background: 'rgba(236, 72, 153, 0.08)',
+                            border: '1px dashed rgba(236, 72, 153, 0.5)',
+                            color: '#ec4899',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        🎟️ Ticket de salida
+                    </button>
                 </div>
             </div>
+
+            <SwitchExitTicketModal
+                isOpen={isTicketModalOpen}
+                currentTicket={switchingTicket}
+                attachedTicketIds={exitTickets.map(t => t.id)}
+                onClose={() => {
+                    setIsTicketModalOpen(false)
+                    setSwitchingTicket(null)
+                }}
+                onSelectTicket={handleConfirmTicketSelect}
+            />
+
+            {ticketToDetach && (
+                <ConfirmModal
+                    title="Desconectar ticket de salida"
+                    message={`¿Estás seguro de que deseas desconectar el ticket "${ticketToDetach.title}" de este módulo?`}
+                    confirmLabel="Desconectar"
+                    cancelLabel="Cancelar"
+                    danger
+                    onCancel={() => setTicketToDetach(null)}
+                    onConfirm={handleConfirmDetachTicket}
+                />
+            )}
         </div>
     )
 }

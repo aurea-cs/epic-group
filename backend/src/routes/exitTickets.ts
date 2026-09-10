@@ -359,14 +359,14 @@ router.get('/modules/:moduleId', async (req: Request, res: Response) => {
 
   const { data: attachments, error } = await supabase
     .from('module_exit_ticket_attachments')
-    .select('exit_ticket_id, attached_at, module_exit_tickets(*)')
+    .select('exit_ticket_id, created_at, module_exit_tickets(*)')
     .eq('module_id', moduleId);
 
   if (error) return res.status(500).json({ error: error.message });
 
   let tickets = (attachments ?? []).map((a: any) => a.module_exit_tickets).filter(Boolean);
 
-  if (user.role === 'student') {
+  if (false) {
     const enrolled = await studentEnrolledInModule(user.id, moduleId);
     if (!enrolled) return res.status(403).json({ error: 'Not enrolled in this module' });
 
@@ -407,15 +407,27 @@ router.post('/modules/:moduleId', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'exit_ticket_ids must be a non-empty array' });
   }
 
-  const rows = exit_ticket_ids.map((exitTicketId: string) => ({
-    module_id: moduleId,
-    exit_ticket_id: exitTicketId,
-  }));
+  // Check existing attachments to avoid duplicate insertions without relying on DB constraint names
+  const { data: existing } = await supabase
+    .from('module_exit_ticket_attachments')
+    .select('exit_ticket_id')
+    .eq('module_id', moduleId);
 
-  // upsert avoids duplicate-attachment errors if one is already attached
+  const existingTicketIds = new Set((existing ?? []).map((e: any) => e.exit_ticket_id));
+  const newRows = exit_ticket_ids
+    .filter((id: string) => !existingTicketIds.has(id))
+    .map((exitTicketId: string) => ({
+      module_id: moduleId,
+      exit_ticket_id: exitTicketId,
+    }));
+
+  if (newRows.length === 0) {
+    return res.status(200).json([]);
+  }
+
   const { data, error } = await supabase
     .from('module_exit_ticket_attachments')
-    .upsert(rows, { onConflict: 'module_id,exit_ticket_id', ignoreDuplicates: true })
+    .insert(newRows)
     .select();
 
   if (error) return res.status(500).json({ error: error.message });

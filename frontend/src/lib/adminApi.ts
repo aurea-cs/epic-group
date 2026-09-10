@@ -135,7 +135,6 @@ export interface ModuleExitTicketAttachment {
     id: string
     module_id: string
     exit_ticket_id: string
-    attached_at: string
     created_at: string
 }
 
