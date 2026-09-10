@@ -43,6 +43,165 @@ const ExitTicketTakeScreen: React.FC<ExitTicketTakeScreenProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null)
   const sectionRefs = useRef<(HTMLElement | null)[]>([])
   const shouldReduceMotion = useReducedMotion()
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  // ---- Particle field: twinkling stars + shooting stars + parallax ----
+  useEffect(() => {
+    if (loading || shouldReduceMotion) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    let animId: number
+    let scrollY = 0
+
+    const container = containerRef.current
+    const onScroll = () => {
+      if (container) scrollY = container.scrollTop
+    }
+    if (container) {
+      container.addEventListener('scroll', onScroll, { passive: true })
+    }
+
+    interface Star {
+      x: number; y: number; r: number
+      baseAlpha: number; alpha: number
+      speed: number; phase: number
+      layer: number // 1-3 for parallax depth
+      color: string
+    }
+    interface Shooter {
+      x: number; y: number
+      vx: number; vy: number
+      len: number; alpha: number
+      life: number; maxLife: number
+    }
+
+    const resize = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+    resize()
+    window.addEventListener('resize', resize)
+
+    // Vibrant starry palette
+    const colors = [
+      '220, 210, 255', // icy purple
+      '168, 85, 247',  // vivid purple
+      '56, 189, 248',  // bright cyan
+      '244, 114, 182', // soft pink
+      '255, 255, 255'  // pure white
+    ]
+
+    // Build star field
+    const NUM_STARS = 280
+    const stars: Star[] = Array.from({ length: NUM_STARS }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      r: Math.random() * 1.8 + 0.5,
+      baseAlpha: Math.random() * 0.65 + 0.35,
+      alpha: 0,
+      speed: Math.random() * 0.8 + 0.2,
+      phase: Math.random() * Math.PI * 2,
+      layer: Math.ceil(Math.random() * 3),
+      color: colors[Math.floor(Math.random() * colors.length)]
+    }))
+
+    const shooters: Shooter[] = []
+    let shooterTimer = 0
+    const SHOOTER_INTERVAL = 140 // spawn shooting star more frequently
+
+    const spawnShooter = () => {
+      const angle = (Math.random() * Math.PI) / 6 + Math.PI / 8 // ~22-52deg downward
+      const speed = Math.random() * 7 + 6
+      shooters.push({
+        x: Math.random() * window.innerWidth * 0.8,
+        y: Math.random() * window.innerHeight * 0.3,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        len: Math.random() * 100 + 80,
+        alpha: 1,
+        life: 0,
+        maxLife: Math.random() * 35 + 25
+      })
+    }
+
+    let frame = 0
+    const draw = () => {
+      animId = requestAnimationFrame(draw)
+      frame++
+
+      // Background fill on canvas
+      ctx.fillStyle = '#0e0c18'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      // Layered parallax speeds (noticeable on scroll)
+      const parallax = [0, scrollY * 0.12, scrollY * 0.28, scrollY * 0.50]
+
+      // Render stars
+      for (const s of stars) {
+        const yOff = parallax[s.layer] % canvas.height
+        const dy = (s.y - yOff + canvas.height) % canvas.height
+        s.alpha = s.baseAlpha * (0.5 + 0.5 * Math.sin(frame * s.speed * 0.05 + s.phase))
+
+        ctx.beginPath()
+        ctx.arc(s.x, dy, s.r, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${s.color}, ${s.alpha.toFixed(3)})`
+        ctx.shadowBlur = s.r > 1.2 ? 6 : 0
+        ctx.shadowColor = `rgba(${s.color}, 0.8)`
+        ctx.fill()
+      }
+      ctx.shadowBlur = 0 // reset shadow
+
+      // Shooting stars
+      shooterTimer++
+      if (shooterTimer >= SHOOTER_INTERVAL) {
+        shooterTimer = 0
+        spawnShooter()
+      }
+
+      for (let i = shooters.length - 1; i >= 0; i--) {
+        const sh = shooters[i]
+        sh.life++
+        sh.alpha = 1 - sh.life / sh.maxLife
+        if (sh.alpha <= 0) { shooters.splice(i, 1); continue }
+
+        const tailX = sh.x - sh.vx * (sh.len / 10)
+        const tailY = sh.y - sh.vy * (sh.len / 10)
+        const grad = ctx.createLinearGradient(tailX, tailY, sh.x, sh.y)
+        grad.addColorStop(0, `rgba(168, 85, 247, 0)`)
+        grad.addColorStop(0.6, `rgba(56, 189, 248, ${ (sh.alpha * 0.6).toFixed(3) })`)
+        grad.addColorStop(1, `rgba(255, 255, 255, ${sh.alpha.toFixed(3)})`)
+
+        ctx.beginPath()
+        ctx.moveTo(tailX, tailY)
+        ctx.lineTo(sh.x, sh.y)
+        ctx.strokeStyle = grad
+        ctx.lineWidth = 2
+        ctx.stroke()
+
+        // Glowing star head
+        ctx.beginPath()
+        ctx.arc(sh.x, sh.y, 2.5, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(255, 255, 255, ${sh.alpha.toFixed(3)})`
+        ctx.shadowBlur = 10
+        ctx.shadowColor = '#38bdf8'
+        ctx.fill()
+        ctx.shadowBlur = 0
+
+        sh.x += sh.vx
+        sh.y += sh.vy
+      }
+    }
+    draw()
+
+    return () => {
+      cancelAnimationFrame(animId)
+      window.removeEventListener('resize', resize)
+      if (container) container.removeEventListener('scroll', onScroll)
+    }
+  }, [loading, shouldReduceMotion])
 
   useEffect(() => {
     loadTicketAndResponse()
@@ -255,19 +414,34 @@ const ExitTicketTakeScreen: React.FC<ExitTicketTakeScreenProps> = ({
   const currentQuestionNumber = activeIndex >= 1 && activeIndex <= questions.length ? activeIndex : null
 
   return (
-    <div
-      ref={containerRef}
-      className="ets-scroll"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        background: '#0e0c18',
-        color: 'white',
-        overflowY: 'auto',
-        fontFamily: 'system-ui, -apple-system, sans-serif'
-      }}
-    >
+    <>
+      {/* Particle field canvas — sibling of the scroll container so position:fixed works correctly */}
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 9999,
+          backgroundColor: '#0e0c18'
+        }}
+        aria-hidden="true"
+      />
+      <div
+        ref={containerRef}
+        className="ets-scroll"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 10000,
+          background: 'transparent',
+          color: 'white',
+          overflowY: 'auto',
+          fontFamily: 'system-ui, -apple-system, sans-serif'
+        }}
+      >
       <style>{`
         .ets-scroll {
           scroll-snap-type: y mandatory;
@@ -966,6 +1140,7 @@ const ExitTicketTakeScreen: React.FC<ExitTicketTakeScreenProps> = ({
         </motion.div>
       </section>
     </div>
+    </>
   )
 }
 
