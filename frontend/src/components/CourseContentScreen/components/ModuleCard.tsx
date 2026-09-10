@@ -28,6 +28,7 @@ import VrRoomRow from './VrRoomRow'
 import ExitTicketRow from './ExitTicketRow'
 import SwitchExitTicketModal from './SwitchExitTicketModal'
 import ConfirmModal from '../../general/ConfirmModal'
+import ExitTicketViewerScreen from '../../ExtraContentScreen/components/exitTicketViewerScreen'
 
 interface ModuleCardProps {
     module: CourseModule
@@ -111,6 +112,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
     const [switchingTicket, setSwitchingTicket] = useState<ExitTicketTemplate | null>(null)
     const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
     const [ticketToDetach, setTicketToDetach] = useState<ExitTicketTemplate | null>(null)
+    const [viewingTicketId, setViewingTicketId] = useState<string | null>(null)
 
     const fetchExitTickets = useCallback(async () => {
         try {
@@ -326,6 +328,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
                                 ticket={ticket}
                                 onDetach={handleDetachTicket}
                                 onSwitch={handleOpenSwitchTicketModal}
+                                onView={t => setViewingTicketId(t.id)}
                             />
                         ))}
                     </div>
@@ -364,19 +367,36 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
                     >
                         🚀 Agregar sala
                     </button>
-                    <button
-                        onClick={handleOpenAttachTicketModal}
-                        style={{
-                            background: 'rgba(236, 72, 153, 0.08)',
-                            border: '1px dashed rgba(236, 72, 153, 0.5)',
-                            color: '#ec4899',
-                            padding: '0.5rem 1rem',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        🎟️ Ticket de salida
-                    </button>
+                    {exitTickets.length > 0 ? (
+                        <button
+                            onClick={() => handleOpenSwitchTicketModal(exitTickets[0])}
+                            title="Solo se permite 1 ticket de salida por módulo. Haz clic para cambiarlo."
+                            style={{
+                                background: 'rgba(108, 92, 231, 0.08)',
+                                border: '1px dashed rgba(108, 92, 231, 0.5)',
+                                color: '#6c5ce7',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            🔄 Cambiar ticket de salida
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleOpenAttachTicketModal}
+                            style={{
+                                background: 'rgba(236, 72, 153, 0.08)',
+                                border: '1px dashed rgba(236, 72, 153, 0.5)',
+                                color: '#ec4899',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            🎟️ Ticket de salida
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -401,6 +421,43 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
                     onCancel={() => setTicketToDetach(null)}
                     onConfirm={handleConfirmDetachTicket}
                 />
+            )}
+
+            {viewingTicketId && (
+                <div
+                    className="modal-overlay"
+                    onClick={() => setViewingTicketId(null)}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.85)',
+                        zIndex: 2000,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '1.5rem',
+                    }}
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            width: '100%',
+                            maxWidth: '800px',
+                            maxHeight: '90vh',
+                            overflowY: 'auto',
+                            background: '#13111c',
+                            borderRadius: '20px',
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            padding: '1.5rem',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)',
+                        }}
+                    >
+                        <ExitTicketViewerScreen
+                            templateId={viewingTicketId}
+                            onClose={() => setViewingTicketId(null)}
+                        />
+                    </div>
+                </div>
             )}
         </div>
     )

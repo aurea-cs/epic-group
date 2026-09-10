@@ -5,16 +5,22 @@ interface ExitTicketRowProps {
     ticket: ExitTicketTemplate
     onDetach: (ticket: ExitTicketTemplate) => void
     onSwitch: (ticket: ExitTicketTemplate) => void
+    onView?: (ticket: ExitTicketTemplate) => void
 }
 
-const ExitTicketRow: React.FC<ExitTicketRowProps> = ({ ticket, onDetach, onSwitch }) => {
+const ExitTicketRow: React.FC<ExitTicketRowProps> = ({ ticket, onDetach, onSwitch, onView }) => {
     const questionCount =
         ticket.questions?.length ??
         ticket.exit_ticket_questions?.[0]?.count ??
         0
 
     return (
-        <div className="module-item-row exit-ticket">
+        <div
+            className="module-item-row exit-ticket"
+            onClick={() => onView?.(ticket)}
+            style={{ cursor: onView ? 'pointer' : 'default' }}
+            title="Haz clic para ver el ticket de salida"
+        >
             <div style={{ fontSize: '1.5rem' }}>🎟️</div>
 
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -50,7 +56,10 @@ const ExitTicketRow: React.FC<ExitTicketRowProps> = ({ ticket, onDetach, onSwitc
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <button
-                    onClick={() => onSwitch(ticket)}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onSwitch(ticket)
+                    }}
                     title="Cambiar ticket de salida"
                     style={{
                         width: '28px', height: '28px', borderRadius: '6px', border: 'none',
@@ -62,7 +71,10 @@ const ExitTicketRow: React.FC<ExitTicketRowProps> = ({ ticket, onDetach, onSwitc
                     🔄
                 </button>
                 <button
-                    onClick={() => onDetach(ticket)}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onDetach(ticket)
+                    }}
                     title="Desconectar ticket de salida"
                     style={{
                         width: '28px', height: '28px', borderRadius: '6px', border: 'none',

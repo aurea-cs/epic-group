@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ExitTicketEditorScreen from './exitTicketEditorScreen'
-import ExitTicketViewerScreen from './exitTicketViewerScreen'
 import ConfirmModal from '../../general/ConfirmModal'
 import type { ExitTicketTemplate } from '../../../lib/adminApi'
 
@@ -37,16 +36,6 @@ const ExitTicketsTab: React.FC<ExitTicketsTabProps> = ({ exitTickets, loading, e
                     await reload()
                     setViewMode('list')
                 }}
-            />
-        )
-    }
-
-    if (viewMode === 'viewer' && selectedTemplateId) {
-        return (
-            <ExitTicketViewerScreen
-                templateId={selectedTemplateId}
-                onBack={() => setViewMode('list')}
-                onEdit={() => setViewMode('editor')}
             />
         )
     }

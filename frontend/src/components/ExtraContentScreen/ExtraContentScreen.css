@@ -671,9 +671,57 @@
   cursor: pointer;
   transition: background 0.2s ease;
   font-size: 0.88rem;
+  color:#e2e8f0
 }
 
 .preview-choice-option:hover {
   background: rgba(108, 92, 231, 0.2);
   border-color: rgba(192, 132, 252, 0.4);
+}
+
+/* Read-only exit ticket preview (used inside ModuleCard's viewer modal) */
+.exit-ticket-readonly-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.exit-ticket-readonly-header h2 {
+  margin: 0 0 0.35rem 0;
+  font-size: 1.3rem;
+  color: #ffffff;
+}
+
+.exit-ticket-readonly-header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.9rem;
+}
+
+.exit-ticket-readonly-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.preview-rating-stars.readonly .preview-star,
+.preview-choice-option.readonly {
+  cursor: default;
+  pointer-events: none;
+}
+
+.preview-choice-option.readonly {
+  opacity: 0.85;
+}
+
+.readonly-text-placeholder {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
 }

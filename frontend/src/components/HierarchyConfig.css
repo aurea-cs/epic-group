@@ -370,7 +370,6 @@
 
 .btn-save-modern:hover:not(:disabled) {
     background: #7c3aed;
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
 }
 
 .btn-save-modern:disabled {
