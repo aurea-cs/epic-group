@@ -101,7 +101,7 @@ router.post('/', async (req: Request, res: Response) => {
 
   if (!title) return res.status(400).json({ error: 'title is required' });
 
-  const { data: ticket, error: ticketErr } = await supabase
+  const { data, error: ticketErr } = await supabase
     .from('module_exit_tickets')
     .insert({
       title,
@@ -110,10 +110,13 @@ router.post('/', async (req: Request, res: Response) => {
       available_from: available_from ?? null,
       due_at: due_at ?? null,
     })
-    .select()
-    .single();
+    .select();
 
-  if (ticketErr) return res.status(500).json({ error: ticketErr.message });
+  if (ticketErr || !data || data.length === 0) {
+    return res.status(500).json({ error: ticketErr?.message || 'Error creating exit ticket' });
+  }
+
+  const ticket = data[0];
 
   if (Array.isArray(questions) && questions.length > 0) {
     const rows = questions.map((q: any, idx: number) => ({
@@ -142,22 +145,21 @@ router.put('/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   const { title, description, is_active, available_from, due_at } = req.body;
 
+  const updateData: any = {};
+  if (title !== undefined) updateData.title = title;
+  if (description !== undefined) updateData.description = description;
+  if (is_active !== undefined) updateData.is_active = is_active;
+  if (available_from !== undefined) updateData.available_from = available_from;
+  if (due_at !== undefined) updateData.due_at = due_at;
+
   const { data, error } = await supabase
     .from('module_exit_tickets')
-    .update({
-      ...(title !== undefined && { title }),
-      ...(description !== undefined && { description }),
-      ...(is_active !== undefined && { is_active }),
-      ...(available_from !== undefined && { available_from }),
-      ...(due_at !== undefined && { due_at }),
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', id)
-    .select()
-    .single();
+    .select();
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  res.json(data && data.length > 0 ? data[0] : { id });
 });
 
 /**
@@ -213,14 +215,13 @@ router.post('/:id/questions', async (req: Request, res: Response) => {
       type,
       title,
       description: description ?? null,
-      config: config ?? null,
+      config: config ?? {},
       required: required ?? true,
     })
-    .select()
-    .single();
+    .select();
 
   if (error) return res.status(500).json({ error: error.message });
-  res.status(201).json(data);
+  res.status(201).json(data && data.length > 0 ? data[0] : data);
 });
 
 /**
@@ -231,22 +232,22 @@ router.put('/questions/:questionId', async (req: Request, res: Response) => {
   const { questionId } = req.params;
   const { question_order, type, title, description, config, required } = req.body;
 
+  const updateData: any = {};
+  if (question_order !== undefined) updateData.question_order = question_order;
+  if (type !== undefined) updateData.type = type;
+  if (title !== undefined) updateData.title = title;
+  if (description !== undefined) updateData.description = description;
+  if (config !== undefined) updateData.config = config;
+  if (required !== undefined) updateData.required = required;
+
   const { data, error } = await supabase
     .from('exit_ticket_questions')
-    .update({
-      ...(question_order !== undefined && { question_order }),
-      ...(type !== undefined && { type }),
-      ...(title !== undefined && { title }),
-      ...(description !== undefined && { description }),
-      ...(config !== undefined && { config }),
-      ...(required !== undefined && { required }),
-    })
+    .update(updateData)
     .eq('id', questionId)
-    .select()
-    .single();
+    .select();
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  res.json(data && data.length > 0 ? data[0] : { id: questionId });
 });
 
 /**
@@ -262,6 +263,80 @@ router.delete('/questions/:questionId', async (req: Request, res: Response) => {
   if (error) return res.status(500).json({ error: error.message });
 
   res.status(204).send();
+});
+
+/**
+ * PUT /exit-tickets/:id/questions/bulk
+ * Atomically replace ALL questions for a template.
+ * Deletes every existing question first (cascading any answers), then
+ * inserts the supplied array in order. This avoids unique-constraint
+ * collisions on (exit_ticket_id, question_order) that arise when doing
+ * sequential per-row updates/inserts.
+ *
+ * Body: { questions: Array<{ type, title, description?, config?, required? }> }
+ */
+router.put('/:id/questions/bulk', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { questions } = req.body as {
+    questions: Array<{
+      type: string;
+      title: string;
+      description?: string;
+      config?: Record<string, any>;
+      required?: boolean;
+    }>;
+  };
+
+  if (!Array.isArray(questions)) {
+    return res.status(400).json({ error: '`questions` must be an array' });
+  }
+
+  // 1. Find all existing question IDs so we can clean up answers first.
+  const { data: existingQuestions } = await supabase
+    .from('exit_ticket_questions')
+    .select('id')
+    .eq('exit_ticket_id', id);
+
+  const existingIds = (existingQuestions ?? []).map((q: any) => q.id);
+
+  if (existingIds.length > 0) {
+    await supabase
+      .from('student_exit_ticket_answers')
+      .delete()
+      .in('question_id', existingIds);
+  }
+
+  // 2. Delete all existing questions for this ticket.
+  const { error: deleteErr } = await supabase
+    .from('exit_ticket_questions')
+    .delete()
+    .eq('exit_ticket_id', id);
+
+  if (deleteErr) return res.status(500).json({ error: deleteErr.message });
+
+  // 3. Re-insert if there are any questions.
+  if (questions.length === 0) {
+    return res.json([]);
+  }
+
+  const rows = questions.map((q, idx) => ({
+    exit_ticket_id: id,
+    question_order: idx,
+    type: q.type,
+    title: q.title,
+    description: q.description ?? null,
+    config: q.config ?? {},
+    required: q.required ?? true,
+  }));
+
+  const { data: inserted, error: insertErr } = await supabase
+    .from('exit_ticket_questions')
+    .insert(rows)
+    .select();
+
+  if (insertErr) return res.status(500).json({ error: insertErr.message });
+
+  res.json(inserted ?? []);
 });
 
 // =============================================================================

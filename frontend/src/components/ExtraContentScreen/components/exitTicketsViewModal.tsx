@@ -88,9 +88,6 @@ const ExitTicketViewModal: React.FC<ExitTicketViewModalProps> = ({ templateId, o
                     {!loading && !error && template && (
                         <>
                             <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-                                <span className={`level-badge ${template.is_active ? 'primaria' : 'secundaria'}`}>
-                                    {template.is_active ? 'Activo' : 'Inactivo'}
-                                </span>
                                 {template.available_from && (
                                     <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
                                         Disponible desde: {new Date(template.available_from).toLocaleDateString()}

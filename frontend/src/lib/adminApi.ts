@@ -1107,6 +1107,43 @@ export const deleteExitTicketQuestion = async (questionId: string): Promise<void
     }
 }
 
+export interface BulkReplaceQuestionPayload {
+    type: string
+    title: string
+    description?: string
+    config?: Record<string, any>
+    required?: boolean
+}
+
+/**
+ * Atomically replaces ALL questions for a ticket with the supplied list.
+ * Internally: DELETE all existing → INSERT all new (ordered by array index).
+ * This avoids unique-constraint collisions on (exit_ticket_id, question_order).
+ */
+export const bulkReplaceExitTicketQuestions = async (
+    exitTicketId: string,
+    questions: BulkReplaceQuestionPayload[]
+): Promise<ExitTicketQuestion[]> => {
+    try {
+        const response = await fetch(
+            `${API_URL}/api/exit-tickets/${exitTicketId}/questions/bulk`,
+            {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ questions }),
+            }
+        )
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}))
+            throw new Error(err.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error bulk-replacing exit ticket questions:', error)
+        throw error
+    }
+}
+
 // ============================================
 // EXIT TICKETS - MODULE ATTACHMENT
 // ============================================
