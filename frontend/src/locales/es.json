@@ -397,5 +397,20 @@
     "btnConfirmDelete": "Sí, eliminar",
     "errorLoadGrades": "Error al cargar grados del centro",
     "errorDeleteTemplate": "Error al eliminar plantilla"
+  },
+  "teacherManagement": {
+    "centerProfessorsTitle": "📋 Profesores de este centro",
+    "noProfessorsAssigned": "No hay profesores asignados a este centro.",
+    "thAvatar": "Avatar",
+    "thName": "Nombre",
+    "thEmail": "Email",
+    "thTime": "Tiempo",
+    "thActions": "Acciones",
+    "viewMore": "Ver más",
+    "unassign": "Desasignar",
+    "unassigning": "Desasignando...",
+    "unassignConfirm": "¿Desasignar a {{name}} de este centro? Al hacer esto, también se le desinscribirá automáticamente de todas las materias de este centro.",
+    "unassignError": "Error al desasignar profesor",
+    "loading": "Cargando..."
   }
 }

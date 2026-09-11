@@ -468,6 +468,29 @@ router.delete('/api/centers/:centerId/professors/:userId', async (req, res) => {
 
         if (error) throw error;
 
+        // Unenroll professor from all subjects belonging to this center
+        const { data: grades } = await supabase
+            .from('grades_levels')
+            .select('id')
+            .eq('center_id', centerId);
+
+        if (grades && grades.length > 0) {
+            const gradeIds = grades.map((g: any) => g.id);
+            const { data: subjects } = await supabase
+                .from('subjects')
+                .select('id')
+                .in('grade_id', gradeIds);
+
+            if (subjects && subjects.length > 0) {
+                const subjectIds = subjects.map((s: any) => s.id);
+                await supabase
+                    .from('professor_subjects')
+                    .delete()
+                    .eq('professor_id', userId)
+                    .in('subject_id', subjectIds);
+            }
+        }
+
         // Update users.center_id to the professor's most recent remaining center (or null)
         const { data: remaining } = await supabase
             .from('center_professors')

@@ -390,5 +390,20 @@
     "btnConfirmDelete": "Yes, delete",
     "errorLoadGrades": "Error loading center grades",
     "errorDeleteTemplate": "Error deleting template"
+  },
+  "teacherManagement": {
+    "centerProfessorsTitle": "📋 Professors in this center",
+    "noProfessorsAssigned": "No professors assigned to this center.",
+    "thAvatar": "Avatar",
+    "thName": "Name",
+    "thEmail": "Email",
+    "thTime": "Time",
+    "thActions": "Actions",
+    "viewMore": "View more",
+    "unassign": "Unassign",
+    "unassigning": "Unassigning...",
+    "unassignConfirm": "Unassign {{name}} from this center? Doing so will also automatically unenroll them from all subjects in this center.",
+    "unassignError": "Error unassigning professor",
+    "loading": "Loading..."
   }
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getCenterProfessors, assignProfessor, unassignProfessor, assignSubjectProfessor } from '../lib/adminApi'
 import UserActivityModal from './UserActivityModal'
 import './HierarchyConfig.css'
@@ -76,6 +77,7 @@ function initials(name: string | null | undefined, email: string): string {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
+    const { t } = useTranslation()
 
     // ── Assigned professors ────────────────────────────────────────────
     const [assignedTeachers, setAssignedTeachers] = useState<AssignedProfessor[]>([])
@@ -299,13 +301,17 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
 
     // ─── Unassign professor from center ───────────────────────────────
     const handleUnassign = async (teacher: AssignedProfessor) => {
-        if (!confirm(`¿Desasignar a ${teacher.full_name || teacher.email} de este centro?`)) return
+        const confirmMsg = t('teacherManagement.unassignConfirm', {
+            name: teacher.full_name || teacher.email,
+            defaultValue: `¿Desasignar a ${teacher.full_name || teacher.email} de este centro? Al hacer esto, también se le desinscribirá automáticamente de todas las materias de este centro.`
+        })
+        if (!confirm(confirmMsg)) return
         setUnassigningId(teacher.id)
         try {
             await unassignProfessor(centerId, teacher.id)
             setAssignedTeachers(prev => prev.filter(t => t.id !== teacher.id))
         } catch (err: any) {
-            alert(err.message || 'Error al desasignar profesor')
+            alert(err.message || t('teacherManagement.unassignError', 'Error al desasignar profesor'))
         } finally {
             setUnassigningId(null)
         }
@@ -666,28 +672,24 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
             {/* ── Assigned Professors List ── */}
             <div className="user-list-section">
                 <h3 style={{ color: '#c084fc', fontSize: '1.2rem', margin: '2rem 0 1rem' }}>
-                    📋 Profesores Asignados a este Centro ({loadingAssigned ? '...' : assignedTeachers.length})
+                    {t('teacherManagement.centerProfessorsTitle', '📋 Profesores de este centro')} ({loadingAssigned ? '...' : assignedTeachers.length})
                 </h3>
                 <div className="users-table-container">
                     <table className="users-table">
                         <thead>
                             <tr>
-                                <th style={{ color: '#c084fc', width: '52px' }}></th>
-                                <th style={{ color: '#c084fc' }}>Nombre</th>
-                                <th style={{ color: '#c084fc' }}>Email</th>
-                                <th style={{ color: '#c084fc' }}>Acciones</th>
-                                <th>Avatar</th>
-                                <th>Nombre</th>
-                                <th>Email</th>
-                                <th>Tiempo</th>
-                                <th>Acciones</th>
+                                <th style={{ color: '#c084fc', width: '52px' }}>{t('teacherManagement.thAvatar', 'Avatar')}</th>
+                                <th style={{ color: '#c084fc' }}>{t('teacherManagement.thName', 'Nombre')}</th>
+                                <th style={{ color: '#c084fc' }}>{t('teacherManagement.thEmail', 'Email')}</th>
+                                <th style={{ color: '#c084fc' }}>{t('teacherManagement.thTime', 'Tiempo')}</th>
+                                <th style={{ color: '#c084fc' }}>{t('teacherManagement.thActions', 'Acciones')}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loadingAssigned ? (
-                                <tr><td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: '#1f295a' }}>Cargando...</td></tr>
+                                <tr><td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#1f295a' }}>{t('teacherManagement.loading', 'Cargando...')}</td></tr>
                             ) : assignedTeachers.length === 0 ? (
-                                <tr><td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: '#4b5563' }}>No hay profesores asignados a este centro.</td></tr>
+                                <tr><td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#4b5563' }}>{t('teacherManagement.noProfessorsAssigned', 'No hay profesores asignados a este centro.')}</td></tr>
                             ) : assignedTeachers.map(teacher => (
                                 <tr key={teacher.id}>
                                     <td style={{ width: '52px' }}>
@@ -700,7 +702,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
                                             {initials(teacher.full_name, teacher.email)}
                                         </div>
                                     </td>
-                                    <td style={{ fontWeight: 500, color: '#1f295a' }}>{teacher.full_name || 'Profesor'}</td>
+                                    <td style={{ fontWeight: 500, color: '#1f295a' }}>{teacher.full_name || t('adminProfessors.thProfessor', 'Profesor')}</td>
                                     <td style={{ color: '#4b5563' }}>{teacher.email}</td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -714,7 +716,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
                                                 onMouseEnter={(e) => e.currentTarget.style.background = '#cbd5e1'}
                                                 onMouseLeave={(e) => e.currentTarget.style.background = '#e2e8f0'}
                                             >
-                                                Ver más
+                                                {t('teacherManagement.viewMore', 'Ver más')}
                                             </button>
                                         </div>
                                     </td>
@@ -724,18 +726,11 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
                                             className="action-btn delete"
                                             disabled={unassigningId === teacher.id}
                                         >
-                                            {unassigningId === teacher.id ? '...' : 'Desasignar'}
+                                            {unassigningId === teacher.id ? t('teacherManagement.unassigning', 'Desasignando...') : t('teacherManagement.unassign', 'Desasignar')}
                                         </button>
                                     </td>
                                 </tr>
                             ))}
-                            {!loadingAssigned && assignedTeachers.length === 0 && (
-                                <tr>
-                                    <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#4b5563' }}>
-                                        No hay maestros asignados a este colegio.
-                                    </td>
-                                </tr>
-                            )}
                         </tbody>
                     </table>
                 </div>
