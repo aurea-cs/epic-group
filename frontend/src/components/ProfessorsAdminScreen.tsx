@@ -187,6 +187,8 @@ const EditProfessorModal: React.FC<{ professor: Professor; allCenters: Center[];
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  const removedCenters = professor.centers.filter(c => !selectedCenterIds.includes(c.id))
+
   const toggleCenter = (id: string) => setSelectedCenterIds(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -238,8 +240,24 @@ const EditProfessorModal: React.FC<{ professor: Professor; allCenters: Center[];
                 })}
               </div>
             }
-            <p style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.3)', margin: '6px 0 0' }}>{t('adminProfessors.uncheckCenterWarning')}</p>
+            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', margin: '6px 0 0' }}>{t('adminProfessors.uncheckCenterWarning')}</p>
           </div>
+
+          {removedCenters.length > 0 && (
+            <div style={{
+              background: 'rgba(245, 158, 11, 0.15)',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              borderRadius: '10px',
+              padding: '12px 14px',
+              color: '#fcd34d',
+              fontSize: '0.84rem',
+              lineHeight: 1.45
+            }}>
+              <strong>⚠️ {t('adminProfessors.unenrollWarningTitle')}</strong>{' '}
+              {t('adminProfessors.unenrollNotice')}{' '}
+              <strong style={{ color: '#fff' }}>{removedCenters.map(c => c.name).join(', ')}</strong>.
+            </div>
+          )}
 
           {error && <ErrorBanner message={error} />}
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>

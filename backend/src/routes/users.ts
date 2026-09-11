@@ -59,6 +59,29 @@ router.put('/api/users/:id', async (req, res) => {
                         .eq('user_id', id)
                         .in('center_id', centersToRemove);
                     if (deleteError) throw deleteError;
+
+                    // Unenroll professor from all subjects belonging to removed centers
+                    const { data: grades } = await supabase
+                        .from('grades_levels')
+                        .select('id')
+                        .in('center_id', centersToRemove);
+
+                    if (grades && grades.length > 0) {
+                        const gradeIds = grades.map((g: any) => g.id);
+                        const { data: subjects } = await supabase
+                            .from('subjects')
+                            .select('id')
+                            .in('grade_id', gradeIds);
+
+                        if (subjects && subjects.length > 0) {
+                            const subjectIds = subjects.map((s: any) => s.id);
+                            await supabase
+                                .from('professor_subjects')
+                                .delete()
+                                .eq('professor_id', id)
+                                .in('subject_id', subjectIds);
+                        }
+                    }
                 }
 
                 // Centers to ADD
