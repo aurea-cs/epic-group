@@ -4,6 +4,7 @@
     "version": "0.0.0",
     "type": "module",
     "scripts": {
+        "translate": "node scripts/autoTranslate.cjs",
         "dev": "vite",
         "build": "tsc && vite build",
         "preview": "vite preview",
@@ -33,6 +34,7 @@
         "remark-gfm": "^4.0.1"
     },
     "devDependencies": {
+        "@google/generative-ai": "^0.24.1",
         "@types/react": "^18.2.43",
         "@types/react-dom": "^18.2.17",
         "@typescript-eslint/eslint-plugin": "^6.14.0",

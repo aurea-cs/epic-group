@@ -388,5 +388,12 @@
     "btnConfirmDelete": "Yes, delete",
     "errorLoadGrades": "Error loading center grades",
     "errorDeleteTemplate": "Error deleting template"
+  },
+  "uploadContent": {
+    "title": "Subjects",
+    "courseDescription": "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod",
+    "uploadLabel": "Upload content",
+    "uploadPlaceholder": "Enter content here...",
+    "getStarted": "Get started"
   }
 }
