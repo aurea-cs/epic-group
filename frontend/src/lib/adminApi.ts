@@ -44,6 +44,30 @@ export interface Subject {
     created_at: string
     updated_at: string
 }
+
+export interface CurriculumGrade {
+    id: string
+    name: string
+    level?: number
+    created_at?: string
+}
+
+export interface CurriculumSubject {
+    id: string
+    curriculum_grade_id: string
+    name: string
+    short_name?: string
+    created_at?: string
+}
+
+export interface CurriculumModule {
+    id: string
+    curriculum_subject_id: string
+    title: string
+    order_index?: number
+    created_at?: string
+}
+
 export interface Hierarchy {
     center: EducationalCenter
     grades: (GradeLevel & {
@@ -1270,3 +1294,49 @@ export const submitExitTicketResponse = async (
         throw error
     }
 }
+
+// ============================================
+// CURRICULUM
+// ============================================
+
+export const getCurriculumGrades = async (): Promise<CurriculumGrade[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/grades`)
+        if (!response.ok) {
+            const errorBody = await response.text()
+            throw new Error(`HTTP error! status: ${response.status} - ${errorBody}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching curriculum grades:', error)
+        throw error
+    }
+}
+
+export const getCurriculumSubjectsByGrade = async (gradeId: string): Promise<CurriculumSubject[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/grades/${gradeId}/subjects`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching curriculum subjects:', error)
+        throw error
+    }
+}
+
+export const getCurriculumModulesBySubject = async (subjectId: string): Promise<CurriculumModule[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/subjects/${subjectId}/modules`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching curriculum modules:', error)
+        throw error
+    }
+}

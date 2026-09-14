@@ -1,23 +1,17 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getGradesByCenter, getSubjectsByGrade, type GradeLevel, type Subject } from '../../../lib/adminApi'
+import { getCurriculumGrades, getCurriculumSubjectsByGrade, type CurriculumGrade, type CurriculumSubject } from '../../../lib/adminApi'
 import { formatGradeDisplayName, getStageOrder } from '../hooks/gradeFormat'
 import CategoryPreviewModal from './categoryPreviewModal'
 import type { CategoryItem } from '../hooks/extraContentTypes'
 
-const HARDCODED_CENTER_ID = '3162dec3-a792-44d6-9868-1c9682d215c3'
-
-interface CategoriesTabProps {
-    onNavigateToExitTickets: () => void
-}
-
-const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }) => {
+const CategoriesTab: React.FC = () => {
     const { t } = useTranslation()
 
-    const [grades, setGrades] = useState<GradeLevel[]>([])
-    const [selectedGrade, setSelectedGrade] = useState<GradeLevel | null>(null)
-    const [subjects, setSubjects] = useState<Subject[]>([])
-    const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null)
+    const [grades, setGrades] = useState<CurriculumGrade[]>([])
+    const [selectedGrade, setSelectedGrade] = useState<CurriculumGrade | null>(null)
+    const [subjects, setSubjects] = useState<CurriculumSubject[]>([])
+    const [selectedSubject, setSelectedSubject] = useState<CurriculumSubject | null>(null)
 
     const [loadingGrades, setLoadingGrades] = useState(true)
     const [loadingSubjects, setLoadingSubjects] = useState(false)
@@ -44,7 +38,7 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
         try {
             setLoadingGrades(true)
             setError(null)
-            const data = await getGradesByCenter(HARDCODED_CENTER_ID)
+            const data = await getCurriculumGrades()
             const sorted = (data || []).sort((a, b) => {
                 const stageA = getStageOrder(a.name)
                 const stageB = getStageOrder(b.name)
@@ -58,7 +52,7 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
                 setSelectedGrade(sorted[0])
             }
         } catch (err: any) {
-            console.error('Error loading grades for hardcoded center:', err)
+            console.error('Error loading curriculum grades:', err)
             setError(err.message || t('extraContent.errorLoadGrades'))
         } finally {
             setLoadingGrades(false)
@@ -68,11 +62,11 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
     const loadSubjects = async (gradeId: string) => {
         try {
             setLoadingSubjects(true)
-            const data = await getSubjectsByGrade(gradeId)
+            const data = await getCurriculumSubjectsByGrade(gradeId)
             setSubjects(data || [])
             setSelectedSubject(data && data.length > 0 ? data[0] : null)
         } catch (err: any) {
-            console.error('Error loading subjects for grade:', err)
+            console.error('Error loading curriculum subjects for grade:', err)
             setSubjects([])
             setSelectedSubject(null)
         } finally {
@@ -93,14 +87,6 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
                   badgeText: t('extraContent.badgePrimaria'),
                   badgeClass: 'primaria',
               },
-              {
-                  id: 'ticket',
-                  name: t('extraContent.catTicket'),
-                  icon: '🎟️',
-                  description: t('extraContent.descTicketPri'),
-                  badgeText: t('extraContent.badgePrimaria'),
-                  badgeClass: 'primaria',
-              },
           ]
         : [
               {
@@ -116,14 +102,6 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
                   name: t('extraContent.catComprueba'),
                   icon: '📝',
                   description: t('extraContent.descCompruebaSec'),
-                  badgeText: t('extraContent.badgeSecundaria'),
-                  badgeClass: 'secundaria',
-              },
-              {
-                  id: 'ticket',
-                  name: t('extraContent.catTicket'),
-                  icon: '🎟️',
-                  description: t('extraContent.descTicketSec'),
                   badgeText: t('extraContent.badgeSecundaria'),
                   badgeClass: 'secundaria',
               },
@@ -224,14 +202,10 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ onNavigateToExitTickets }
                                     <button
                                         className="btn-manage-category"
                                         onClick={() => {
-                                            if (cat.id === 'ticket') {
-                                                onNavigateToExitTickets()
-                                            } else {
-                                                setManagingCategory(cat)
-                                            }
+                                            setManagingCategory(cat)
                                         }}
                                     >
-                                        <span>{cat.id === 'ticket' ? t('extraContent.btnManageTemplates') : t('extraContent.btnAdminister')}</span>
+                                        <span>{t('extraContent.btnAdminister')}</span>
                                     </button>
                                     <button className="btn-preview-category" onClick={() => setManagingCategory(cat)}>
                                         {t('extraContent.btnPreview')}

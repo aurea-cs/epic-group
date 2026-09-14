@@ -2,12 +2,12 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatGradeDisplayName } from '../hooks/gradeFormat'
 import type { CategoryItem } from '../hooks/extraContentTypes'
-import type { GradeLevel, Subject } from '../../../lib/adminApi'
+import type { CurriculumGrade, CurriculumSubject, GradeLevel, Subject } from '../../../lib/adminApi'
 
 interface CategoryPreviewModalProps {
     category: CategoryItem
-    grade: GradeLevel
-    subject: Subject
+    grade: CurriculumGrade | GradeLevel
+    subject: CurriculumSubject | Subject
     onClose: () => void
 }
 
