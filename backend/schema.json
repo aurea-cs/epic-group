@@ -1,0 +1,1299 @@
+{
+  "module_exit_tickets": {
+    "required": [
+      "id",
+      "title",
+      "is_active",
+      "created_at",
+      "updated_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "title": {
+        "default": "Ticket de salida",
+        "format": "text",
+        "type": "string"
+      },
+      "description": {
+        "format": "text",
+        "type": "string"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "available_from": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "due_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "submission_files": {
+    "required": [
+      "id"
+    ],
+    "properties": {
+      "submission_id": {
+        "description": "Note:\nThis is a Foreign Key to `submissions.id`.<fk table='submissions' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "storage_path": {
+        "format": "text",
+        "type": "string"
+      },
+      "file_name": {
+        "format": "text",
+        "type": "string"
+      },
+      "mime_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "file_size_bytes": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "external_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "uploaded_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "id": {
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "student_item_progress": {
+    "required": [
+      "id"
+    ],
+    "properties": {
+      "id": {
+        "default": "extensions.uuid_generate_v4()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "student_id": {
+        "description": "Note:\nThis is a Foreign Key to `users.id`.<fk table='users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "item_id": {
+        "description": "Note:\nThis is a Foreign Key to `module_items.id`.<fk table='module_items' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "assignments": {
+    "required": [
+      "created_at",
+      "subject_id",
+      "professor_id",
+      "id"
+    ],
+    "properties": {
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "subject_id": {
+        "description": "Note:\nThis is a Foreign Key to `subjects.id`.<fk table='subjects' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "module_id": {
+        "description": "Note:\nThis is a Foreign Key to `modules.id`.<fk table='modules' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "professor_id": {
+        "description": "Note:\nThis is a Foreign Key to `users.id`.<fk table='users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "title": {
+        "format": "text",
+        "type": "string"
+      },
+      "instructions_md": {
+        "format": "text",
+        "type": "string"
+      },
+      "due_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "available_from": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "max_score": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "allowed_file_types": {
+        "format": "text[]",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "max_file_size_mb": {
+        "format": "bigint",
+        "type": "integer"
+      },
+      "allow_resubmission": {
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "status": {
+        "format": "text",
+        "type": "string"
+      },
+      "updated_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "module_item_id": {
+        "description": "Note:\nThis is a Foreign Key to `module_items.id`.<fk table='module_items' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "assigned_pages": {
+        "format": "text",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "module_items": {
+    "required": [
+      "id",
+      "module_id",
+      "type",
+      "title",
+      "counts_towards_progress",
+      "show_teacher",
+      "show_student"
+    ],
+    "properties": {
+      "id": {
+        "default": "extensions.uuid_generate_v4()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "module_id": {
+        "description": "Note:\nThis is a Foreign Key to `modules.id`.<fk table='modules' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "type": {
+        "format": "character varying",
+        "maxLength": 50,
+        "type": "string"
+      },
+      "title": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      },
+      "description": {
+        "format": "text",
+        "type": "string"
+      },
+      "content_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "order_index": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "is_visible": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "counts_towards_progress": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "show_teacher": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "show_student": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "image_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "is_editable": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      }
+    },
+    "type": "object"
+  },
+  "student_comments": {
+    "description": "Comentarios de profesores sobre estudiantes",
+    "required": [
+      "id",
+      "text",
+      "author_name"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "student_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "professor_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "text": {
+        "format": "text",
+        "type": "string"
+      },
+      "author_name": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "educational_centers": {
+    "description": "Centros educativos/escuelas",
+    "required": [
+      "id",
+      "name"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "name": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      },
+      "address": {
+        "format": "text",
+        "type": "string"
+      },
+      "phone": {
+        "format": "character varying",
+        "maxLength": 50,
+        "type": "string"
+      },
+      "email": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "vr_code": {
+        "format": "text",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "center_professors": {
+    "required": [
+      "center_id",
+      "user_id",
+      "created_at",
+      "id"
+    ],
+    "properties": {
+      "center_id": {
+        "description": "Note:\nThis is a Foreign Key to `educational_centers.id`.<fk table='educational_centers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "timezone('utc'::text, now())",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "subjects": {
+    "description": "Materias dentro de cada grado",
+    "required": [
+      "id",
+      "name"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "grade_id": {
+        "description": "Note:\nThis is a Foreign Key to `grades_levels.id`.<fk table='grades_levels' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "name": {
+        "format": "character varying",
+        "maxLength": 50,
+        "type": "string"
+      },
+      "max_students": {
+        "default": 30,
+        "format": "integer",
+        "type": "integer"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "short_name": {
+        "format": "character varying",
+        "maxLength": 50,
+        "type": "string"
+      },
+      "description": {
+        "format": "text",
+        "type": "string"
+      },
+      "start_date": {
+        "format": "date",
+        "type": "string"
+      },
+      "end_date": {
+        "format": "date",
+        "type": "string"
+      },
+      "visibility": {
+        "default": "active",
+        "format": "character varying",
+        "maxLength": 20,
+        "type": "string"
+      },
+      "schedule_days": {
+        "format": "text[]",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "schedule_start_time": {
+        "format": "time without time zone",
+        "type": "string"
+      },
+      "schedule_end_time": {
+        "format": "time without time zone",
+        "type": "string"
+      },
+      "campo_formativo": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "module_vr_code": {
+    "required": [
+      "id",
+      "created_at",
+      "order_index"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "module_id": {
+        "description": "Note:\nThis is a Foreign Key to `modules.id`.<fk table='modules' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "code": {
+        "format": "text",
+        "type": "string"
+      },
+      "image_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "title": {
+        "format": "text",
+        "type": "string"
+      },
+      "description": {
+        "format": "text",
+        "type": "string"
+      },
+      "order_index": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  },
+  "activity_logs": {
+    "required": [
+      "id",
+      "duration_seconds"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "duration_seconds": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "path": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "professor_subjects": {
+    "description": "Asignación de profesores a materias",
+    "required": [
+      "id"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "professor_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "subject_id": {
+        "description": "Note:\nThis is a Foreign Key to `subjects.id`.<fk table='subjects' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "assigned_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      }
+    },
+    "type": "object"
+  },
+  "module_exit_ticket_attachments": {
+    "required": [
+      "id",
+      "module_id",
+      "exit_ticket_id",
+      "attached_at",
+      "created_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "module_id": {
+        "description": "Note:\nThis is a Foreign Key to `modules.id`.<fk table='modules' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "exit_ticket_id": {
+        "description": "Note:\nThis is a Foreign Key to `module_exit_tickets.id`.<fk table='module_exit_tickets' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "attached_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "student_exit_ticket_responses": {
+    "required": [
+      "id",
+      "exit_ticket_id",
+      "student_id",
+      "status",
+      "created_at",
+      "updated_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "exit_ticket_id": {
+        "description": "Note:\nThis is a Foreign Key to `module_exit_tickets.id`.<fk table='module_exit_tickets' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "student_id": {
+        "description": "Note:\nThis is a Foreign Key to `users.id`.<fk table='users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "status": {
+        "default": "in_progress",
+        "format": "text",
+        "type": "string"
+      },
+      "started_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "submitted_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "student_exit_ticket_answers": {
+    "required": [
+      "id",
+      "response_id",
+      "question_id",
+      "created_at",
+      "updated_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "response_id": {
+        "description": "Note:\nThis is a Foreign Key to `student_exit_ticket_responses.id`.<fk table='student_exit_ticket_responses' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "question_id": {
+        "description": "Note:\nThis is a Foreign Key to `exit_ticket_questions.id`.<fk table='exit_ticket_questions' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "answer": {
+        "format": "jsonb"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "exit_ticket_questions": {
+    "required": [
+      "id",
+      "exit_ticket_id",
+      "question_order",
+      "type",
+      "title",
+      "config",
+      "created_at",
+      "required"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "exit_ticket_id": {
+        "description": "Note:\nThis is a Foreign Key to `module_exit_tickets.id`.<fk table='module_exit_tickets' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "question_order": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "type": {
+        "format": "text",
+        "type": "string"
+      },
+      "title": {
+        "format": "text",
+        "type": "string"
+      },
+      "description": {
+        "format": "text",
+        "type": "string"
+      },
+      "config": {
+        "format": "jsonb"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "required": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      }
+    },
+    "type": "object"
+  },
+  "submissions": {
+    "required": [
+      "submitted_at",
+      "assignment_id",
+      "student_id",
+      "id"
+    ],
+    "properties": {
+      "submitted_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "assignment_id": {
+        "description": "Note:\nThis is a Foreign Key to `assignments.id`.<fk table='assignments' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "student_id": {
+        "description": "Note:\nThis is a Foreign Key to `users.id`.<fk table='users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "body_md": {
+        "format": "text",
+        "type": "string"
+      },
+      "attempt_number": {
+        "format": "smallint",
+        "type": "integer"
+      },
+      "status": {
+        "format": "text",
+        "type": "string"
+      },
+      "grade": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "feedback_md": {
+        "format": "text",
+        "type": "string"
+      },
+      "graded_by": {
+        "description": "Note:\nThis is a Foreign Key to `users.id`.<fk table='users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "graded_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "modules": {
+    "required": [
+      "id",
+      "subject_id",
+      "title"
+    ],
+    "properties": {
+      "id": {
+        "default": "extensions.uuid_generate_v4()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "subject_id": {
+        "description": "Note:\nThis is a Foreign Key to `subjects.id`.<fk table='subjects' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "title": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      },
+      "order_index": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "assignment_attachments": {
+    "required": [
+      "id",
+      "created_at",
+      "assignment_id"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "assignment_id": {
+        "description": "Note:\nThis is a Foreign Key to `assignments.id`.<fk table='assignments' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "storage_path": {
+        "format": "text",
+        "type": "string"
+      },
+      "mime_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "file_name": {
+        "format": "text",
+        "type": "string"
+      },
+      "external_url": {
+        "format": "text",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "content_assets": {
+    "required": [
+      "id",
+      "file_path"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "file_path": {
+        "format": "text",
+        "type": "string"
+      },
+      "file_hash": {
+        "format": "text",
+        "type": "string"
+      },
+      "processing_status": {
+        "default": "pending",
+        "format": "text",
+        "type": "string"
+      },
+      "processing_error": {
+        "format": "text",
+        "type": "string"
+      },
+      "total_pages": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "users": {
+    "required": [
+      "id",
+      "email",
+      "role",
+      "is_professor"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "email": {
+        "format": "text",
+        "type": "string"
+      },
+      "full_name": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "username": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      },
+      "password": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      },
+      "firstname": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      },
+      "lastname": {
+        "format": "character varying",
+        "maxLength": 255,
+        "type": "string"
+      },
+      "cohort1": {
+        "format": "character varying",
+        "maxLength": 50,
+        "type": "string"
+      },
+      "school": {
+        "format": "text",
+        "type": "string"
+      },
+      "role": {
+        "default": "student",
+        "format": "text",
+        "type": "string"
+      },
+      "is_professor": {
+        "default": false,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "center_id": {
+        "description": "Note:\nThis is a Foreign Key to `educational_centers.id`.<fk table='educational_centers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "grade_id": {
+        "description": "Note:\nThis is a Foreign Key to `grades_levels.id`.<fk table='grades_levels' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "status": {
+        "default": "active",
+        "format": "character varying",
+        "maxLength": 50,
+        "type": "string"
+      },
+      "suspended_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "suspended_reason": {
+        "format": "text",
+        "type": "string"
+      },
+      "avatar_url": {
+        "format": "text",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "student_tutors": {
+    "required": [
+      "created_at",
+      "id"
+    ],
+    "properties": {
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "student_id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Foreign Key to `users.id`.<fk table='users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "tutor_id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Foreign Key to `users.id`.<fk table='users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "grades_levels": {
+    "description": "Grados académicos dentro de cada centro",
+    "required": [
+      "id",
+      "name"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "center_id": {
+        "description": "Note:\nThis is a Foreign Key to `educational_centers.id`.<fk table='educational_centers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "name": {
+        "format": "character varying",
+        "maxLength": 100,
+        "type": "string"
+      },
+      "level": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "student_time_view": {
+    "properties": {
+      "user_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "total_time_seconds": {
+        "format": "bigint",
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  },
+  "enrollments": {
+    "required": [
+      "id",
+      "center_id"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "student_id": {
+        "description": "Note:\nThis is a Foreign Key to `users.id`.<fk table='users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "grade_id": {
+        "description": "Note:\nThis is a Foreign Key to `grades_levels.id`.<fk table='grades_levels' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "status": {
+        "default": "active",
+        "format": "character varying",
+        "type": "string"
+      },
+      "center_id": {
+        "description": "Note:\nThis is a Foreign Key to `educational_centers.id`.<fk table='educational_centers' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "subject_id": {
+        "description": "Note:\nThis is a Foreign Key to `subjects.id`.<fk table='subjects' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "calendar_events": {
+    "required": [
+      "id",
+      "created_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "subject_id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Foreign Key to `subjects.id`.<fk table='subjects' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "professor_id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Foreign Key to `users.id`.<fk table='users' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "title": {
+        "format": "text",
+        "type": "string"
+      },
+      "description_md": {
+        "format": "text",
+        "type": "string"
+      },
+      "event_date": {
+        "format": "date",
+        "type": "string"
+      },
+      "type": {
+        "format": "text",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+}
