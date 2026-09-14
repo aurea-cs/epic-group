@@ -81,7 +81,10 @@ const ExitTicketsTab: React.FC<ExitTicketsTabProps> = ({ exitTickets, loading, e
                                     <div className="category-card-icon-actions">
                                         <button
                                             className="btn-icon-action btn-icon-danger"
-                                            onClick={() => setConfirmDeleteTemplate(template)}
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setConfirmDeleteTemplate(template)
+                                            }}
                                             aria-label={t('extraContent.btnConfirmDelete')}
                                             title={t('extraContent.btnConfirmDelete')}
                                         >

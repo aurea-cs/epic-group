@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getExitTicket, type ExitTicketTemplate } from '../../../lib/adminApi'
+import { useDynamicTranslation } from '../../../hooks/useDynamicTranslation'
 
 interface ExitTicketViewModalProps {
     templateId: string
@@ -7,17 +9,45 @@ interface ExitTicketViewModalProps {
     onEdit: () => void
 }
 
-const typeLabel = (type: string) => {
+const typeLabel = (type: string, t: any) => {
     switch (type) {
         case 'rating':
-            return '⭐ Calificación 1-5'
+            return `⭐ ${t('extraContent.rating', 'Calificación 1-5')}`
         case 'text':
-            return '✍️ Respuesta abierta'
+            return `✍️ ${t('extraContent.openResponse', 'Respuesta abierta')}`
         case 'multiple_choice':
-            return '🔘 Opción múltiple'
+            return `🔘 ${t('extraContent.multipleChoice', 'Opción múltiple')}`
         default:
             return type
     }
+}
+
+const QuestionItemCard = ({ q, idx, t }: { q: any; idx: number; t: any }) => {
+    const { text: translatedTitle, isTranslating: loadingTitle } = useDynamicTranslation(q.title)
+
+    return (
+        <div className="question-item-card">
+            <div>
+                <div className="question-item-title">
+                    {idx + 1}. {loadingTitle ? <span style={{ opacity: 0.5 }}>{q.title} ✨</span> : translatedTitle}
+                </div>
+                <div className="question-item-meta">
+                    {t('extraContent.type', 'Tipo')}: {typeLabel(q.type, t)} | {q.required ? t('extraContent.required', 'Obligatoria') : t('extraContent.optional', 'Opcional')}
+                </div>
+                {q.type === 'multiple_choice' && q.config?.options && (
+                    <div
+                        style={{
+                            fontSize: '0.78rem',
+                            color: 'rgba(255,255,255,0.5)',
+                            marginTop: '0.35rem',
+                        }}
+                    >
+                        {t('extraContent.options', 'Opciones')}: {q.config.options.map((o: any) => o.label).join(', ')}
+                    </div>
+                )}
+            </div>
+        </div>
+    )
 }
 
 /**
@@ -29,9 +59,13 @@ const typeLabel = (type: string) => {
  * question list.
  */
 const ExitTicketViewModal: React.FC<ExitTicketViewModalProps> = ({ templateId, onClose, onEdit }) => {
+    const { t } = useTranslation()
     const [template, setTemplate] = useState<ExitTicketTemplate | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+
+    const { text: translatedTitle, isTranslating: loadingTitle } = useDynamicTranslation(template?.title)
+    const { text: translatedDesc, isTranslating: loadingDesc } = useDynamicTranslation(template?.description)
 
     useEffect(() => {
         let cancelled = false
@@ -63,8 +97,8 @@ const ExitTicketViewModal: React.FC<ExitTicketViewModalProps> = ({ templateId, o
             <div className="school-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
                 <div className="modal-header">
                     <div className="modal-icon">🎟️</div>
-                    <h2>{loading ? 'Cargando...' : template?.title || 'Ticket de Salida'}</h2>
-                    {template?.description && <p>{template.description}</p>}
+                    <h2>{loading ? t('extraContent.loading', 'Cargando...') : (loadingTitle ? <span style={{ opacity: 0.5 }}>{template?.title} ✨</span> : (translatedTitle || t('extraContent.catTicket')))}</h2>
+                    {template?.description && <p>{loadingDesc ? <span style={{ opacity: 0.5 }}>{template.description} ✨</span> : translatedDesc}</p>}
                 </div>
 
                 <div style={{ padding: '0.5rem 0' }}>
@@ -88,14 +122,17 @@ const ExitTicketViewModal: React.FC<ExitTicketViewModalProps> = ({ templateId, o
                     {!loading && !error && template && (
                         <>
                             <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                                <span className={`level-badge ${template.is_active ? 'primaria' : 'secundaria'}`}>
+                                    {template.is_active ? t('extraContent.statusActive', 'Activo') : t('extraContent.statusInactive', 'Inactivo')}
+                                </span>
                                 {template.available_from && (
                                     <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
-                                        Disponible desde: {new Date(template.available_from).toLocaleDateString()}
+                                        {t('extraContent.availableFrom', 'Disponible desde')}: {new Date(template.available_from).toLocaleDateString()}
                                     </span>
                                 )}
                                 {template.due_at && (
                                     <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
-                                        Vence: {new Date(template.due_at).toLocaleDateString()}
+                                        {t('extraContent.dueAt', 'Vence')}: {new Date(template.due_at).toLocaleDateString()}
                                     </span>
                                 )}
                             </div>
@@ -108,12 +145,12 @@ const ExitTicketViewModal: React.FC<ExitTicketViewModalProps> = ({ templateId, o
                                     marginBottom: '1rem',
                                 }}
                             >
-                                📋 Preguntas del Cuestionario ({questions.length})
+                                📋 {t('extraContent.questionPlural', 'Preguntas')} ({questions.length})
                             </div>
 
                             {questions.length === 0 ? (
                                 <p style={{ color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
-                                    Este cuestionario no tiene preguntas configuradas.
+                                    {t('extraContent.noQuestions', 'Este cuestionario no tiene preguntas configuradas.')}
                                 </p>
                             ) : (
                                 <div
@@ -129,27 +166,7 @@ const ExitTicketViewModal: React.FC<ExitTicketViewModalProps> = ({ templateId, o
                                         .slice()
                                         .sort((a, b) => a.question_order - b.question_order)
                                         .map((q, idx) => (
-                                            <div key={q.id} className="question-item-card">
-                                                <div>
-                                                    <div className="question-item-title">
-                                                        {idx + 1}. {q.title}
-                                                    </div>
-                                                    <div className="question-item-meta">
-                                                        Tipo: {typeLabel(q.type)} | {q.required ? 'Obligatoria' : 'Opcional'}
-                                                    </div>
-                                                    {q.type === 'multiple_choice' && q.config?.options && (
-                                                        <div
-                                                            style={{
-                                                                fontSize: '0.78rem',
-                                                                color: 'rgba(255,255,255,0.5)',
-                                                                marginTop: '0.35rem',
-                                                            }}
-                                                        >
-                                                            Opciones: {q.config.options.map((o: any) => o.label).join(', ')}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
+                                            <QuestionItemCard key={q.id} q={q} idx={idx} t={t} />
                                         ))}
                                 </div>
                             )}
@@ -159,10 +176,10 @@ const ExitTicketViewModal: React.FC<ExitTicketViewModalProps> = ({ templateId, o
 
                 <div className="modal-actions">
                     <button className="btn-cancel-modern" onClick={onClose}>
-                        Cerrar
+                        {t('adminProfessors.cancelBtn', 'Cerrar')}
                     </button>
                     <button className="btn-save-modern" onClick={onEdit} disabled={loading || !!error}>
-                        ✏️ Editar Cuestionario
+                        ✏️ {t('extraContent.btnEdit', 'Editar Cuestionario')}
                     </button>
                 </div>
             </div>

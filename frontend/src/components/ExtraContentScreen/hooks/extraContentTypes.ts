@@ -16,4 +16,5 @@ export interface ExitTicketQuestionFormState {
     type: 'multiple_choice' | 'text' | 'rating'
     required: boolean
     question_order?: number
+    config?: { options?: string[] }
 }
