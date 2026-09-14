@@ -2,16 +2,17 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatGradeDisplayName } from '../hooks/gradeFormat'
 import type { CategoryItem } from '../hooks/extraContentTypes'
-import type { GradeLevel, Subject } from '../../../lib/adminApi'
+import type { CurriculumGrade, CurriculumSubject, CurriculumModule, GradeLevel, Subject } from '../../../lib/adminApi'
 
 interface CategoryPreviewModalProps {
     category: CategoryItem
-    grade: GradeLevel
-    subject: Subject
+    grade: CurriculumGrade | GradeLevel
+    subject: CurriculumSubject | Subject
+    module?: CurriculumModule | null
     onClose: () => void
 }
 
-const CategoryPreviewModal: React.FC<CategoryPreviewModalProps> = ({ category, grade, subject, onClose }) => {
+const CategoryPreviewModal: React.FC<CategoryPreviewModalProps> = ({ category, grade, subject, module, onClose }) => {
     const { t } = useTranslation()
 
     return (
@@ -23,6 +24,11 @@ const CategoryPreviewModal: React.FC<CategoryPreviewModalProps> = ({ category, g
                     <p>
                         Materia: <strong>{subject.name}</strong> | Grado:{' '}
                         <strong>{formatGradeDisplayName(t, grade.name, grade.level)}</strong>
+                        {module && (
+                            <>
+                                {' '} | Módulo: <strong>{module.title}</strong>
+                            </>
+                        )}
                     </p>
                 </div>
 
@@ -57,7 +63,7 @@ const CategoryPreviewModal: React.FC<CategoryPreviewModalProps> = ({ category, g
                             <div>
                                 <div style={{ fontWeight: '600', color: '#fff' }}>{category.name} - Plantilla Base</div>
                                 <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
-                                    Se aplica a todos los módulos de {subject.name}
+                                    {module ? `Se aplica al módulo "${module.title}"` : `Se aplica a todos los módulos de ${subject.name}`}
                                 </div>
                             </div>
                             <span

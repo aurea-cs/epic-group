@@ -29,7 +29,7 @@ const ExtraContentScreen: React.FC<ExtraContentScreenProps> = () => {
                     labelExitTickets={t('extraContent.tabExitTickets')}
                 />
 
-                {activeTab === 'categories' && <CategoriesTab onNavigateToExitTickets={() => setActiveTab('exit_tickets')} />}
+                {activeTab === 'categories' && <CategoriesTab/>}
 
                 {activeTab === 'exit_tickets' && (
                     <ExitTicketsTab exitTickets={exitTickets} loading={loading} error={error} reload={reload} remove={remove} />
