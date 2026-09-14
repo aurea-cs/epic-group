@@ -1339,4 +1339,162 @@ export const getCurriculumModulesBySubject = async (subjectId: string): Promise<
         console.error('Error fetching curriculum modules:', error)
         throw error
     }
+}
+
+// ============================================
+// QUIZZES
+// ============================================
+
+export type QuizQuestionType =
+    | 'multiple_choice'
+    | 'true_false'
+    | 'checklist'
+    | 'open'
+    | 'complete_sentence'
+
+export interface QuizQuestion {
+    id: string
+    quiz_id: string
+    question_order: number
+    type: QuizQuestionType
+    title: string
+    config?: Record<string, any>
+    required: boolean
+    created_at?: string
+}
+
+export interface Quiz {
+    id: string
+    title: string
+    description?: string
+    curriculum_module_id?: string
+    created_by?: string
+    is_active: boolean
+    created_at: string
+    updated_at: string
+    questions?: QuizQuestion[]
+    quiz_questions?: [{ count: number }]
+}
+
+export interface CreateQuizPayload {
+    title: string
+    description?: string
+    is_active?: boolean
+    curriculum_module_id?: string
+    questions?: Omit<QuizQuestion, 'id' | 'quiz_id' | 'created_at'>[]
+}
+
+export interface UpdateQuizPayload {
+    title?: string
+    description?: string
+    is_active?: boolean
+    curriculum_module_id?: string
+}
+
+export interface BulkReplaceQuizQuestionsPayload {
+    type: QuizQuestionType
+    title: string
+    config?: Record<string, any>
+    required?: boolean
+}
+
+export const getQuizzes = async (curriculumModuleId?: string): Promise<Quiz[]> => {
+    try {
+        const url = curriculumModuleId
+            ? `${API_URL}/api/quizzes?curriculum_module_id=${curriculumModuleId}`
+            : `${API_URL}/api/quizzes`
+        const response = await fetch(url)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching quizzes:', error)
+        throw error
+    }
+}
+
+export const getQuiz = async (id: string): Promise<Quiz> => {
+    try {
+        const response = await fetch(`${API_URL}/api/quizzes/${id}`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching quiz:', error)
+        throw error
+    }
+}
+
+export const createQuiz = async (payload: CreateQuizPayload): Promise<Quiz> => {
+    try {
+        const response = await fetch(`${API_URL}/api/quizzes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error creating quiz:', error)
+        throw error
+    }
+}
+
+export const updateQuiz = async (id: string, payload: UpdateQuizPayload): Promise<Quiz> => {
+    try {
+        const response = await fetch(`${API_URL}/api/quizzes/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error updating quiz:', error)
+        throw error
+    }
+}
+
+export const deleteQuiz = async (id: string): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/quizzes/${id}`, { method: 'DELETE' })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Error deleting quiz:', error)
+        throw error
+    }
+}
+
+export const bulkReplaceQuizQuestions = async (
+    quizId: string,
+    questions: BulkReplaceQuizQuestionsPayload[]
+): Promise<QuizQuestion[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/quizzes/${quizId}/questions/bulk`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ questions }),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error bulk-replacing quiz questions:', error)
+        throw error
+    }
 }

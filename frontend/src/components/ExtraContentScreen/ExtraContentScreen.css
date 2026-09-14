@@ -220,7 +220,7 @@
 
 .categories-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 49%));
   gap: 1.5rem;
   margin-top: 1.25rem;
 }
@@ -724,4 +724,277 @@
   border: 1px dashed rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   padding: 0.75rem 1rem;
+}
+
+/* ------------------------------------------------ */
+/* Quiz Manager (Comprueba lo que aprendiste) */
+/* ------------------------------------------------ */
+
+.qm-context-bar {
+    background: rgba(37, 22, 78, 0.6);
+    border: 1px solid rgba(192, 132, 252, 0.25);
+    border-radius: 14px;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.qm-context-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.qm-context-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.qm-context-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.qm-context-sep {
+    color: rgba(255, 255, 255, 0.2);
+    font-size: 1.25rem;
+    margin: 0 0.25rem;
+}
+
+.qm-quiz-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.btn-save-quiz {
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    color: #000;
+    font-weight: 700;
+    border: none;
+    padding: 0.65rem 1.25rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.btn-save-quiz:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(74, 222, 128, 0.3);
+}
+
+.btn-save-quiz:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #6b7280;
+    color: #fff;
+}
+
+.qm-active-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+}
+
+.qm-meta-input,
+.qm-meta-textarea {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 0.85rem;
+    color: #fff;
+    font-size: 0.95rem;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.qm-meta-input:focus,
+.qm-meta-textarea:focus {
+    outline: none;
+    border-color: #c084fc;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.qm-question-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s ease;
+}
+
+.qm-question-card:focus-within {
+    border-color: rgba(192, 132, 252, 0.4);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.qm-question-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.qm-question-number {
+    font-weight: 800;
+    color: #c084fc;
+    font-size: 1.1rem;
+    background: rgba(192, 132, 252, 0.15);
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+}
+
+.qm-type-select {
+    background: rgba(37, 22, 78, 0.8);
+    border: 1px solid rgba(192, 132, 252, 0.3);
+    color: #fff;
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.qm-question-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 2px dashed rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 600;
+    padding: 0.5rem 0;
+    margin-bottom: 0.75rem;
+}
+
+.qm-question-input:focus {
+    outline: none;
+    border-bottom-color: #c084fc;
+}
+
+.qm-required-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    margin-bottom: 1rem;
+}
+
+.qm-options-block {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-top: 0.5rem;
+}
+
+.qm-options-label {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 0.75rem;
+}
+
+.qm-option-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.qm-option-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 0.4rem 0.75rem;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+.qm-option-input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.qm-add-option-btn {
+    background: none;
+    border: none;
+    color: #c084fc;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    margin-top: 0.25rem;
+}
+
+.qm-add-option-btn:hover {
+    color: #d8b4fe;
+    text-decoration: underline;
+}
+
+.qm-tf-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.qm-tf-label:has(input:checked) {
+    background: rgba(108, 92, 231, 0.2);
+    border-color: #c084fc;
+}
+
+.qm-open-placeholder {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.qm-open-textarea {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 0.75rem;
+    color: #fff;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.qm-add-question-btn {
+    width: 100%;
+    background: rgba(108, 92, 231, 0.15);
+    border: 1px dashed rgba(192, 132, 252, 0.5);
+    color: #d8b4fe;
+    font-weight: 700;
+    padding: 1rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 0.5rem;
+}
+
+.qm-add-question-btn:hover {
+    background: rgba(108, 92, 231, 0.25);
+    border-color: #c084fc;
 }
