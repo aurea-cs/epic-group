@@ -5,7 +5,7 @@ import { formatGradeDisplayName, getStageOrder } from '../hooks/gradeFormat'
 import CategoryPreviewModal from './categoryPreviewModal'
 import type { CategoryItem } from '../hooks/extraContentTypes'
 
-const HARDCODED_CENTER_ID = '3162dec3-a792-44d6-9868-1c9682d215c3'
+const HARDCODED_CENTER_ID = '9a398415-08b1-42d4-9c51-ec49cfb96487'
 
 interface CategoriesTabProps {
     onNavigateToExitTickets: () => void

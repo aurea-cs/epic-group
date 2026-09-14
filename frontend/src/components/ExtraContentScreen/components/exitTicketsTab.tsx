@@ -3,60 +3,6 @@ import { useTranslation } from 'react-i18next'
 import ExitTicketEditorScreen from './exitTicketEditorScreen'
 import ConfirmModal from '../../general/ConfirmModal'
 import type { ExitTicketTemplate } from '../../../lib/adminApi'
-import { useDynamicTranslation } from '../../../hooks/useDynamicTranslation'
-
-interface ExitTicketCardProps {
-    template: ExitTicketTemplate
-    onView: (id: string) => void
-    onEdit: (id: string) => void
-    onDelete: (template: ExitTicketTemplate) => void
-}
-
-const ExitTicketCard: React.FC<ExitTicketCardProps> = ({ template, onView, onEdit, onDelete }) => {
-    const { t } = useTranslation()
-    const { text: title, isTranslating: loadingTitle } = useDynamicTranslation(template.title)
-    const { text: description, isTranslating: loadingDesc } = useDynamicTranslation(template.description)
-
-    const qCount = template.exit_ticket_questions?.[0]?.count ?? template.questions?.length ?? 0
-    return (
-        <div className="category-card">
-            <div className="category-card-header">
-                <div className="category-icon-wrapper">🎟️</div>
-                <div className="category-info">
-                    <h3>{loadingTitle ? <span style={{ opacity: 0.5 }}>{template.title} ✨</span> : title}</h3>
-                    <span className={`level-badge ${template.is_active ? 'primaria' : 'secundaria'}`}>
-                        {template.is_active ? t('extraContent.statusActive') : t('extraContent.statusInactive')}
-                    </span>
-                </div>
-            </div>
-
-            <div className="category-card-body">
-                <p style={{ margin: '0 0 0.75rem 0' }}>
-                    {loadingDesc ? <span style={{ opacity: 0.5 }}>{template.description || t('extraContent.noDescription')} ✨</span> : (description || t('extraContent.noDescription'))}
-                </p>
-                <div style={{ fontSize: '0.85rem', color: '#c084fc', fontWeight: '600' }}>
-                    📋 {qCount} {qCount === 1 ? t('extraContent.questionSingle') : t('extraContent.questionPlural')} {t('extraContent.inThisQuiz')}
-                </div>
-            </div>
-
-            <div className="category-card-actions" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-                <button className="btn-preview-category" onClick={() => onView(template.id)}>
-                    {t('extraContent.btnView')}
-                </button>
-                <button className="btn-manage-category" onClick={() => onEdit(template.id)}>
-                    {t('extraContent.btnEdit')}
-                </button>
-                <button
-                    className="btn-preview-category"
-                    onClick={() => onDelete(template)}
-                    style={{ background: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#f87171' }}
-                >
-                    🗑️
-                </button>
-            </div>
-        </div>
-    )
-}
 
 interface ExitTicketsTabProps {
     exitTickets: ExitTicketTemplate[]
@@ -135,7 +81,10 @@ const ExitTicketsTab: React.FC<ExitTicketsTabProps> = ({ exitTickets, loading, e
                                     <div className="category-card-icon-actions">
                                         <button
                                             className="btn-icon-action btn-icon-danger"
-                                            onClick={() => setConfirmDeleteTemplate(template)}
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setConfirmDeleteTemplate(template)
+                                            }}
                                             aria-label={t('extraContent.btnConfirmDelete')}
                                             title={t('extraContent.btnConfirmDelete')}
                                         >
@@ -150,15 +99,6 @@ const ExitTicketsTab: React.FC<ExitTicketsTabProps> = ({ exitTickets, loading, e
                             </div>
                         )
                     })}
-                    {exitTickets.map((template) => (
-                        <ExitTicketCard
-                            key={template.id}
-                            template={template}
-                            onView={setViewModalId}
-                            onEdit={setFormModalId}
-                            onDelete={setConfirmDeleteTemplate}
-                        />
-                    ))}
                 </div>
             )}
 
