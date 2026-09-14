@@ -5,12 +5,11 @@ import CategoriesTab from './components/categoriesTab'
 import ExitTicketsTab from './components/exitTicketsTab'
 import { useExitTickets } from './hooks/useExitTickets'
 import './ExtraContentScreen.css'
+import SegmentedTabs from './components/segmentedTabs'
 
 interface ExtraContentScreenProps {
     user: User
 }
-
-const HARDCODED_CENTER_ID = '3162dec3-a792-44d6-9868-1c9682d215c3'
 
 const ExtraContentScreen: React.FC<ExtraContentScreenProps> = () => {
     const { t } = useTranslation()
@@ -23,30 +22,12 @@ const ExtraContentScreen: React.FC<ExtraContentScreenProps> = () => {
     return (
         <div className="extra-content-screen">
             <div className="extra-content-container">
-                <div className="extra-content-header">
-                    <h1>{t('extraContent.title')}</h1>
-                    <p>{t('extraContent.doNotTouch')}</p>
-                    <div className="center-badge">
-                        <span>{t('extraContent.baseCenter')}</span> {HARDCODED_CENTER_ID}
-                    </div>
-                </div>
-
-                <div className="extra-nav-tabs">
-                    <button
-                        className={`extra-nav-tab ${activeTab === 'categories' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('categories')}
-                    >
-                        <span>📚</span>
-                        <span>{t('extraContent.tabCategories')}</span>
-                    </button>
-                    <button
-                        className={`extra-nav-tab ${activeTab === 'exit_tickets' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('exit_tickets')}
-                    >
-                        <span>🎟️</span>
-                        <span>{t('extraContent.tabExitTickets')} ({exitTickets.length})</span>
-                    </button>
-                </div>
+                <SegmentedTabs
+                    activeTab={activeTab}
+                    onChange={setActiveTab}
+                    labelCategories={t('extraContent.tabCategories')}
+                    labelExitTickets={t('extraContent.tabExitTickets')}
+                />
 
                 {activeTab === 'categories' && <CategoriesTab onNavigateToExitTickets={() => setActiveTab('exit_tickets')} />}
 

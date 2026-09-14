@@ -500,4 +500,242 @@ router.post('/api/students/:studentId/tutor', async (req, res) => {
     }
 });
 
+// ─── Bulk CSV import: create students and enroll by grade_level ────────────────
+// Body: { center_id: string, students: { email, password, full_name, grade_level }[] }
+// grade_level examples: "Primaria 1", "Secundaria 3", "Universidad 0"
+router.post('/api/students/csv-import', async (req, res) => {
+    try {
+        const { center_id, students } = req.body as {
+            center_id: string
+            students: { email: string; password: string; full_name: string; grade_level: string }[]
+        }
+
+        if (!center_id) return res.status(400).json({ error: 'center_id is required' })
+        if (!Array.isArray(students) || students.length === 0) return res.status(400).json({ error: 'students array is required' })
+
+        // Pre-fetch all grade_levels for this center so we can resolve grade_id without N queries
+        const { data: grades, error: gradesErr } = await supabase
+            .from('grades_levels')
+            .select('id, name, level')
+            .eq('center_id', center_id)
+
+        if (gradesErr) throw gradesErr
+
+        const results: {
+            email: string
+            fullName: string
+            accountStatus: 'created' | 'already_exists' | 'error'
+            accountMessage: string
+            gradeStatus: 'enrolled' | 'already_enrolled' | 'grade_not_found' | 'error' | 'skipped'
+            gradeMessage: string
+            gradeLevel: string
+        }[] = []
+
+        for (const student of students) {
+            const result = {
+                email: student.email,
+                fullName: student.full_name,
+                accountStatus: 'created' as 'created' | 'already_exists' | 'error',
+                accountMessage: '',
+                gradeStatus: 'skipped' as any,
+                gradeMessage: '',
+                gradeLevel: student.grade_level || ''
+            }
+
+            // 1. Parse grade_level string → name + level
+            // Format: "Primaria 1", "Secundaria 3", etc.
+            let gradeName: string | null = null
+            let gradeLevel: number | null = null
+
+            if (student.grade_level) {
+                const parts = student.grade_level.trim().split(/\s+/)
+                if (parts.length === 2) {
+                    gradeName = parts[0]           // e.g. "Primaria"
+                    gradeLevel = parseInt(parts[1], 10) // e.g. 1
+                }
+            }
+
+            // 2. Create or find user account (mirrors POST /api/users logic)
+            let userId: string | null = null
+
+            try {
+                const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+                    email: student.email,
+                    password: student.password,
+                    email_confirm: true,
+                    user_metadata: { full_name: student.full_name }
+                })
+
+                if (authErr) {
+                    // User already exists in auth — find them in public.users
+                    if (authErr.message?.toLowerCase().includes('already') || (authErr as any).code === 'email_exists') {
+                        const { data: existingUser } = await supabase
+                            .from('users')
+                            .select('id')
+                            .ilike('email', student.email)
+                            .maybeSingle()
+
+                        if (existingUser) {
+                            userId = existingUser.id
+                            result.accountStatus = 'already_exists'
+                            result.accountMessage = 'Usuario ya registrado previamente'
+                        } else {
+                            // Edge case: in auth but not in public.users — list auth users to find them
+                            const { data: listData } = await supabase.auth.admin.listUsers()
+                            const found = listData?.users?.find((u: any) => u.email?.toLowerCase() === student.email.toLowerCase())
+                            if (found) {
+                                await supabase.from('users').upsert({
+                                    id: found.id,
+                                    email: student.email,
+                                    full_name: student.full_name,
+                                    role: 'student',
+                                    firstname: student.full_name.split(' ')[0],
+                                    lastname: student.full_name.split(' ').slice(1).join(' ')
+                                })
+                                userId = found.id
+                                result.accountStatus = 'already_exists'
+                                result.accountMessage = 'Usuario ya registrado previamente'
+                            } else {
+                                result.accountStatus = 'error'
+                                result.accountMessage = authErr.message || 'Error creando cuenta'
+                                result.gradeStatus = 'skipped'
+                                result.gradeMessage = 'Omisión por fallo en cuenta'
+                                results.push(result)
+                                continue
+                            }
+                        }
+                    } else {
+                        result.accountStatus = 'error'
+                        result.accountMessage = authErr.message || 'Error creando cuenta'
+                        result.gradeStatus = 'skipped'
+                        result.gradeMessage = 'Omisión por fallo en cuenta'
+                        results.push(result)
+                        continue
+                    }
+                } else {
+                    if (!authData.user) {
+                        result.accountStatus = 'error'
+                        result.accountMessage = 'Sin objeto de usuario tras creación'
+                        result.gradeStatus = 'skipped'
+                        result.gradeMessage = 'Omisión por fallo en cuenta'
+                        results.push(result)
+                        continue
+                    }
+                    userId = authData.user.id
+                    // Upsert profile row
+                    const { error: profileErr } = await supabase.from('users').upsert({
+                        id: userId,
+                        email: student.email,
+                        full_name: student.full_name,
+                        role: 'student',
+                        firstname: student.full_name.split(' ')[0],
+                        lastname: student.full_name.split(' ').slice(1).join(' ')
+                    })
+                    if (profileErr) {
+                        result.accountStatus = 'error'
+                        result.accountMessage = profileErr.message || 'Error creando perfil'
+                        result.gradeStatus = 'skipped'
+                        result.gradeMessage = 'Omisión por fallo en cuenta'
+                        results.push(result)
+                        continue
+                    }
+                    result.accountStatus = 'created'
+                    result.accountMessage = 'Usuario creado exitosamente'
+                }
+            } catch (err: any) {
+                result.accountStatus = 'error'
+                result.accountMessage = err.message || 'Error creando usuario'
+                result.gradeStatus = 'skipped'
+                result.gradeMessage = 'Omisión por fallo en cuenta'
+                results.push(result)
+                continue
+            }
+
+            // 3. Resolve grade_id from grades_levels
+            if (!userId) {
+                result.gradeStatus = 'skipped'
+                result.gradeMessage = 'Sin ID de usuario'
+                results.push(result)
+                continue
+            }
+
+            if (gradeName === null || gradeLevel === null || isNaN(gradeLevel)) {
+                result.gradeStatus = 'grade_not_found'
+                result.gradeMessage = `Formato de grado inválido: "${student.grade_level}"`
+                results.push(result)
+                continue
+            }
+
+            const matchedGrade = (grades || []).find(
+                g => g.name.toLowerCase() === gradeName!.toLowerCase() && Number(g.level) === gradeLevel
+            )
+
+            if (!matchedGrade) {
+                result.gradeStatus = 'grade_not_found'
+                result.gradeMessage = `Grado "${student.grade_level}" no encontrado en este centro`
+                results.push(result)
+                continue
+            }
+
+            // 4. Enroll student in grade (mirrors /api/grades/:gradeId/students logic)
+            try {
+                // Get subjects for this grade
+                const { data: subjects, error: subjectsErr } = await supabase
+                    .from('subjects')
+                    .select('id')
+                    .eq('grade_id', matchedGrade.id)
+
+                if (subjectsErr) throw subjectsErr
+
+                if (!subjects || subjects.length === 0) {
+                    result.gradeStatus = 'error'
+                    result.gradeMessage = `El grado "${student.grade_level}" no tiene materias`
+                    results.push(result)
+                    continue
+                }
+
+                const now = new Date().toISOString()
+                const rows = subjects.map(subject => ({
+                    subject_id: subject.id,
+                    grade_id: matchedGrade.id,
+                    center_id,
+                    student_id: userId,
+                    created_at: now,
+                    status: 'active'
+                }))
+
+                const { error: enrollErr } = await supabase
+                    .from('enrollments')
+                    .insert(rows)
+
+                if (enrollErr) {
+                    // Unique constraint = already enrolled
+                    if (enrollErr.code === '23505') {
+                        result.gradeStatus = 'already_enrolled'
+                        result.gradeMessage = `Ya inscrito en ${student.grade_level}`
+                    } else {
+                        throw enrollErr
+                    }
+                } else {
+                    result.gradeStatus = 'enrolled'
+                    result.gradeMessage = `Inscrito en ${student.grade_level} exitosamente`
+                    // Update user's center_id
+                    await supabase.from('users').update({ center_id }).eq('id', userId)
+                }
+            } catch (err: any) {
+                result.gradeStatus = 'error'
+                result.gradeMessage = err.message || 'Error al inscribir'
+            }
+
+            results.push(result)
+        }
+
+        res.json({ results })
+    } catch (error: any) {
+        console.error('Error in CSV student import:', error)
+        res.status(500).json({ error: error.message })
+    }
+})
+
 export default router;
+

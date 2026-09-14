@@ -4,6 +4,7 @@ import { PDFDocument } from 'pdf-lib'
 import { DrawingModal } from './DrawingModal'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
+import bannerImg from '../../assets/banner.png'
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
@@ -122,7 +123,9 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
   const [numPages, setNumPages] = useState<number>(0)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [pageWidth, setPageWidth] = useState<number>(window.innerWidth)
+  // PDF occupies ~60% of the viewport; the remaining space is filled with the banner
+  const PDF_WIDTH_RATIO = 0.60
+  const [pageWidth, setPageWidth] = useState<number>(Math.floor(window.innerWidth * PDF_WIDTH_RATIO))
 
   // Map of fieldName -> PNG dataUrl
   const [drawings, setDrawings] = useState<Record<string, string>>({})
@@ -143,7 +146,7 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
     window.addEventListener('keydown', handleKeyDown, true)
     window.addEventListener('contextmenu', blockMenu, true)
 
-    const handleResize = () => setPageWidth(window.innerWidth)
+    const handleResize = () => setPageWidth(Math.floor(window.innerWidth * PDF_WIDTH_RATIO))
     window.addEventListener('resize', handleResize)
 
     return () => {
@@ -499,12 +502,37 @@ return (
     <div
       style={{
         flex: 1,
-        overflowY: 'auto',
+        overflowY: 'hidden',
         overflowX: 'hidden',
         backgroundColor: '#000',
+        display: 'flex',
+        flexDirection: 'row',
       }}
       onContextMenu={(e) => e.preventDefault()}
     >
+      {/* Left banner panel */}
+      <div
+        style={{
+          flex: 1,
+          backgroundImage: `url(${bannerImg})`,
+          backgroundRepeat: 'repeat-y',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+          opacity: 0.85,
+          minWidth: 0,
+        }}
+      />
+
+      {/* PDF scroll column */}
+      <div
+        style={{
+          width: `${PDF_WIDTH_RATIO * 100}%`,
+          flexShrink: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          backgroundColor: '#111',
+        }}
+      >
       {error ? (
         <p style={{ color: '#fca5a5', textAlign: 'center', paddingTop: '40vh', fontSize: '1rem' }}>
           {error}
@@ -718,6 +746,20 @@ return (
           })}
         </Document>
       )}
+      </div>
+
+      {/* Right banner panel */}
+      <div
+        style={{
+          flex: 1,
+          backgroundImage: `url(${bannerImg})`,
+          backgroundRepeat: 'repeat-y',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+          opacity: 0.85,
+          minWidth: 0,
+        }}
+      />
     </div>
 
     {/* Drawing Modal Dialog */}

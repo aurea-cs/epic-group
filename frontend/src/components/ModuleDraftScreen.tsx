@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
-import { getCourseModules, getModuleVrCode, CourseModule, ModuleItem, VrCodeEntry } from '../lib/adminApi'
+import { getCourseModules, getModuleVrCode, getModuleExitTickets, CourseModule, ModuleItem, VrCodeEntry, ExitTicketTemplate } from '../lib/adminApi'
 import { getUserRole } from '../utils/getUserRole'
-import { Book, Gamepad2, FileText, ArrowRight, Folder, Play } from 'lucide-react'
+import { Book, Gamepad2, FileText, ArrowRight, Folder, Play, Ticket } from 'lucide-react'
 import { markItemAsRead } from '../lib/api'
+import ExitTicketTakeScreen from './ExitTicketTakeScreen'
 import bannerImg from '../assets/banner.png'
 
 import ciberImg from '../assets/ciber.png'
@@ -278,11 +279,102 @@ const ResourceCard = ({ item, onViewPdf }: { item: ModuleItem, index: number, on
   )
 }
 
+const ExitTicketCard = ({ ticket, onView }: { ticket: ExitTicketTemplate, onView: (id: string) => void }) => {
+  const questionCount =
+    ticket.questions?.length ??
+    ticket.exit_ticket_questions?.[0]?.count ??
+    0
+
+  return (
+    <div 
+      className="hoverable-card"
+      onClick={() => onView(ticket.id)}
+      style={{
+        backgroundColor: '#25164E',
+        borderRadius: '16px',
+        padding: '24px',
+        width: '320px',
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        border: '1px solid rgba(255,255,255,0.05)',
+        cursor: 'pointer'
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div style={{
+          width: '180px',
+          height: '180px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #a855f7 0%, #6c5ce7 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '6px solid #432E7E',
+          fontSize: '4.5rem',
+          boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+        }}>
+          🎟️
+        </div>
+      </div>
+      <div>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
+          {ticket.title}
+        </h3>
+        <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
+          {ticket.description || "Cuestionario de evaluación rápida para comprobar tus aprendizajes al finalizar este módulo."}
+        </p>
+        <div style={{
+          marginTop: '10px',
+          backgroundColor: 'rgba(168,85,247,0.15)',
+          borderRadius: '8px',
+          padding: '6px 12px',
+          color: '#c084fc',
+          fontSize: '0.82rem',
+          fontWeight: 600,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}>
+          ● {questionCount > 0 ? `${questionCount} ${questionCount === 1 ? 'pregunta' : 'preguntas'}` : 'Ticket de salida'}
+        </div>
+      </div>
+      <div style={{ marginTop: 'auto' }}>
+        <button
+          style={{
+            width: '100%',
+            backgroundColor: '#c084fc',
+            color: '#1a1625',
+            border: 'none',
+            padding: '12px',
+            borderRadius: '8px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            transition: 'background 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#d8b4fe'}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#c084fc'}
+        >
+          Ver Ticket de Salida <FileText size={16} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
   const navigate = useNavigate()
   const [moduleData, setModuleData] = useState<CourseModule | null>(null)
   const [vrEntries, setVrEntries] = useState<VrCodeEntry[]>([])
+  const [exitTickets, setExitTickets] = useState<ExitTicketTemplate[]>([])
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [, setError] = useState<string | null>(null)
 
@@ -303,9 +395,10 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [modules, vr] = await Promise.all([
+      const [modules, vr, tickets] = await Promise.all([
         getCourseModules(courseId!),
-        getModuleVrCode(moduleId!)
+        getModuleVrCode(moduleId!),
+        getModuleExitTickets(moduleId!).catch(() => [])
       ])
 
       const targetModule = modules.find(m => m.id === moduleId)
@@ -315,6 +408,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
 
       setModuleData(targetModule)
       setVrEntries(vr)
+      setExitTickets(tickets)
     } catch (err: any) {
       setError(err.message || 'Error al cargar los ítems del módulo')
     } finally {
@@ -432,6 +526,30 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
           </div>
         )}
 
+        {/* Ticket de Salida Section */}
+        {exitTickets.length > 0 && (
+          <div style={{ marginBottom: '4rem' }}>
+            <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
+              <Ticket size={24} color="#FCEE50" /> TICKET DE SALIDA
+            </h2>
+            <div style={{
+              display: 'flex',
+              gap: '24px',
+              overflowX: 'auto',
+              paddingTop: '12px',
+              paddingBottom: '2rem',
+              paddingLeft: '8px',
+              paddingRight: '8px',
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(255,255,255,0.3) transparent'
+            }}>
+              {exitTickets.map((ticket) => (
+                <ExitTicketCard key={ticket.id} ticket={ticket} onView={setSelectedTicketId} />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Salas VR Section */}
         <div>
           <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
@@ -455,6 +573,16 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
         </div>
       </div>
       </div>
+
+      {selectedTicketId && (
+        <ExitTicketTakeScreen
+          ticketId={selectedTicketId}
+          moduleId={moduleId!}
+          user={user}
+          onClose={() => setSelectedTicketId(null)}
+          moduleTitle={moduleData?.title}
+        />
+      )}
     </div>
   )
 }

@@ -24,12 +24,12 @@ const typeLabel = (type: string, t: any) => {
 
 const QuestionItemCard = ({ q, idx, t }: { q: any; idx: number; t: any }) => {
     const { text: translatedTitle, isTranslating: loadingTitle } = useDynamicTranslation(q.title)
-    
+
     return (
         <div className="question-item-card">
             <div>
                 <div className="question-item-title">
-                    {idx + 1}. {loadingTitle ? <span style={{opacity: 0.5}}>{q.title} ✨</span> : translatedTitle}
+                    {idx + 1}. {loadingTitle ? <span style={{ opacity: 0.5 }}>{q.title} ✨</span> : translatedTitle}
                 </div>
                 <div className="question-item-meta">
                     {t('extraContent.type', 'Tipo')}: {typeLabel(q.type, t)} | {q.required ? t('extraContent.required', 'Obligatoria') : t('extraContent.optional', 'Opcional')}
@@ -97,8 +97,8 @@ const ExitTicketViewModal: React.FC<ExitTicketViewModalProps> = ({ templateId, o
             <div className="school-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
                 <div className="modal-header">
                     <div className="modal-icon">🎟️</div>
-                    <h2>{loading ? t('extraContent.loading', 'Cargando...') : (loadingTitle ? <span style={{opacity: 0.5}}>{template?.title} ✨</span> : (translatedTitle || t('extraContent.catTicket')))}</h2>
-                    {template?.description && <p>{loadingDesc ? <span style={{opacity: 0.5}}>{template.description} ✨</span> : translatedDesc}</p>}
+                    <h2>{loading ? t('extraContent.loading', 'Cargando...') : (loadingTitle ? <span style={{ opacity: 0.5 }}>{template?.title} ✨</span> : (translatedTitle || t('extraContent.catTicket')))}</h2>
+                    {template?.description && <p>{loadingDesc ? <span style={{ opacity: 0.5 }}>{template.description} ✨</span> : translatedDesc}</p>}
                 </div>
 
                 <div style={{ padding: '0.5rem 0' }}>

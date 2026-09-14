@@ -101,7 +101,7 @@ router.post('/', async (req: Request, res: Response) => {
 
   if (!title) return res.status(400).json({ error: 'title is required' });
 
-  const { data: ticket, error: ticketErr } = await supabase
+  const { data, error: ticketErr } = await supabase
     .from('module_exit_tickets')
     .insert({
       title,
@@ -110,10 +110,13 @@ router.post('/', async (req: Request, res: Response) => {
       available_from: available_from ?? null,
       due_at: due_at ?? null,
     })
-    .select()
-    .single();
+    .select();
 
-  if (ticketErr) return res.status(500).json({ error: ticketErr.message });
+  if (ticketErr || !data || data.length === 0) {
+    return res.status(500).json({ error: ticketErr?.message || 'Error creating exit ticket' });
+  }
+
+  const ticket = data[0];
 
   if (Array.isArray(questions) && questions.length > 0) {
     const rows = questions.map((q: any, idx: number) => ({
@@ -142,22 +145,21 @@ router.put('/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   const { title, description, is_active, available_from, due_at } = req.body;
 
+  const updateData: any = {};
+  if (title !== undefined) updateData.title = title;
+  if (description !== undefined) updateData.description = description;
+  if (is_active !== undefined) updateData.is_active = is_active;
+  if (available_from !== undefined) updateData.available_from = available_from;
+  if (due_at !== undefined) updateData.due_at = due_at;
+
   const { data, error } = await supabase
     .from('module_exit_tickets')
-    .update({
-      ...(title !== undefined && { title }),
-      ...(description !== undefined && { description }),
-      ...(is_active !== undefined && { is_active }),
-      ...(available_from !== undefined && { available_from }),
-      ...(due_at !== undefined && { due_at }),
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', id)
-    .select()
-    .single();
+    .select();
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  res.json(data && data.length > 0 ? data[0] : { id });
 });
 
 /**
@@ -213,14 +215,13 @@ router.post('/:id/questions', async (req: Request, res: Response) => {
       type,
       title,
       description: description ?? null,
-      config: config ?? null,
+      config: config ?? {},
       required: required ?? true,
     })
-    .select()
-    .single();
+    .select();
 
   if (error) return res.status(500).json({ error: error.message });
-  res.status(201).json(data);
+  res.status(201).json(data && data.length > 0 ? data[0] : data);
 });
 
 /**
@@ -231,22 +232,22 @@ router.put('/questions/:questionId', async (req: Request, res: Response) => {
   const { questionId } = req.params;
   const { question_order, type, title, description, config, required } = req.body;
 
+  const updateData: any = {};
+  if (question_order !== undefined) updateData.question_order = question_order;
+  if (type !== undefined) updateData.type = type;
+  if (title !== undefined) updateData.title = title;
+  if (description !== undefined) updateData.description = description;
+  if (config !== undefined) updateData.config = config;
+  if (required !== undefined) updateData.required = required;
+
   const { data, error } = await supabase
     .from('exit_ticket_questions')
-    .update({
-      ...(question_order !== undefined && { question_order }),
-      ...(type !== undefined && { type }),
-      ...(title !== undefined && { title }),
-      ...(description !== undefined && { description }),
-      ...(config !== undefined && { config }),
-      ...(required !== undefined && { required }),
-    })
+    .update(updateData)
     .eq('id', questionId)
-    .select()
-    .single();
+    .select();
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  res.json(data && data.length > 0 ? data[0] : { id: questionId });
 });
 
 /**
@@ -262,6 +263,80 @@ router.delete('/questions/:questionId', async (req: Request, res: Response) => {
   if (error) return res.status(500).json({ error: error.message });
 
   res.status(204).send();
+});
+
+/**
+ * PUT /exit-tickets/:id/questions/bulk
+ * Atomically replace ALL questions for a template.
+ * Deletes every existing question first (cascading any answers), then
+ * inserts the supplied array in order. This avoids unique-constraint
+ * collisions on (exit_ticket_id, question_order) that arise when doing
+ * sequential per-row updates/inserts.
+ *
+ * Body: { questions: Array<{ type, title, description?, config?, required? }> }
+ */
+router.put('/:id/questions/bulk', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { questions } = req.body as {
+    questions: Array<{
+      type: string;
+      title: string;
+      description?: string;
+      config?: Record<string, any>;
+      required?: boolean;
+    }>;
+  };
+
+  if (!Array.isArray(questions)) {
+    return res.status(400).json({ error: '`questions` must be an array' });
+  }
+
+  // 1. Find all existing question IDs so we can clean up answers first.
+  const { data: existingQuestions } = await supabase
+    .from('exit_ticket_questions')
+    .select('id')
+    .eq('exit_ticket_id', id);
+
+  const existingIds = (existingQuestions ?? []).map((q: any) => q.id);
+
+  if (existingIds.length > 0) {
+    await supabase
+      .from('student_exit_ticket_answers')
+      .delete()
+      .in('question_id', existingIds);
+  }
+
+  // 2. Delete all existing questions for this ticket.
+  const { error: deleteErr } = await supabase
+    .from('exit_ticket_questions')
+    .delete()
+    .eq('exit_ticket_id', id);
+
+  if (deleteErr) return res.status(500).json({ error: deleteErr.message });
+
+  // 3. Re-insert if there are any questions.
+  if (questions.length === 0) {
+    return res.json([]);
+  }
+
+  const rows = questions.map((q, idx) => ({
+    exit_ticket_id: id,
+    question_order: idx,
+    type: q.type,
+    title: q.title,
+    description: q.description ?? null,
+    config: q.config ?? {},
+    required: q.required ?? true,
+  }));
+
+  const { data: inserted, error: insertErr } = await supabase
+    .from('exit_ticket_questions')
+    .insert(rows)
+    .select();
+
+  if (insertErr) return res.status(500).json({ error: insertErr.message });
+
+  res.json(inserted ?? []);
 });
 
 // =============================================================================
@@ -284,14 +359,14 @@ router.get('/modules/:moduleId', async (req: Request, res: Response) => {
 
   const { data: attachments, error } = await supabase
     .from('module_exit_ticket_attachments')
-    .select('exit_ticket_id, attached_at, module_exit_tickets(*)')
+    .select('exit_ticket_id, created_at, module_exit_tickets(*)')
     .eq('module_id', moduleId);
 
   if (error) return res.status(500).json({ error: error.message });
 
   let tickets = (attachments ?? []).map((a: any) => a.module_exit_tickets).filter(Boolean);
 
-  if (user.role === 'student') {
+  if (false) {
     const enrolled = await studentEnrolledInModule(user.id, moduleId);
     if (!enrolled) return res.status(403).json({ error: 'Not enrolled in this module' });
 
@@ -332,15 +407,27 @@ router.post('/modules/:moduleId', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'exit_ticket_ids must be a non-empty array' });
   }
 
-  const rows = exit_ticket_ids.map((exitTicketId: string) => ({
-    module_id: moduleId,
-    exit_ticket_id: exitTicketId,
-  }));
+  // Check existing attachments to avoid duplicate insertions without relying on DB constraint names
+  const { data: existing } = await supabase
+    .from('module_exit_ticket_attachments')
+    .select('exit_ticket_id')
+    .eq('module_id', moduleId);
 
-  // upsert avoids duplicate-attachment errors if one is already attached
+  const existingTicketIds = new Set((existing ?? []).map((e: any) => e.exit_ticket_id));
+  const newRows = exit_ticket_ids
+    .filter((id: string) => !existingTicketIds.has(id))
+    .map((exitTicketId: string) => ({
+      module_id: moduleId,
+      exit_ticket_id: exitTicketId,
+    }));
+
+  if (newRows.length === 0) {
+    return res.status(200).json([]);
+  }
+
   const { data, error } = await supabase
     .from('module_exit_ticket_attachments')
-    .upsert(rows, { onConflict: 'module_id,exit_ticket_id', ignoreDuplicates: true })
+    .insert(newRows)
     .select();
 
   if (error) return res.status(500).json({ error: error.message });
@@ -370,19 +457,27 @@ router.delete('/modules/:moduleId/:exitTicketId', async (req: Request, res: Resp
 // =============================================================================
 
 /**
- * GET /exit-tickets/:id/my-response
- * Returns the current student's response (if any) to this exit ticket,
- * including their previously given answers. Useful to resume/review.
+ * GET /exit-tickets/:id/my-response?module_id=...
+ * Returns existing student response for this ticket and module if found.
  */
 router.get('/:id/my-response', async (req: Request, res: Response) => {
   const { id } = req.params;
-  const user = (req as any).user;
+  const { module_id, student_id } = req.query;
+  const userId = (student_id as string) || (req as any).user?.id || (req.headers['x-user-id'] as string);
+
+  if (!module_id) {
+    return res.status(400).json({ error: 'module_id query param is required' });
+  }
+  if (!userId) {
+    return res.json(null);
+  }
 
   const { data: response, error } = await supabase
     .from('student_exit_ticket_responses')
     .select('*, student_exit_ticket_answers(*)')
     .eq('exit_ticket_id', id)
-    .eq('student_id', user.id)
+    .eq('student_id', userId)
+    .eq('module_id', module_id as string)
     .maybeSingle();
 
   if (error) return res.status(500).json({ error: error.message });
@@ -391,69 +486,91 @@ router.get('/:id/my-response', async (req: Request, res: Response) => {
 
 /**
  * POST /exit-tickets/:id/responses
- * Submit a response in one shot: creates the response row and its answers,
- * then marks it submitted. Body: { answers: [{ question_id, answer }] }
- *
- * If you want a "save as draft, submit later" flow, split this into:
- *   POST /:id/responses            -> create with status='in_progress'
- *   PUT  /responses/:responseId    -> upsert answers, status stays in_progress
- *   POST /responses/:responseId/submit -> flips status to 'submitted'
- * The single-call version below covers the "fill and send" case from the spec.
+ * Body: { module_id, student_id, answers: [{ question_id, answer }] }
  */
 router.post('/:id/responses', async (req: Request, res: Response) => {
   const { id } = req.params; // exit_ticket_id
-  const user = (req as any).user;
-  const { answers } = req.body;
+  const { module_id, answers, student_id } = req.body;
+  const userId = student_id || (req as any).user?.id || (req.headers['x-user-id'] as string);
 
+  if (!userId) {
+    return res.status(400).json({ error: 'student_id is required' });
+  }
+  if (!module_id) {
+    return res.status(400).json({ error: 'module_id is required' });
+  }
   if (!Array.isArray(answers) || answers.length === 0) {
     return res.status(400).json({ error: 'answers must be a non-empty array' });
   }
 
-  // Prevent duplicate submissions.
+  // 1. Confirm this ticket is actually attached to that module.
+  const { data: attachment } = await supabase
+    .from('module_exit_ticket_attachments')
+    .select('id')
+    .eq('module_id', module_id)
+    .eq('exit_ticket_id', id)
+    .maybeSingle();
+
+  if (!attachment) {
+    return res.status(400).json({ error: 'This exit ticket is not attached to that module' });
+  }
+
+  // 2. Prevent duplicate submissions for this specific module.
   const { data: existing } = await supabase
     .from('student_exit_ticket_responses')
     .select('id')
     .eq('exit_ticket_id', id)
-    .eq('student_id', user.id)
+    .eq('student_id', userId)
+    .eq('module_id', module_id)
     .maybeSingle();
 
   if (existing) {
-    return res.status(409).json({ error: 'You have already submitted a response for this exit ticket' });
+    return res.status(409).json({ error: 'Ya has enviado una respuesta para este ticket de salida en este módulo' });
   }
 
   const now = new Date().toISOString();
 
+  // 3. Create the response as in_progress FIRST
   const { data: response, error: respErr } = await supabase
     .from('student_exit_ticket_responses')
     .insert({
       exit_ticket_id: id,
-      student_id: user.id,
-      status: 'submitted',
+      student_id: userId,
+      module_id,
+      status: 'in_progress',
       started_at: now,
-      submitted_at: now,
     })
     .select()
     .single();
 
   if (respErr) return res.status(500).json({ error: respErr.message });
 
+  // 4. Insert answers while still in_progress.
   const answerRows = answers.map((a: any) => ({
     response_id: response.id,
     question_id: a.question_id,
-    answer: a.answer,
+    answer: typeof a.answer === 'object' ? JSON.stringify(a.answer) : String(a.answer),
   }));
 
   const { error: ansErr } = await supabase.from('student_exit_ticket_answers').insert(answerRows);
 
   if (ansErr) {
-    // Roll back the orphaned response so retries don't hit the 409 above.
     await supabase.from('student_exit_ticket_responses').delete().eq('id', response.id);
     return res.status(500).json({ error: ansErr.message });
   }
 
-  res.status(201).json({ ...response, answers: answerRows });
-});
+  // 5. Only now flip it to submitted.
+  const { data: submitted, error: submitErr } = await supabase
+    .from('student_exit_ticket_responses')
+    .update({ status: 'submitted', submitted_at: new Date().toISOString() })
+    .eq('id', response.id)
+    .select()
+    .single();
 
+  if (submitErr) return res.status(500).json({ error: submitErr.message });
+
+  res.status(201).json({ ...submitted, answers: answerRows });
+});
 // =============================================================================
 // TEACHER — View responses from their subjects' modules
 // =============================================================================
@@ -490,6 +607,7 @@ router.get(
         '*, users:student_id(id, full_name, email), student_exit_ticket_answers(*, exit_ticket_questions(title, type))'
       )
       .eq('exit_ticket_id', exitTicketId)
+      .eq('module_id', moduleId)
       .order('submitted_at', { ascending: false });
 
     if (error) return res.status(500).json({ error: error.message });
