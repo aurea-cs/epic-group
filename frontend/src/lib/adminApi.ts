@@ -76,6 +76,33 @@ export interface CurriculumGradeTree extends CurriculumGrade {
     subjects: CurriculumSubjectTree[]
 }
 
+export type ThinkBlockPromptType = 'piensa' | 'observa' | 'experimenta' | 'otro'
+
+export interface ThinkBlockPrompt {
+    id?: string
+    block_id?: string
+    prompt_type: ThinkBlockPromptType
+    icon?: string | null
+    label?: string | null
+    prompt_md: string
+    prompt_order?: number
+    created_at?: string
+}
+
+export interface ThinkBlock {
+    id: string
+    curriculum_module_id: string
+    fun_fact_md: string
+    image_url?: string | null
+    order_index: number
+    is_active: boolean
+    created_by?: string | null
+    created_at?: string
+    updated_at?: string
+    prompts?: ThinkBlockPrompt[]
+    think_block_prompts?: { count: number }[] | ThinkBlockPrompt[]
+}
+
 export interface Hierarchy {
     center: EducationalCenter
     grades: (GradeLevel & {
@@ -1359,6 +1386,122 @@ export const getCurriculumTree = async (): Promise<CurriculumGradeTree[]> => {
         return await response.json()
     } catch (error) {
         console.error('Error fetching curriculum tree:', error)
+        throw error
+    }
+}
+
+// ============================================
+// THINK BLOCKS (PIENSA, OBSERVA Y EXPERIMENTA)
+// ============================================
+
+export const getThinkBlocks = async (curriculumModuleId?: string): Promise<ThinkBlock[]> => {
+    try {
+        const url = curriculumModuleId
+            ? `${API_URL}/api/think-blocks?curriculum_module_id=${curriculumModuleId}`
+            : `${API_URL}/api/think-blocks`
+        const response = await fetch(url)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching think blocks:', error)
+        throw error
+    }
+}
+
+export const getThinkBlock = async (id: string): Promise<ThinkBlock> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/${id}`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching think block:', error)
+        throw error
+    }
+}
+
+export const createThinkBlock = async (payload: {
+    curriculum_module_id: string
+    fun_fact_md: string
+    image_url?: string | null
+    order_index?: number
+    is_active?: boolean
+    prompts?: Partial<ThinkBlockPrompt>[]
+}): Promise<ThinkBlock> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error creating think block:', error)
+        throw error
+    }
+}
+
+export const updateThinkBlock = async (
+    id: string,
+    payload: Partial<ThinkBlock>
+): Promise<ThinkBlock> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error updating think block:', error)
+        throw error
+    }
+}
+
+export const deleteThinkBlock = async (id: string): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/${id}`, {
+            method: 'DELETE',
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Error deleting think block:', error)
+        throw error
+    }
+}
+
+export const bulkReplaceThinkBlockPrompts = async (
+    id: string,
+    prompts: Array<{ prompt_type?: string; icon?: string | null; label?: string | null; prompt_md: string; prompt_order?: number }>
+): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/${id}/prompts/bulk`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompts }),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Error replacing think block prompts:', error)
         throw error
     }
 }
