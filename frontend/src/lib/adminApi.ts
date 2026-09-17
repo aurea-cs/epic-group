@@ -68,6 +68,14 @@ export interface CurriculumModule {
     created_at?: string
 }
 
+export interface CurriculumSubjectTree extends CurriculumSubject {
+    modules: CurriculumModule[]
+}
+
+export interface CurriculumGradeTree extends CurriculumGrade {
+    subjects: CurriculumSubjectTree[]
+}
+
 export interface Hierarchy {
     center: EducationalCenter
     grades: (GradeLevel & {
@@ -1337,6 +1345,20 @@ export const getCurriculumModulesBySubject = async (subjectId: string): Promise<
         return await response.json()
     } catch (error) {
         console.error('Error fetching curriculum modules:', error)
+        throw error
+    }
+}
+
+export const getCurriculumTree = async (): Promise<CurriculumGradeTree[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/tree`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching curriculum tree:', error)
         throw error
     }
 }

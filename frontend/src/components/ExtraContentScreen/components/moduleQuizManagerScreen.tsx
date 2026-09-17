@@ -9,7 +9,6 @@ import {
     deleteQuiz,
     bulkReplaceQuizQuestions,
     type Quiz,
-    type QuizQuestion,
     type QuizQuestionType,
     type BulkReplaceQuizQuestionsPayload,
     type CurriculumGrade,

@@ -64,4 +64,49 @@ router.get('/subjects/:subjectId/modules', async (req: Request, res: Response) =
   }
 });
 
+/**
+ * GET /api/curriculum/tree
+ * Fetch complete hierarchy of canonical grades, subjects, and modules.
+ */
+router.get('/tree', async (_req: Request, res: Response) => {
+  try {
+    const [gradesRes, subjectsRes, modulesRes] = await Promise.all([
+      supabase.from('curriculum_grades').select('*').order('level', { ascending: true }),
+      supabase.from('curriculum_subjects').select('*').order('name', { ascending: true }),
+      supabase.from('curriculum_modules').select('*').order('order_index', { ascending: true }),
+    ]);
+
+    if (gradesRes.error) throw gradesRes.error;
+    if (subjectsRes.error) throw subjectsRes.error;
+    if (modulesRes.error) throw modulesRes.error;
+
+    const grades = gradesRes.data || [];
+    const subjects = subjectsRes.data || [];
+    const modules = modulesRes.data || [];
+
+    const tree = grades.map((grade) => {
+      const gradeSubjects = subjects
+        .filter((s) => s.curriculum_grade_id === grade.id)
+        .map((subj) => {
+          const subjModules = modules.filter((m) => m.curriculum_subject_id === subj.id);
+          return {
+            ...subj,
+            modules: subjModules,
+          };
+        });
+
+      return {
+        ...grade,
+        subjects: gradeSubjects,
+      };
+    });
+
+    res.json(tree);
+  } catch (error: any) {
+    console.error('Error fetching curriculum tree:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
+

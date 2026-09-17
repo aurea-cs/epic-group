@@ -20,7 +20,8 @@ import {
     uploadRouter,
     exitTicketsRouter,
     quizzesRouter,
-    curriculumRouter
+    curriculumRouter,
+    thinkBlocksRouter
 } from './routes';
 
 dotenv.config();
@@ -50,7 +51,7 @@ app.use(uploadRouter);
 app.use('/api/exit-tickets', exitTicketsRouter);
 app.use('/api/quizzes', quizzesRouter);
 app.use('/api/curriculum', curriculumRouter);
-
+app.use('/api/think-blocks', thinkBlocksRouter);
 // ── Utility Routes ─────────────────────────────────────────────────────────────
 
 // Basic Route
