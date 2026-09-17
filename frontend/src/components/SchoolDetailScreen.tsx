@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
 import {
@@ -42,6 +42,19 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
     const [center, setCenter] = useState<EducationalCenter | null>(null)
     const [grades, setGrades] = useState<GradeLevel[]>([])
     const [selectedGrade, setSelectedGrade] = useState<GradeLevel | null>(null)
+    const [selectedLevelName, setSelectedLevelName] = useState<string>('')
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+    const dropdownRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
     const [subjects, setSubjects] = useState<Subject[]>([])
     const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null)
 
@@ -241,6 +254,9 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
             if (centerId) {
                 localStorage.setItem(`selectedGrade_${centerId}`, selectedGrade.id)
             }
+            if (selectedGrade.name !== selectedLevelName) {
+                setSelectedLevelName(selectedGrade.name)
+            }
             loadSubjects(selectedGrade.id)
         } else if (grades.length > 0) {
             // Auto-select first grade if none is selected
@@ -249,14 +265,18 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                 const savedGrade = savedGradeId ? grades.find(g => g.id === savedGradeId) : null
                 if (savedGrade) {
                     setSelectedGrade(savedGrade)
+                    setSelectedLevelName(savedGrade.name)
                 } else {
                     setSelectedGrade(grades[0])
+                    setSelectedLevelName(grades[0].name)
                 }
             } else {
                 setSelectedGrade(grades[0])
+                setSelectedLevelName(grades[0].name)
             }
         } else {
             setSubjects([])
+            setSelectedLevelName('')
         }
     }, [selectedGrade, grades, centerId])
 
@@ -379,6 +399,9 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
 
 
 
+    const uniqueLevels = Array.from(new Set(grades.map(g => g.name)))
+    const gradesInSelectedLevel = grades.filter(g => g.name === selectedLevelName).sort((a, b) => (a.level || 0) - (b.level || 0))
+
     return (
         <div className='course-content-screen'>
 
@@ -423,22 +446,51 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                     <div className="filter-bar-modern">
                         <div className="filter-group">
                             <label>Grado</label>
-                            <select
-                                className="modern-select"
-                                value={selectedGrade?.id || ''}
-                                onChange={(e) => {
-                                    const grade = grades.find(g => g.id === e.target.value)
-                                    setSelectedGrade(grade || null)
-                                }}
-                            >
-                                {grades.length === 0 && <option value="">Sin grados registrados</option>}
-                                {grades.map(grade => (
-                                    <option key={grade.id} value={grade.id}>
-                                        {grade.name} (Nivel {grade.level})
-                                    </option>
-                                ))}
-                            </select>
-                            <button style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer' }} onClick={() => { if (selectedGrade) setConfirmDeleteGrade(selectedGrade) }}> 🗑️ </button>
+                            
+                            <div className={`cascading-dropdown-container ${isDropdownOpen ? 'open' : ''}`} ref={dropdownRef}>
+                                <div 
+                                    className="cascading-dropdown-button"
+                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                >
+                                    <span>{selectedGrade ? `${selectedGrade.name} - Nivel ${selectedGrade.level}` : 'Seleccionar grado...'}</span>
+                                    <span style={{ fontSize: '0.8rem' }}>▼</span>
+                                </div>
+                                
+                                <div className="cascading-dropdown-menu">
+                                    {uniqueLevels.length === 0 && <div className="cascading-dropdown-item" style={{ cursor: 'default' }}>Sin niveles registrados</div>}
+                                    
+                                    {uniqueLevels.map(levelName => {
+                                        const gradesInThisLevel = grades.filter(g => g.name === levelName).sort((a, b) => (a.level || 0) - (b.level || 0));
+                                        
+                                        return (
+                                            <div key={levelName} className="cascading-dropdown-item">
+                                                <span>{levelName}</span>
+                                                <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>▶</span>
+                                                
+                                                <div className="cascading-dropdown-submenu">
+                                                    {gradesInThisLevel.length === 0 && <div className="cascading-dropdown-subitem" style={{ cursor: 'default' }}>Vacío</div>}
+                                                    {gradesInThisLevel.map(grade => (
+                                                        <div 
+                                                            key={grade.id} 
+                                                            className={`cascading-dropdown-subitem ${selectedGrade?.id === grade.id ? 'active' : ''}`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedLevelName(levelName);
+                                                                setSelectedGrade(grade);
+                                                                setIsDropdownOpen(false);
+                                                            }}
+                                                        >
+                                                            Nivel {grade.level}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            
+                            <button style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => { if (selectedGrade) setConfirmDeleteGrade(selectedGrade) }} title="Eliminar Grado"> 🗑️ </button>
                         </div>
                         <div className="filter-actions">
 
