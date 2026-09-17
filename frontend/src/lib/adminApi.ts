@@ -1418,6 +1418,22 @@ export const getThinkBlocks = async (curriculumModuleId?: string): Promise<Think
     }
 }
 
+/** Fetch think blocks for a specific module instance (resolves via curriculum_module_id). */
+export const getModuleThinkBlocks = async (moduleId: string): Promise<ThinkBlock[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/modules/${moduleId}`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching module think blocks:', error)
+        throw error
+    }
+}
+
+
 export const getThinkBlock = async (id: string): Promise<ThinkBlock> => {
     try {
         const response = await fetch(`${API_URL}/api/think-blocks/${id}`)

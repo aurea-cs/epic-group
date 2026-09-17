@@ -20,18 +20,21 @@ import {
     type ExitTicketTemplate,
     type ModuleQuizAttachment,
     type Quiz,
+    type ThinkBlock,
     getModuleExitTickets,
     attachExitTicketsToModule,
     detachExitTicketFromModule,
     getModuleQuizzes,
     attachQuizzesToModule,
     detachQuizFromModule,
+    getModuleThinkBlocks,
 } from '../../../lib/adminApi'
 import useReorderableList from '../hooks/useReorderableList'
 import ItemRow from './ItemRow'
 import VrRoomRow from './VrRoomRow'
 import ExitTicketRow from './ExitTicketRow'
 import QuizRow from './QuizRow'
+import ThinkBlockRow from './ThinkBlockRow'
 import SwitchExitTicketModal from './SwitchExitTicketModal'
 import AttachQuizModal from './AttachQuizModal'
 import QuizViewerModal from './QuizViewerModal'
@@ -178,6 +181,32 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
         await attachQuizzesToModule(module.id, selectedQuizIds)
         await fetchModuleQuizzes()
     }
+
+    // Think blocks — read-only, resolved via curriculum_module_id
+    const [thinkBlocks, setThinkBlocks] = useState<ThinkBlock[]>([])
+    const [loadingThinkBlocks, setLoadingThinkBlocks] = useState(true)
+
+    const fetchThinkBlocks = useCallback(async () => {
+        // Only fetch if this module is linked to a curriculum module
+        if (!module.curriculum_module_id) {
+            setThinkBlocks([])
+            setLoadingThinkBlocks(false)
+            return
+        }
+        try {
+            setLoadingThinkBlocks(true)
+            const blocks = await getModuleThinkBlocks(module.id)
+            setThinkBlocks(blocks)
+        } catch {
+            setThinkBlocks([])
+        } finally {
+            setLoadingThinkBlocks(false)
+        }
+    }, [module.id, module.curriculum_module_id])
+
+    useEffect(() => {
+        fetchThinkBlocks()
+    }, [fetchThinkBlocks])
 
     const handleDetachTicket = (ticket: ExitTicketTemplate) => {
         setTicketToDetach(ticket)
@@ -392,6 +421,15 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
                                 onDetach={a => setQuizToDetach(a)}
                                 onView={q => setViewingQuizId(q.id)}
                             />
+                        ))}
+                    </div>
+                )}
+
+                {/* Think Blocks Section — read-only, auto-resolved from curriculum_module_id */}
+                {!loadingThinkBlocks && thinkBlocks.length > 0 && (
+                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {thinkBlocks.map(block => (
+                            <ThinkBlockRow key={block.id} block={block} />
                         ))}
                     </div>
                 )}

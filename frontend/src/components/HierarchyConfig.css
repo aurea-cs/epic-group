@@ -1236,6 +1236,11 @@
     border: 1px solid rgba(56, 189, 248, 0.35);
 }
 
+.module-item-row.think-block-row {
+    background: linear-gradient(135deg, #052e16 0%, #021d0e 100%);
+    border: 1px solid rgba(52, 211, 153, 0.35);
+}
+
 
 @media (max-width: 768px) {
     .module-item-row {
