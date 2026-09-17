@@ -18,15 +18,23 @@ import {
     type ModuleItem,
     type VrCodeEntry,
     type ExitTicketTemplate,
+    type ModuleQuizAttachment,
+    type Quiz,
     getModuleExitTickets,
     attachExitTicketsToModule,
     detachExitTicketFromModule,
+    getModuleQuizzes,
+    attachQuizzesToModule,
+    detachQuizFromModule,
 } from '../../../lib/adminApi'
 import useReorderableList from '../hooks/useReorderableList'
 import ItemRow from './ItemRow'
 import VrRoomRow from './VrRoomRow'
 import ExitTicketRow from './ExitTicketRow'
+import QuizRow from './QuizRow'
 import SwitchExitTicketModal from './SwitchExitTicketModal'
+import AttachQuizModal from './AttachQuizModal'
+import QuizViewerModal from './QuizViewerModal'
 import ConfirmModal from '../../general/ConfirmModal'
 import ExitTicketViewerScreen from '../../ExtraContentScreen/components/exitTicketViewerScreen'
 
@@ -130,6 +138,46 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
     useEffect(() => {
         fetchExitTickets()
     }, [fetchExitTickets])
+
+    // Quizzes attached to this module via module_quizzes table
+    const [moduleQuizzes, setModuleQuizzes] = useState<ModuleQuizAttachment[]>([])
+    const [loadingQuizzes, setLoadingQuizzes] = useState(true)
+    const [quizToDetach, setQuizToDetach] = useState<ModuleQuizAttachment | null>(null)
+    const [viewingQuizId, setViewingQuizId] = useState<string | null>(null)
+    const [isAttachQuizModalOpen, setIsAttachQuizModalOpen] = useState(false)
+
+    const fetchModuleQuizzes = useCallback(async () => {
+        try {
+            setLoadingQuizzes(true)
+            const quizzes = await getModuleQuizzes(module.id)
+            setModuleQuizzes(quizzes)
+        } catch {
+            setModuleQuizzes([])
+        } finally {
+            setLoadingQuizzes(false)
+        }
+    }, [module.id])
+
+    useEffect(() => {
+        fetchModuleQuizzes()
+    }, [fetchModuleQuizzes])
+
+    const handleConfirmDetachQuiz = async () => {
+        if (!quizToDetach) return
+        const att = quizToDetach
+        setQuizToDetach(null)
+        try {
+            await detachQuizFromModule(module.id, att.quiz_id)
+            setModuleQuizzes(prev => prev.filter(q => q.id !== att.id))
+        } catch (err: any) {
+            alert(err.message || 'Error al desconectar el cuestionario')
+        }
+    }
+
+    const handleAttachQuizzes = async (selectedQuizIds: string[]) => {
+        await attachQuizzesToModule(module.id, selectedQuizIds)
+        await fetchModuleQuizzes()
+    }
 
     const handleDetachTicket = (ticket: ExitTicketTemplate) => {
         setTicketToDetach(ticket)
@@ -334,6 +382,20 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
                     </div>
                 )}
 
+                {/* Quizzes Section — rendered using module_quizzes table */}
+                {!loadingQuizzes && moduleQuizzes.length > 0 && (
+                    <div style={{ marginTop: hasContent || exitTickets.length > 0 ? '0.75rem' : '0', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {moduleQuizzes.map(att => (
+                            <QuizRow
+                                key={att.id}
+                                attachment={att}
+                                onDetach={a => setQuizToDetach(a)}
+                                onView={q => setViewingQuizId(q.id)}
+                            />
+                        ))}
+                    </div>
+                )}
+
                 <div style={{
                     marginTop: '1rem',
                     display: 'flex',
@@ -366,6 +428,19 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
                         }}
                     >
                         🚀 Agregar sala
+                    </button>
+                    <button
+                        onClick={() => setIsAttachQuizModalOpen(true)}
+                        style={{
+                            background: 'rgba(56, 189, 248, 0.08)',
+                            border: '1px dashed rgba(56, 189, 248, 0.5)',
+                            color: '#38bdf8',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        🧠 Cuestionario
                     </button>
                     {exitTickets.length > 0 ? (
                         <button
@@ -410,6 +485,33 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
                 }}
                 onSelectTicket={handleConfirmTicketSelect}
             />
+
+            <AttachQuizModal
+                isOpen={isAttachQuizModalOpen}
+                curriculumModuleId={module.curriculum_module_id || undefined}
+                attachedQuizIds={moduleQuizzes.map(q => q.quiz_id)}
+                onClose={() => setIsAttachQuizModalOpen(false)}
+                onAttach={handleAttachQuizzes}
+            />
+
+            {viewingQuizId && (
+                <QuizViewerModal
+                    quizId={viewingQuizId}
+                    onClose={() => setViewingQuizId(null)}
+                />
+            )}
+
+            {quizToDetach && (
+                <ConfirmModal
+                    title="Desconectar cuestionario"
+                    message={`¿Estás seguro de que deseas desconectar el cuestionario "${quizToDetach.quizzes?.title || ''}" de este módulo?`}
+                    confirmLabel="Desconectar"
+                    cancelLabel="Cancelar"
+                    danger
+                    onCancel={() => setQuizToDetach(null)}
+                    onConfirm={handleConfirmDetachQuiz}
+                />
+            )}
 
             {ticketToDetach && (
                 <ConfirmModal

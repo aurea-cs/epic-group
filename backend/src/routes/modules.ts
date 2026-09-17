@@ -106,11 +106,17 @@ router.delete('/api/modules/vr-code/:entryId', async (req, res) => {
 router.put('/api/modules/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, order_index, is_active } = req.body;
+        const { title, order_index, is_active, curriculum_module_id } = req.body;
+
+        const updateData: any = {};
+        if (title !== undefined) updateData.title = title;
+        if (order_index !== undefined) updateData.order_index = order_index;
+        if (is_active !== undefined) updateData.is_active = is_active;
+        if (curriculum_module_id !== undefined) updateData.curriculum_module_id = curriculum_module_id || null;
 
         const { data, error } = await supabase
             .from('modules')
-            .update({ title, order_index, is_active })
+            .update(updateData)
             .eq('id', id)
             .select()
             .single();

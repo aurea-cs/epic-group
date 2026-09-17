@@ -13,10 +13,14 @@ import {
     cloneSubject,
     updateSubject,
     deleteSubject,
-    deleteGrade,
+    getCurriculumGrades,
+    getCurriculumSubjectsByGrade,
     type EducationalCenter,
     type GradeLevel,
     type Subject,
+    type CurriculumGrade,
+    type CurriculumSubject,
+    deleteGrade,
 } from '../lib/adminApi'
 import StudentManagement from './StudentManagement'
 import TeacherManagement from './TeacherManagement'
@@ -57,6 +61,57 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
     }, [])
     const [subjects, setSubjects] = useState<Subject[]>([])
     const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null)
+    const [curriculumSubjects, setCurriculumSubjects] = useState<CurriculumSubject[]>([])
+    const [allCurriculumGrades, setAllCurriculumGrades] = useState<CurriculumGrade[]>([])
+
+    useEffect(() => {
+        const fetchCurriculumSubjects = async () => {
+            if (!selectedGrade) {
+                setCurriculumSubjects([])
+                return
+            }
+            try {
+                let cGradeId = (selectedGrade as any).curriculum_grade_id
+                if (!cGradeId) {
+                    let cGrades = allCurriculumGrades
+                    if (cGrades.length === 0) {
+                        cGrades = await getCurriculumGrades()
+                        setAllCurriculumGrades(cGrades)
+                    }
+                    const matched = cGrades.find(
+                        (cg) => cg.level === selectedGrade.level || cg.name.toLowerCase() === selectedGrade.name.toLowerCase()
+                    )
+                    if (matched) {
+                        cGradeId = matched.id
+                    }
+                }
+
+                if (cGradeId) {
+                    const cSubjs = await getCurriculumSubjectsByGrade(cGradeId)
+                    setCurriculumSubjects(cSubjs || [])
+                } else {
+                    setCurriculumSubjects([])
+                }
+            } catch (err) {
+                console.error('Error fetching curriculum subjects for grade:', err)
+                setCurriculumSubjects([])
+            }
+        }
+        fetchCurriculumSubjects()
+    }, [selectedGrade])
+
+    const handleAssignCurriculumSubject = async (subjectId: string, curriculumSubjectId: string) => {
+        const targetId = curriculumSubjectId || null
+        try {
+            await updateSubject(subjectId, { curriculum_subject_id: targetId })
+            setSubjects((prev) =>
+                prev.map((s) => (s.id === subjectId ? { ...s, curriculum_subject_id: targetId } : s))
+            )
+        } catch (err: any) {
+            console.error('Error assigning curriculum subject:', err)
+            alert(err.message || 'Error al asignar la materia canónica.')
+        }
+    }
 
     // State for loading and errors
     const [loading, setLoading] = useState(false)
@@ -500,8 +555,8 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                     <div className="courses-list-container">
                         <div className="courses-list-header">
                             <div className="col-course">Materia</div>
-                            <div className="col-code">Código</div>
                             <div className="col-students">Capacidad</div>
+                            <div className="col-curriculum">Materia Canónica</div>
                             <div className="col-actions">Acciones</div>
                         </div>
 
@@ -524,11 +579,32 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                                 <span className="course-name">{t(`dynamicSubjects.${subject.name}`, { defaultValue: subject.name })}</span>
                                             </div>
                                         </div>
-                                        <div className="col-code">
-                                            {'-'}
-                                        </div>
                                         <div className="col-students">
                                             Max. {subject.max_students}
+                                        </div>
+                                        <div className="col-curriculum" onClick={(e) => e.stopPropagation()}>
+                                            <select
+                                                value={subject.curriculum_subject_id || ''}
+                                                onChange={(e) => handleAssignCurriculumSubject(subject.id, e.target.value)}
+                                                className="curriculum-subject-select"
+                                                style={{
+                                                    background: 'rgba(37, 22, 78, 0.85)',
+                                                    border: '1px solid rgba(192, 132, 252, 0.35)',
+                                                    color: '#fff',
+                                                    borderRadius: '8px',
+                                                    padding: '6px 10px',
+                                                    fontSize: '0.85rem',
+                                                    width: 'max-content',
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                <option value="">-- Sin asignar --</option>
+                                                {curriculumSubjects.map((cs) => (
+                                                    <option key={cs.id} value={cs.id}>
+                                                        {cs.short_name ? `${cs.name} (${cs.short_name})` : cs.name}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
                                         <div className="col-actions">
                                             <button

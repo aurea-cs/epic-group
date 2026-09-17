@@ -378,7 +378,7 @@ router.get('/modules/:moduleId', async (req: Request, res: Response) => {
 
   const { data: attachments, error } = await supabase
     .from('module_quizzes')
-    .select('id, quiz_id, due_at, available_from, is_active, quizzes(*)')
+    .select('id, quiz_id, due_at, available_from, is_active, quizzes(*, quiz_questions(count))')
     .eq('module_id', moduleId);
 
   if (error) return res.status(500).json({ error: error.message });

@@ -931,7 +931,12 @@
 
 .col-code {
     flex: 1;
-    min-width: 150px;
+    min-width: 120px;
+}
+
+.col-curriculum {
+    flex: 2;
+    min-width: 220px;
 }
 
 .col-students {
@@ -1224,6 +1229,11 @@
 .module-item-row.exit-ticket {
     background: linear-gradient(135deg, #430346 0%, #2c010c 100%);
     border: 1px solid rgba(248, 113, 183, 0.3);
+}
+
+.module-item-row.quiz-row {
+    background: linear-gradient(135deg, #0d254c 0%, #051630 100%);
+    border: 1px solid rgba(56, 189, 248, 0.35);
 }
 
 

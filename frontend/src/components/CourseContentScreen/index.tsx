@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
 import ConfirmModal from '../general/ConfirmModal'
 import '../HierarchyConfig.css'
 
 // API
-import { reorderModuleItems, reorderModuleVrCodes } from '../../lib/adminApi'
+import { reorderModuleItems, reorderModuleVrCodes, getCurriculumModulesBySubject, type CurriculumModule } from '../../lib/adminApi'
 
 // Hooks
 import { useCourseContent } from './hooks/useCourseContent'
@@ -54,6 +54,22 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     )
 
     const menu = useItemMenu()
+
+    const [curriculumModules, setCurriculumModules] = useState<CurriculumModule[]>([])
+
+    useEffect(() => {
+        const currSubjId = content.subject?.curriculum_subject_id
+        if (currSubjId) {
+            getCurriculumModulesBySubject(currSubjId)
+                .then((data) => setCurriculumModules(data || []))
+                .catch((err) => {
+                    console.error('Error fetching curriculum modules:', err)
+                    setCurriculumModules([])
+                })
+        } else {
+            setCurriculumModules([])
+        }
+    }, [content.subject?.curriculum_subject_id])
 
     // ── Bootstrap ─────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -163,6 +179,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                     editingModule={moduleCRUD.editingModule}
                     moduleForm={moduleCRUD.moduleForm}
                     modulesCount={content.modules.length}
+                    curriculumModules={curriculumModules}
                     onFormChange={moduleCRUD.setModuleForm}
                     onSave={moduleCRUD.save}
                     onClose={() => moduleCRUD.setShowModal(false)}
