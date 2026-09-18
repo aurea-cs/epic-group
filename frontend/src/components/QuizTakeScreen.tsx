@@ -259,6 +259,8 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
   const totalSlides = questions.length + 2
   const finalSlideIndex = totalSlides - 1
 
+  const pendingCount = questions.filter((q) => !isAutoGraded(q.type)).length
+
   const isQuestionAnswered = (q: QuizQuestion) => {
     const v = answers[q.id]
     if (v === undefined || v === null || v === '') return false
@@ -840,23 +842,42 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
                             * Obligatoria
                           </span>
                         )}
-                        {isReviewing && isAutoGraded(q.type) && (
-                          <span
-                            style={{
-                              fontSize: '0.8rem',
-                              fontWeight: 700,
-                              color: questionCorrectness === true ? '#4ade80' : questionCorrectness === false ? '#fca5a5' : 'rgba(255,255,255,0.4)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            {questionCorrectness === true ? (
-                              <><CheckCircle2 size={14} /> Correcta</>
-                            ) : questionCorrectness === false ? (
-                              <><XCircle size={14} /> Incorrecta</>
-                            ) : null}
-                          </span>
+                        {isReviewing && (
+                          isAutoGraded(q.type) ? (
+                            <span
+                              style={{
+                                fontSize: '0.8rem',
+                                fontWeight: 700,
+                                color: questionCorrectness === true ? '#4ade80' : questionCorrectness === false ? '#fca5a5' : 'rgba(255,255,255,0.4)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              {questionCorrectness === true ? (
+                                <><CheckCircle2 size={14} /> Correcta</>
+                              ) : questionCorrectness === false ? (
+                                <><XCircle size={14} /> Incorrecta</>
+                              ) : null}
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
+                                color: '#fbbf24',
+                                background: 'rgba(251, 191, 36, 0.15)',
+                                border: '1px solid rgba(251, 191, 36, 0.3)',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              ⏳ Pendiente de revisión
+                            </span>
+                          )
                         )}
                       </div>
                       <h3
@@ -1344,9 +1365,31 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
                       >
                         {score}/{maxScore}
                       </p>
-                      <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '1.05rem' }}>
-                        {Math.round((score / maxScore) * 100)}% de respuestas correctas
+                      <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '1.05rem', margin: 0 }}>
+                        {pendingCount > 0
+                          ? `${Math.round((score / maxScore) * 100)}% de respuestas autoevaluadas correctas`
+                          : `${Math.round((score / maxScore) * 100)}% de respuestas correctas`}
                       </p>
+                      {pendingCount > 0 && (
+                        <div
+                          style={{
+                            marginTop: '1rem',
+                            background: 'rgba(251, 191, 36, 0.12)',
+                            border: '1px solid rgba(251, 191, 36, 0.3)',
+                            borderRadius: '12px',
+                            padding: '10px 16px',
+                            color: '#fbbf24',
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          <span>⏳ {pendingCount} {pendingCount === 1 ? 'pregunta pendiente' : 'preguntas pendientes'} de revisión manual por tu profesor</span>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '1.1rem', maxWidth: '500px', margin: '0 auto' }}>
@@ -1412,9 +1455,29 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
                 </h2>
                 {score !== undefined && score !== null && maxScore ? (
                   <p style={{ color: '#4ade80', fontSize: '1.4rem', fontWeight: 800, margin: '0.5rem 0 1rem 0' }}>
-                    {score}/{maxScore} puntos
+                    {score}/{maxScore} puntos autoevaluados
                   </p>
                 ) : null}
+                {pendingCount > 0 && (
+                  <div
+                    style={{
+                      marginBottom: '1.25rem',
+                      background: 'rgba(251, 191, 36, 0.12)',
+                      border: '1px solid rgba(251, 191, 36, 0.3)',
+                      borderRadius: '12px',
+                      padding: '10px 16px',
+                      color: '#fbbf24',
+                      fontSize: '0.9rem',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <span>⏳ {pendingCount} {pendingCount === 1 ? 'pregunta pendiente' : 'preguntas pendientes'} de revisión manual por tu profesor</span>
+                  </div>
+                )}
                 <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '1.75rem' }}>
                   Tus respuestas ya fueron registradas. Puedes deslizarte hacia arriba para revisarlas.
                 </p>

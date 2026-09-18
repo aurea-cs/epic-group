@@ -19,6 +19,7 @@ import { Book, Gamepad2, FileText, ArrowRight, Folder, Play, Ticket } from 'luci
 import { markItemAsRead } from '../lib/api'
 import ExitTicketTakeScreen from './ExitTicketTakeScreen'
 import QuizTakeScreen from './QuizTakeScreen'
+import ThinkBlockViewerScreen from './ThinkBlockViewerScreen'
 import bannerImg from '../assets/banner.png'
 
 import ciberImg from '../assets/ciber.png'
@@ -478,22 +479,28 @@ const QuizCard = ({ attachment, onOpen }: { attachment: ModuleQuizAttachment; on
   )
 }
 
-const ThinkBlockCard = ({ block }: { block: ThinkBlock }) => {
-  const promptCount = Array.isArray(block.prompts) 
-    ? block.prompts.length 
-    : (Array.isArray(block.think_block_prompts) && block.think_block_prompts.length > 0
-        ? (typeof block.think_block_prompts[0] === 'object' && 'count' in block.think_block_prompts[0]
-            ? (block.think_block_prompts[0] as { count: number }).count
-            : block.think_block_prompts.length)
-        : 0)
+const ThinkBlockCard = ({ blocks, onOpen }: { blocks: ThinkBlock[]; onOpen: () => void }) => {
+  const firstBlock = blocks[0]
+  if (!firstBlock) return null
+
+  const totalPrompts = blocks.reduce((acc, block) => {
+    const pCount = Array.isArray(block.prompts) 
+      ? block.prompts.length 
+      : (Array.isArray(block.think_block_prompts) && block.think_block_prompts.length > 0
+          ? (typeof block.think_block_prompts[0] === 'object' && 'count' in block.think_block_prompts[0]
+              ? (block.think_block_prompts[0] as { count: number }).count
+              : block.think_block_prompts.length)
+          : 0)
+    return acc + pCount
+  }, 0)
 
   const handleOpen = (e: React.MouseEvent) => {
     e.stopPropagation()
-    window.open('about:blank', '_blank')
+    onOpen()
   }
 
-  const cleanDescription = block.fun_fact_md 
-    ? block.fun_fact_md.replace(/[#*`_]/g, '').trim()
+  const cleanDescription = firstBlock.fun_fact_md 
+    ? firstBlock.fun_fact_md.replace(/[#*`_]/g, '').trim()
     : "Bloque de curiosidad y actividades de pensamiento crítico para explorar y analizar este tema."
 
   return (
@@ -515,9 +522,9 @@ const ThinkBlockCard = ({ block }: { block: ThinkBlock }) => {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'center' }}>
-        {block.image_url ? (
+        {firstBlock.image_url ? (
           <img
-            src={block.image_url}
+            src={firstBlock.image_url}
             alt="Piensa, observa y experimenta"
             style={{
               width: '180px',
@@ -572,7 +579,7 @@ const ThinkBlockCard = ({ block }: { block: ThinkBlock }) => {
           alignItems: 'center',
           gap: '6px'
         }}>
-          ● {promptCount > 0 ? `${promptCount} ${promptCount === 1 ? 'actividad' : 'actividades'}` : 'Pensamiento y Experimentos'}
+          ● {blocks.length} {blocks.length === 1 ? 'experimento' : 'experimentos'}{totalPrompts > 0 ? ` (${totalPrompts} actividades)` : ''}
         </div>
       </div>
       <div style={{ marginTop: 'auto' }}>
@@ -596,7 +603,7 @@ const ThinkBlockCard = ({ block }: { block: ThinkBlock }) => {
           onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#6ee7b7'}
           onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#34d399'}
         >
-          Ver Experimento <FileText size={16} />
+          Ver Experimentos <FileText size={16} />
         </button>
       </div>
     </div>
@@ -613,6 +620,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   const [thinkBlocks, setThinkBlocks] = useState<ThinkBlock[]>([])
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [selectedQuizAttachment, setSelectedQuizAttachment] = useState<ModuleQuizAttachment | null>(null)
+  const [showThinkBlocks, setShowThinkBlocks] = useState(false)
   const [loading, setLoading] = useState(true)
   const [, setError] = useState<string | null>(null)
 
@@ -791,9 +799,9 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
               {moduleQuizzes.map((attachment) => (
                 <QuizCard key={attachment.id} attachment={attachment} onOpen={setSelectedQuizAttachment} />
               ))}
-              {thinkBlocks.map((block) => (
-                <ThinkBlockCard key={block.id} block={block} />
-              ))}
+              {thinkBlocks.length > 0 && (
+                <ThinkBlockCard blocks={thinkBlocks} onOpen={() => setShowThinkBlocks(true)} />
+              )}
             </div>
           </div>
         )}
@@ -838,6 +846,14 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
           quizId={selectedQuizAttachment.quiz_id}
           user={user}
           onClose={() => setSelectedQuizAttachment(null)}
+          moduleTitle={moduleData?.title}
+        />
+      )}
+
+      {showThinkBlocks && (
+        <ThinkBlockViewerScreen
+          blocks={thinkBlocks}
+          onClose={() => setShowThinkBlocks(false)}
           moduleTitle={moduleData?.title}
         />
       )}
