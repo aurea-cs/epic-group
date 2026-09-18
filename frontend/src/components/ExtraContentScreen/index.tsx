@@ -3,9 +3,10 @@ import { User } from '@supabase/supabase-js'
 import { useTranslation } from 'react-i18next'
 import CategoriesTab from './components/categoriesTab'
 import ExitTicketsTab from './components/exitTicketsTab'
+import GlobalCurriculumTab from './components/globalCurriculumTab'
 import { useExitTickets } from './hooks/useExitTickets'
 import './ExtraContentScreen.css'
-import SegmentedTabs from './components/segmentedTabs'
+import SegmentedTabs, { TabKey } from './components/segmentedTabs'
 
 interface ExtraContentScreenProps {
     user: User
@@ -13,7 +14,7 @@ interface ExtraContentScreenProps {
 
 const ExtraContentScreen: React.FC<ExtraContentScreenProps> = () => {
     const { t } = useTranslation()
-    const [activeTab, setActiveTab] = useState<'categories' | 'exit_tickets'>('categories')
+    const [activeTab, setActiveTab] = useState<TabKey>('categories')
 
     // Owned here (once) and passed down, so switching tabs back and forth
     // doesn't refetch the list, and the nav-tab label can show a live count.
@@ -27,13 +28,16 @@ const ExtraContentScreen: React.FC<ExtraContentScreenProps> = () => {
                     onChange={setActiveTab}
                     labelCategories={t('extraContent.tabCategories')}
                     labelExitTickets={t('extraContent.tabExitTickets')}
+                    labelGlobalCurriculum={t('extraContent.tabGlobalCurriculum', 'Currículum global')}
                 />
 
-                {activeTab === 'categories' && <CategoriesTab onNavigateToExitTickets={() => setActiveTab('exit_tickets')} />}
+                {activeTab === 'categories' && <CategoriesTab/>}
 
                 {activeTab === 'exit_tickets' && (
                     <ExitTicketsTab exitTickets={exitTickets} loading={loading} error={error} reload={reload} remove={remove} />
                 )}
+
+                {activeTab === 'global_curriculum' && <GlobalCurriculumTab />}
             </div>
         </div>
     )

@@ -9,18 +9,21 @@ import {
 export function useModuleCRUD(courseId: string | undefined, onSuccess: () => Promise<void>) {
     const [showModal, setShowModal] = useState(false)
     const [editingModule, setEditingModule] = useState<CourseModule | null>(null)
-    const [moduleForm, setModuleForm] = useState({ title: '' })
+    const [moduleForm, setModuleForm] = useState<{ title: string; curriculum_module_id?: string | null }>({
+        title: '',
+        curriculum_module_id: null,
+    })
     const [confirmDelete, setConfirmDelete] = useState<CourseModule | null>(null)
 
     const openCreate = (_currentCount: number) => {
         setEditingModule(null)
-        setModuleForm({ title: '' })
+        setModuleForm({ title: '', curriculum_module_id: null })
         setShowModal(true)
     }
 
     const openEdit = (module: CourseModule) => {
         setEditingModule(module)
-        setModuleForm({ title: module.title })
+        setModuleForm({ title: module.title, curriculum_module_id: module.curriculum_module_id || null })
         setShowModal(true)
     }
 
@@ -28,13 +31,26 @@ export function useModuleCRUD(courseId: string | undefined, onSuccess: () => Pro
         if (!courseId) return
         try {
             if (editingModule) {
-                await updateCourseModule(editingModule.id, { title: moduleForm.title })
+                const payload = {
+                    title: moduleForm.title,
+                    curriculum_module_id: moduleForm.curriculum_module_id || null,
+                }
+                console.log('[ModuleCRUD] Updating module', editingModule.id, 'with payload:', payload)
+                await updateCourseModule(editingModule.id, payload)
             } else {
-                await createCourseModule(courseId, moduleForm.title, currentModulesCount)
+                const cmId = moduleForm.curriculum_module_id || null
+                console.log('[ModuleCRUD] Creating module in course', courseId, 'curriculum_module_id:', cmId)
+                await createCourseModule(
+                    courseId,
+                    moduleForm.title,
+                    currentModulesCount,
+                    cmId
+                )
             }
             await onSuccess()
             setShowModal(false)
         } catch (err: any) {
+            console.error('[ModuleCRUD] Save error:', err)
             alert(err.message || 'Error al guardar módulo')
         }
     }

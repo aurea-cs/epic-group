@@ -41,9 +41,70 @@ export interface Subject {
     schedule_start_time?: string
     schedule_end_time?: string
     campo_formativo?: string
+    curriculum_subject_id?: string | null
     created_at: string
     updated_at: string
 }
+
+export interface CurriculumGrade {
+    id: string
+    name: string
+    level?: number
+    created_at?: string
+}
+
+export interface CurriculumSubject {
+    id: string
+    curriculum_grade_id: string
+    name: string
+    short_name?: string
+    created_at?: string
+}
+
+export interface CurriculumModule {
+    id: string
+    curriculum_subject_id: string
+    title: string
+    order_index?: number
+    created_at?: string
+}
+
+export interface CurriculumSubjectTree extends CurriculumSubject {
+    modules: CurriculumModule[]
+}
+
+export interface CurriculumGradeTree extends CurriculumGrade {
+    subjects: CurriculumSubjectTree[]
+}
+
+export type ThinkBlockPromptType = 'piensa' | 'observa' | 'experimenta' | 'otro'
+
+export interface ThinkBlockPrompt {
+    id?: string
+    block_id?: string
+    prompt_type: ThinkBlockPromptType
+    icon?: string | null
+    label?: string | null
+    prompt_md: string
+    prompt_order?: number
+    created_at?: string
+    my_answer?: string | null
+}
+
+export interface ThinkBlock {
+    id: string
+    curriculum_module_id: string
+    fun_fact_md: string
+    image_url?: string | null
+    order_index: number
+    is_active: boolean
+    created_by?: string | null
+    created_at?: string
+    updated_at?: string
+    prompts?: ThinkBlockPrompt[]
+    think_block_prompts?: { count: number }[] | ThinkBlockPrompt[]
+}
+
 export interface Hierarchy {
     center: EducationalCenter
     grades: (GradeLevel & {
@@ -90,6 +151,7 @@ export interface CourseModule {
     title: string
     order_index: number
     is_active: boolean
+    curriculum_module_id?: string | null
     created_at: string
     updated_at: string
     items: ModuleItem[]
@@ -730,12 +792,17 @@ export const getCourseModules = async (subjectId: string): Promise<CourseModule[
     }
 }
 
-export const createCourseModule = async (subjectId: string, title: string, order_index: number = 0): Promise<CourseModule> => {
+export const createCourseModule = async (
+    subjectId: string,
+    title: string,
+    order_index: number = 0,
+    curriculum_module_id?: string | null
+): Promise<CourseModule> => {
     try {
         const response = await fetch(`${API_URL}/api/subjects/${subjectId}/modules`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, order_index }),
+            body: JSON.stringify({ title, order_index, curriculum_module_id: curriculum_module_id || null }),
         })
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
         return await response.json()
@@ -746,18 +813,18 @@ export const createCourseModule = async (subjectId: string, title: string, order
 }
 
 export const updateCourseModule = async (id: string, data: Partial<CourseModule>): Promise<CourseModule> => {
-    try {
-        const response = await fetch(`${API_URL}/api/modules/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        })
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-        return await response.json()
-    } catch (error) {
-        console.error('Error updating module:', error)
-        throw error
+    const response = await fetch(`${API_URL}/api/modules/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}))
+        const msg = errBody?.error || errBody?.message || `HTTP error! status: ${response.status}`
+        console.error('Error updating module:', msg, errBody)
+        throw new Error(msg)
     }
+    return await response.json()
 }
 
 export const deleteCourseModule = async (id: string): Promise<void> => {
@@ -1270,3 +1337,552 @@ export const submitExitTicketResponse = async (
         throw error
     }
 }
+
+// ============================================
+// CURRICULUM
+// ============================================
+
+export const getCurriculumGrades = async (): Promise<CurriculumGrade[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/grades`)
+        if (!response.ok) {
+            const errorBody = await response.text()
+            throw new Error(`HTTP error! status: ${response.status} - ${errorBody}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching curriculum grades:', error)
+        throw error
+    }
+}
+
+export const getCurriculumSubjectsByGrade = async (gradeId: string): Promise<CurriculumSubject[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/grades/${gradeId}/subjects`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching curriculum subjects:', error)
+        throw error
+    }
+}
+
+export const getCurriculumModulesBySubject = async (subjectId: string): Promise<CurriculumModule[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/subjects/${subjectId}/modules`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching curriculum modules:', error)
+        throw error
+    }
+}
+
+export const getCurriculumTree = async (): Promise<CurriculumGradeTree[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/tree`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching curriculum tree:', error)
+        throw error
+    }
+}
+
+// ============================================
+// THINK BLOCKS (PIENSA, OBSERVA Y EXPERIMENTA)
+// ============================================
+
+export const getThinkBlocks = async (curriculumModuleId?: string): Promise<ThinkBlock[]> => {
+    try {
+        const url = curriculumModuleId
+            ? `${API_URL}/api/think-blocks?curriculum_module_id=${curriculumModuleId}`
+            : `${API_URL}/api/think-blocks`
+        const response = await fetch(url)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching think blocks:', error)
+        throw error
+    }
+}
+
+/** Fetch think blocks for a specific module instance (resolves via curriculum_module_id). */
+export const getModuleThinkBlocks = async (moduleId: string): Promise<ThinkBlock[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/modules/${moduleId}`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching module think blocks:', error)
+        throw error
+    }
+}
+
+
+export const getThinkBlock = async (id: string): Promise<ThinkBlock> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/${id}`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching think block:', error)
+        throw error
+    }
+}
+
+export const createThinkBlock = async (payload: {
+    curriculum_module_id: string
+    fun_fact_md: string
+    image_url?: string | null
+    order_index?: number
+    is_active?: boolean
+    prompts?: Partial<ThinkBlockPrompt>[]
+}): Promise<ThinkBlock> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error creating think block:', error)
+        throw error
+    }
+}
+
+export const updateThinkBlock = async (
+    id: string,
+    payload: Partial<ThinkBlock>
+): Promise<ThinkBlock> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error updating think block:', error)
+        throw error
+    }
+}
+
+export const deleteThinkBlock = async (id: string): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/${id}`, {
+            method: 'DELETE',
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Error deleting think block:', error)
+        throw error
+    }
+}
+
+export const bulkReplaceThinkBlockPrompts = async (
+    id: string,
+    prompts: Array<{ prompt_type?: string; icon?: string | null; label?: string | null; prompt_md: string; prompt_order?: number }>
+): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/${id}/prompts/bulk`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompts }),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Error replacing think block prompts:', error)
+        throw error
+    }
+}
+
+/** Save or update a student's open response for a single think block prompt. */
+export const saveStudentThinkBlockAnswer = async (
+    promptId: string,
+    studentId: string,
+    answerMd: string
+): Promise<any> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/prompts/${promptId}/answer`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: studentId, answer_md: answerMd }),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error saving think block prompt answer:', error)
+        throw error
+    }
+}
+
+/** Save or update multiple student open responses for a think block. */
+export const saveStudentThinkBlockAnswers = async (
+    blockId: string,
+    studentId: string,
+    answers: { prompt_id: string; answer_md: string }[]
+): Promise<any> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/${blockId}/answers`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: studentId, answers }),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error saving think block answers:', error)
+        throw error
+    }
+}
+
+// ============================================
+// QUIZZES
+// ============================================
+
+export type QuizQuestionType =
+    | 'multiple_choice'
+    | 'true_false'
+    | 'checklist'
+    | 'open'
+    | 'complete_sentence'
+
+export interface QuizQuestion {
+    id: string
+    quiz_id: string
+    question_order: number
+    type: QuizQuestionType
+    title: string
+    config?: Record<string, any>
+    required: boolean
+    created_at?: string
+}
+
+export interface Quiz {
+    id: string
+    title: string
+    description?: string
+    curriculum_module_id?: string
+    created_by?: string
+    is_active: boolean
+    created_at: string
+    updated_at: string
+    questions?: QuizQuestion[]
+    quiz_questions?: [{ count: number }]
+}
+
+export interface CreateQuizPayload {
+    title: string
+    description?: string
+    is_active?: boolean
+    curriculum_module_id?: string
+    questions?: Omit<QuizQuestion, 'id' | 'quiz_id' | 'created_at'>[]
+}
+
+export interface UpdateQuizPayload {
+    title?: string
+    description?: string
+    is_active?: boolean
+    curriculum_module_id?: string
+}
+
+export interface BulkReplaceQuizQuestionsPayload {
+    type: QuizQuestionType
+    title: string
+    config?: Record<string, any>
+    required?: boolean
+}
+
+export const getQuizzes = async (curriculumModuleId?: string): Promise<Quiz[]> => {
+    try {
+        const url = curriculumModuleId
+            ? `${API_URL}/api/quizzes?curriculum_module_id=${curriculumModuleId}`
+            : `${API_URL}/api/quizzes`
+        const response = await fetch(url)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching quizzes:', error)
+        throw error
+    }
+}
+
+export const getQuiz = async (id: string): Promise<Quiz> => {
+    try {
+        const response = await fetch(`${API_URL}/api/quizzes/${id}`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching quiz:', error)
+        throw error
+    }
+}
+
+export const createQuiz = async (payload: CreateQuizPayload): Promise<Quiz> => {
+    try {
+        const response = await fetch(`${API_URL}/api/quizzes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error creating quiz:', error)
+        throw error
+    }
+}
+
+export const updateQuiz = async (id: string, payload: UpdateQuizPayload): Promise<Quiz> => {
+    try {
+        const response = await fetch(`${API_URL}/api/quizzes/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error updating quiz:', error)
+        throw error
+    }
+}
+
+export const deleteQuiz = async (id: string): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/quizzes/${id}`, { method: 'DELETE' })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Error deleting quiz:', error)
+        throw error
+    }
+}
+
+export const bulkReplaceQuizQuestions = async (
+    quizId: string,
+    questions: BulkReplaceQuizQuestionsPayload[]
+): Promise<QuizQuestion[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/quizzes/${quizId}/questions/bulk`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ questions }),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error bulk-replacing quiz questions:', error)
+        throw error
+    }
+}
+
+// ============================================
+// MODULE QUIZZES ATTACHMENT
+// ============================================
+
+export interface ModuleQuizAttachment {
+    id: string
+    quiz_id: string
+    module_id?: string
+    due_at?: string | null
+    available_from?: string | null
+    is_active: boolean
+    quizzes: Quiz
+}
+
+export const getModuleQuizzes = async (
+    moduleId: string
+): Promise<ModuleQuizAttachment[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/quizzes/modules/${moduleId}`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching module quizzes:', error)
+        throw error
+    }
+}
+
+export const attachQuizzesToModule = async (
+    moduleId: string,
+    quizIds: string[],
+    dueAt?: string,
+    availableFrom?: string
+): Promise<ModuleQuizAttachment[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/quizzes/modules/${moduleId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                quiz_ids: quizIds,
+                due_at: dueAt || null,
+                available_from: availableFrom || null,
+            }),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error attaching quizzes to module:', error)
+        throw error
+    }
+}
+
+export const detachQuizFromModule = async (
+    moduleId: string,
+    quizId: string
+): Promise<void> => {
+    try {
+        const response = await fetch(
+            `${API_URL}/api/quizzes/modules/${moduleId}/${quizId}`,
+            { method: 'DELETE' }
+        )
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Error detaching quiz from module:', error)
+        throw error
+    }
+}
+
+// ============================================
+// STUDENT QUIZ RESPONSES
+// ============================================
+
+export interface StudentQuizAnswer {
+    id?: string
+    response_id?: string
+    question_id: string
+    answer: string
+    is_correct?: boolean | null
+    points_awarded?: number | null
+    quiz_questions?: {
+        title: string
+        type: string
+        config: Record<string, any>
+        question_order: number
+    }
+}
+
+export interface StudentQuizResponse {
+    id: string
+    module_quiz_id: string
+    student_id: string
+    status: 'in_progress' | 'submitted'
+    started_at?: string
+    submitted_at?: string
+    score?: number | null
+    max_score?: number | null
+    student_quiz_answers?: StudentQuizAnswer[]
+}
+
+/** Fetch a student's existing response for a specific module_quiz attachment. Returns null if not yet answered. */
+export const getModuleQuizResponse = async (
+    moduleQuizId: string,
+    studentId: string
+): Promise<StudentQuizResponse | null> => {
+    try {
+        const response = await fetch(
+            `${API_URL}/api/quizzes/module-quizzes/${moduleQuizId}/my-response?student_id=${studentId}`
+        )
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching module quiz response:', error)
+        throw error
+    }
+}
+
+/** Submit a student's answers to a module quiz attachment. Auto-graded on the backend. */
+export const submitModuleQuizResponse = async (
+    moduleQuizId: string,
+    studentId: string,
+    answers: { question_id: string; answer: string | string[] | boolean }[]
+): Promise<StudentQuizResponse> => {
+    try {
+        const response = await fetch(
+            `${API_URL}/api/quizzes/module-quizzes/${moduleQuizId}/responses`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_id: studentId, answers }),
+            }
+        )
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error submitting module quiz response:', error)
+        throw error
+    }
+}

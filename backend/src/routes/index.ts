@@ -13,3 +13,6 @@ export { default as calendarRouter } from './calendar';
 export { default as commentsRouter } from './comments';
 export { default as uploadRouter } from './uploadRoutes';
 export { default as exitTicketsRouter } from './exitTickets';
+export { default as quizzesRouter } from './quizzes';
+export { default as curriculumRouter } from './curriculum';
+export { default as thinkBlocksRouter } from './thinkBlocks';

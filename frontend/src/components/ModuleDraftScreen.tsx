@@ -1,11 +1,25 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
-import { getCourseModules, getModuleVrCode, getModuleExitTickets, CourseModule, ModuleItem, VrCodeEntry, ExitTicketTemplate } from '../lib/adminApi'
+import {
+  getCourseModules,
+  getModuleVrCode,
+  getModuleExitTickets,
+  getModuleQuizzes,
+  getModuleThinkBlocks,
+  CourseModule,
+  ModuleItem,
+  VrCodeEntry,
+  ExitTicketTemplate,
+  ModuleQuizAttachment,
+  ThinkBlock
+} from '../lib/adminApi'
 import { getUserRole } from '../utils/getUserRole'
 import { Book, Gamepad2, FileText, ArrowRight, Folder, Play, Ticket } from 'lucide-react'
 import { markItemAsRead } from '../lib/api'
 import ExitTicketTakeScreen from './ExitTicketTakeScreen'
+import QuizTakeScreen from './QuizTakeScreen'
+import ThinkBlockViewerScreen from './ThinkBlockViewerScreen'
 import bannerImg from '../assets/banner.png'
 
 import ciberImg from '../assets/ciber.png'
@@ -368,13 +382,245 @@ const ExitTicketCard = ({ ticket, onView }: { ticket: ExitTicketTemplate, onView
   )
 }
 
+const QuizCard = ({ attachment, onOpen }: { attachment: ModuleQuizAttachment; onOpen: (attachment: ModuleQuizAttachment) => void }) => {
+  const quiz = attachment.quizzes
+  if (!quiz) return null
+
+  const questionCount =
+    quiz.questions?.length ??
+    (quiz.quiz_questions && quiz.quiz_questions[0] ? quiz.quiz_questions[0].count : 0)
+
+  const handleOpen = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onOpen(attachment)
+  }
+
+  return (
+    <div 
+      className="hoverable-card"
+      onClick={handleOpen}
+      style={{
+        backgroundColor: '#25164E',
+        borderRadius: '16px',
+        padding: '24px',
+        width: '320px',
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        border: '1px solid rgba(255,255,255,0.05)',
+        cursor: 'pointer'
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div style={{
+          width: '180px',
+          height: '180px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #38bdf8 0%, #1e40af 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '6px solid #432E7E',
+          fontSize: '4.5rem',
+          boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+        }}>
+          📝
+        </div>
+      </div>
+      <div>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
+          {quiz.title || 'Cuestionario'}
+        </h3>
+        <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
+          {quiz.description || "Cuestionario de evaluación para poner a prueba tus conocimientos sobre este módulo."}
+        </p>
+        <div style={{
+          marginTop: '10px',
+          backgroundColor: 'rgba(56,189,248,0.15)',
+          borderRadius: '8px',
+          padding: '6px 12px',
+          color: '#38bdf8',
+          fontSize: '0.82rem',
+          fontWeight: 600,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}>
+          ● {questionCount > 0 ? `${questionCount} ${questionCount === 1 ? 'pregunta' : 'preguntas'}` : 'Cuestionario'}
+        </div>
+      </div>
+      <div style={{ marginTop: 'auto' }}>
+        <button
+          onClick={handleOpen}
+          style={{
+            width: '100%',
+            backgroundColor: '#38bdf8',
+            color: '#0f172a',
+            border: 'none',
+            padding: '12px',
+            borderRadius: '8px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            transition: 'background 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#7dd3fc'}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#38bdf8'}
+        >
+          Ver Cuestionario <FileText size={16} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+const ThinkBlockCard = ({ blocks, onOpen }: { blocks: ThinkBlock[]; onOpen: () => void }) => {
+  const firstBlock = blocks[0]
+  if (!firstBlock) return null
+
+  const totalPrompts = blocks.reduce((acc, block) => {
+    const pCount = Array.isArray(block.prompts) 
+      ? block.prompts.length 
+      : (Array.isArray(block.think_block_prompts) && block.think_block_prompts.length > 0
+          ? (typeof block.think_block_prompts[0] === 'object' && 'count' in block.think_block_prompts[0]
+              ? (block.think_block_prompts[0] as { count: number }).count
+              : block.think_block_prompts.length)
+          : 0)
+    return acc + pCount
+  }, 0)
+
+  const handleOpen = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onOpen()
+  }
+
+  const cleanDescription = firstBlock.fun_fact_md 
+    ? firstBlock.fun_fact_md.replace(/[#*`_]/g, '').trim()
+    : "Bloque de curiosidad y actividades de pensamiento crítico para explorar y analizar este tema."
+
+  return (
+    <div 
+      className="hoverable-card"
+      onClick={handleOpen}
+      style={{
+        backgroundColor: '#25164E',
+        borderRadius: '16px',
+        padding: '24px',
+        width: '320px',
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        border: '1px solid rgba(255,255,255,0.05)',
+        cursor: 'pointer'
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        {firstBlock.image_url ? (
+          <img
+            src={firstBlock.image_url}
+            alt="Piensa, observa y experimenta"
+            style={{
+              width: '180px',
+              height: '180px',
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: '6px solid #432E7E',
+              boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+            }}
+          />
+        ) : (
+          <div style={{
+            width: '180px',
+            height: '180px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #34d399 0%, #059669 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '6px solid #432E7E',
+            fontSize: '4.5rem',
+            boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+          }}>
+            🔬
+          </div>
+        )}
+      </div>
+      <div>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
+          Piensa, Observa y Experimenta
+        </h3>
+        <p style={{
+          fontSize: '0.875rem',
+          color: 'rgba(255,255,255,0.7)',
+          lineHeight: '1.4',
+          display: '-webkit-box',
+          WebkitLineClamp: 3,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }}>
+          {cleanDescription}
+        </p>
+        <div style={{
+          marginTop: '10px',
+          backgroundColor: 'rgba(52,211,153,0.15)',
+          borderRadius: '8px',
+          padding: '6px 12px',
+          color: '#34d399',
+          fontSize: '0.82rem',
+          fontWeight: 600,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}>
+          ● {blocks.length} {blocks.length === 1 ? 'experimento' : 'experimentos'}{totalPrompts > 0 ? ` (${totalPrompts} actividades)` : ''}
+        </div>
+      </div>
+      <div style={{ marginTop: 'auto' }}>
+        <button
+          onClick={handleOpen}
+          style={{
+            width: '100%',
+            backgroundColor: '#34d399',
+            color: '#064e3b',
+            border: 'none',
+            padding: '12px',
+            borderRadius: '8px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            transition: 'background 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#6ee7b7'}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#34d399'}
+        >
+          Ver Experimentos <FileText size={16} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
   const navigate = useNavigate()
   const [moduleData, setModuleData] = useState<CourseModule | null>(null)
   const [vrEntries, setVrEntries] = useState<VrCodeEntry[]>([])
   const [exitTickets, setExitTickets] = useState<ExitTicketTemplate[]>([])
+  const [moduleQuizzes, setModuleQuizzes] = useState<ModuleQuizAttachment[]>([])
+  const [thinkBlocks, setThinkBlocks] = useState<ThinkBlock[]>([])
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
+  const [selectedQuizAttachment, setSelectedQuizAttachment] = useState<ModuleQuizAttachment | null>(null)
+  const [showThinkBlocks, setShowThinkBlocks] = useState(false)
   const [loading, setLoading] = useState(true)
   const [, setError] = useState<string | null>(null)
 
@@ -395,10 +641,12 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [modules, vr, tickets] = await Promise.all([
+      const [modules, vr, tickets, quizzes, thinking] = await Promise.all([
         getCourseModules(courseId!),
         getModuleVrCode(moduleId!),
-        getModuleExitTickets(moduleId!).catch(() => [])
+        getModuleExitTickets(moduleId!).catch(() => []),
+        getModuleQuizzes(moduleId!).catch(() => []),
+        getModuleThinkBlocks(moduleId!).catch(() => [])
       ])
 
       const targetModule = modules.find(m => m.id === moduleId)
@@ -409,6 +657,8 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
       setModuleData(targetModule)
       setVrEntries(vr)
       setExitTickets(tickets)
+      setModuleQuizzes(quizzes)
+      setThinkBlocks(thinking)
     } catch (err: any) {
       setError(err.message || 'Error al cargar los ítems del módulo')
     } finally {
@@ -526,11 +776,11 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
           </div>
         )}
 
-        {/* Ticket de Salida Section */}
-        {exitTickets.length > 0 && (
+        {/* Ticket de Salida, Quizzes & Think Blocks Section */}
+        {(exitTickets.length > 0 || moduleQuizzes.length > 0 || thinkBlocks.length > 0) && (
           <div style={{ marginBottom: '4rem' }}>
             <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
-              <Ticket size={24} color="#FCEE50" /> TICKET DE SALIDA
+              <Ticket size={24} color="#FCEE50" /> EVALUACIÓN Y ACTIVIDADES
             </h2>
             <div style={{
               display: 'flex',
@@ -546,6 +796,12 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
               {exitTickets.map((ticket) => (
                 <ExitTicketCard key={ticket.id} ticket={ticket} onView={setSelectedTicketId} />
               ))}
+              {moduleQuizzes.map((attachment) => (
+                <QuizCard key={attachment.id} attachment={attachment} onOpen={setSelectedQuizAttachment} />
+              ))}
+              {thinkBlocks.length > 0 && (
+                <ThinkBlockCard blocks={thinkBlocks} onOpen={() => setShowThinkBlocks(true)} />
+              )}
             </div>
           </div>
         )}
@@ -580,6 +836,25 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
           moduleId={moduleId!}
           user={user}
           onClose={() => setSelectedTicketId(null)}
+          moduleTitle={moduleData?.title}
+        />
+      )}
+
+      {selectedQuizAttachment && (
+        <QuizTakeScreen
+          moduleQuizId={selectedQuizAttachment.id}
+          quizId={selectedQuizAttachment.quiz_id}
+          user={user}
+          onClose={() => setSelectedQuizAttachment(null)}
+          moduleTitle={moduleData?.title}
+        />
+      )}
+
+      {showThinkBlocks && (
+        <ThinkBlockViewerScreen
+          blocks={thinkBlocks}
+          user={user}
+          onClose={() => setShowThinkBlocks(false)}
           moduleTitle={moduleData?.title}
         />
       )}

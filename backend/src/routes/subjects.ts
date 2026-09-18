@@ -18,7 +18,8 @@ router.post('/api/subjects', async (req, res) => {
             grade_id,
             schedule_days,
             schedule_start_time,
-            schedule_end_time
+            schedule_end_time,
+            curriculum_subject_id
         } = req.body;
 
         if (!name || !grade_id) {
@@ -38,7 +39,8 @@ router.post('/api/subjects', async (req, res) => {
                 grade_id,
                 schedule_days: schedule_days || null,
                 schedule_start_time: schedule_start_time || null,
-                schedule_end_time: schedule_end_time || null
+                schedule_end_time: schedule_end_time || null,
+                curriculum_subject_id: curriculum_subject_id || null
             })
             .select()
             .single();
@@ -185,23 +187,25 @@ router.post('/api/subjects/:subjectId/clone', async (req, res) => {
 router.put('/api/subjects/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, short_name, description, start_date, end_date, visibility, max_students, is_active, schedule_days, schedule_start_time, schedule_end_time } = req.body;
+        const { name, short_name, description, start_date, end_date, visibility, max_students, is_active, schedule_days, schedule_start_time, schedule_end_time, curriculum_subject_id } = req.body;
+
+        const updateData: any = {};
+        if (name !== undefined) updateData.name = name;
+        if (short_name !== undefined) updateData.short_name = short_name;
+        if (description !== undefined) updateData.description = description;
+        if (start_date !== undefined) updateData.start_date = start_date || null;
+        if (end_date !== undefined) updateData.end_date = end_date || null;
+        if (visibility !== undefined) updateData.visibility = visibility;
+        if (max_students !== undefined) updateData.max_students = max_students;
+        if (is_active !== undefined) updateData.is_active = is_active;
+        if (schedule_days !== undefined) updateData.schedule_days = schedule_days;
+        if (schedule_start_time !== undefined) updateData.schedule_start_time = schedule_start_time;
+        if (schedule_end_time !== undefined) updateData.schedule_end_time = schedule_end_time;
+        if (curriculum_subject_id !== undefined) updateData.curriculum_subject_id = curriculum_subject_id || null;
 
         const { data, error } = await supabase
             .from('subjects')
-            .update({ 
-                name, 
-                short_name, 
-                description, 
-                start_date: start_date || null, 
-                end_date: end_date || null, 
-                visibility, 
-                max_students, 
-                is_active,
-                schedule_days: schedule_days !== undefined ? schedule_days : undefined,
-                schedule_start_time: schedule_start_time !== undefined ? schedule_start_time : undefined,
-                schedule_end_time: schedule_end_time !== undefined ? schedule_end_time : undefined
-            })
+            .update(updateData)
             .eq('id', id)
             .select()
             .single();
@@ -553,11 +557,11 @@ router.get('/api/subjects/:subjectId/modules', async (req, res) => {
 router.post('/api/subjects/:subjectId/modules', async (req, res) => {
     try {
         const { subjectId } = req.params;
-        const { title, order_index } = req.body;
+        const { title, order_index, curriculum_module_id } = req.body;
 
         const { data, error } = await supabase
             .from('modules')
-            .insert({ subject_id: subjectId, title, order_index })
+            .insert({ subject_id: subjectId, title, order_index, curriculum_module_id: curriculum_module_id || null })
             .select()
             .single();
 

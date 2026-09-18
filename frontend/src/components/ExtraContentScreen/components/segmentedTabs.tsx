@@ -1,30 +1,37 @@
 import React from 'react'
 
-type TabKey = 'categories' | 'exit_tickets'
+export type TabKey = 'categories' | 'exit_tickets' | 'global_curriculum'
 
 interface SegmentedTabsProps {
     activeTab: TabKey
     onChange: (tab: TabKey) => void
     labelCategories: string
     labelExitTickets: string
+    labelGlobalCurriculum: string
 }
 
 /**
- * Single-track segmented control (not two separate floating buttons).
- * The active segment is a sliding highlight, which reads immediately as
- * "one toggle, two states" rather than two independent pills.
+ * Single-track segmented control.
+ * The active segment is a sliding highlight across 3 states.
  */
 const SegmentedTabs: React.FC<SegmentedTabsProps> = ({
     activeTab,
     onChange,
     labelCategories,
     labelExitTickets,
+    labelGlobalCurriculum,
 }) => {
+    const getTransform = () => {
+        if (activeTab === 'categories') return 'translateX(0%)'
+        if (activeTab === 'exit_tickets') return 'translateX(100%)'
+        return 'translateX(200%)'
+    }
+
     return (
         <div className="segmented-tabs" role="tablist">
             <div
                 className="segmented-tabs-highlight"
-                style={{ transform: activeTab === 'categories' ? 'translateX(0%)' : 'translateX(100%)' }}
+                style={{ transform: getTransform() }}
             />
             <button
                 role="tab"
@@ -40,9 +47,15 @@ const SegmentedTabs: React.FC<SegmentedTabsProps> = ({
                 className={`segmented-tab ${activeTab === 'exit_tickets' ? 'active' : ''}`}
                 onClick={() => onChange('exit_tickets')}
             >
-                <span>
-                    {labelExitTickets}
-                </span>
+                <span>{labelExitTickets}</span>
+            </button>
+            <button
+                role="tab"
+                aria-selected={activeTab === 'global_curriculum'}
+                className={`segmented-tab ${activeTab === 'global_curriculum' ? 'active' : ''}`}
+                onClick={() => onChange('global_curriculum')}
+            >
+                <span>{labelGlobalCurriculum}</span>
             </button>
         </div>
     )
