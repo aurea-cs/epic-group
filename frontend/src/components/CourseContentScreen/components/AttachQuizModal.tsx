@@ -32,7 +32,7 @@ const AttachQuizModal: React.FC<AttachQuizModalProps> = ({
             .then(data => {
                 if (isMounted) setQuizzes(data)
             })
-            .catch(err => {
+            .catch(() => {
                 // If filtering by curriculumModuleId returned error or empty, fetch all
                 getQuizzes()
                     .then(data => { if (isMounted) setQuizzes(data) })

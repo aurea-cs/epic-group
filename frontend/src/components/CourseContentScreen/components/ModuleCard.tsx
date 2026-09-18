@@ -19,7 +19,6 @@ import {
     type VrCodeEntry,
     type ExitTicketTemplate,
     type ModuleQuizAttachment,
-    type Quiz,
     type ThinkBlock,
     getModuleExitTickets,
     attachExitTicketsToModule,

@@ -32,8 +32,6 @@ const DEFAULT_PROMPT_ICONS: Record<ThinkBlockPromptType, string> = {
     otro: '💡',
 }
 
-const PRESET_ICONS = ['🧠', '👀', '🧪', '🔎', '💡', '❓', '🔬', '📝', '⚡', '🌱']
-
 function EMPTY_PROMPT(type: ThinkBlockPromptType = 'piensa'): ThinkBlockPrompt {
     return {
         prompt_type: type,
@@ -327,7 +325,6 @@ const ThinkBlockEditor: React.FC<ThinkBlockEditorProps> = ({
     onBack,
     onSaved,
 }) => {
-    const { t } = useTranslation()
     const [loading, setLoading] = useState<boolean>(!!blockId)
     const [saving, setSaving] = useState<boolean>(false)
     const [error, setError] = useState<string | null>(null)
