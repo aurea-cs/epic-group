@@ -18,6 +18,7 @@ import { getUserRole } from '../utils/getUserRole'
 import { Book, Gamepad2, FileText, ArrowRight, Folder, Play, Ticket } from 'lucide-react'
 import { markItemAsRead } from '../lib/api'
 import ExitTicketTakeScreen from './ExitTicketTakeScreen'
+import QuizTakeScreen from './QuizTakeScreen'
 import bannerImg from '../assets/banner.png'
 
 import ciberImg from '../assets/ciber.png'
@@ -380,7 +381,7 @@ const ExitTicketCard = ({ ticket, onView }: { ticket: ExitTicketTemplate, onView
   )
 }
 
-const QuizCard = ({ attachment }: { attachment: ModuleQuizAttachment }) => {
+const QuizCard = ({ attachment, onOpen }: { attachment: ModuleQuizAttachment; onOpen: (attachment: ModuleQuizAttachment) => void }) => {
   const quiz = attachment.quizzes
   if (!quiz) return null
 
@@ -390,7 +391,7 @@ const QuizCard = ({ attachment }: { attachment: ModuleQuizAttachment }) => {
 
   const handleOpen = (e: React.MouseEvent) => {
     e.stopPropagation()
-    window.open('about:blank', '_blank')
+    onOpen(attachment)
   }
 
   return (
@@ -611,6 +612,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   const [moduleQuizzes, setModuleQuizzes] = useState<ModuleQuizAttachment[]>([])
   const [thinkBlocks, setThinkBlocks] = useState<ThinkBlock[]>([])
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
+  const [selectedQuizAttachment, setSelectedQuizAttachment] = useState<ModuleQuizAttachment | null>(null)
   const [loading, setLoading] = useState(true)
   const [, setError] = useState<string | null>(null)
 
@@ -787,7 +789,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
                 <ExitTicketCard key={ticket.id} ticket={ticket} onView={setSelectedTicketId} />
               ))}
               {moduleQuizzes.map((attachment) => (
-                <QuizCard key={attachment.id} attachment={attachment} />
+                <QuizCard key={attachment.id} attachment={attachment} onOpen={setSelectedQuizAttachment} />
               ))}
               {thinkBlocks.map((block) => (
                 <ThinkBlockCard key={block.id} block={block} />
@@ -826,6 +828,16 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
           moduleId={moduleId!}
           user={user}
           onClose={() => setSelectedTicketId(null)}
+          moduleTitle={moduleData?.title}
+        />
+      )}
+
+      {selectedQuizAttachment && (
+        <QuizTakeScreen
+          moduleQuizId={selectedQuizAttachment.id}
+          quizId={selectedQuizAttachment.quiz_id}
+          user={user}
+          onClose={() => setSelectedQuizAttachment(null)}
           moduleTitle={moduleData?.title}
         />
       )}

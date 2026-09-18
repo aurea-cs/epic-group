@@ -58,16 +58,47 @@ function gradeAnswer(question: any, answerValue: any): { is_correct: boolean | n
   switch (question.type) {
     case 'multiple_choice': {
       const correct = config.correct_option_id;
-      if (correct === undefined) return { is_correct: null, points_awarded: null };
+      if (correct === undefined || correct === null) return { is_correct: null, points_awarded: null };
       const isCorrect = String(answerValue) === String(correct);
       return { is_correct: isCorrect, points_awarded: isCorrect ? points : 0 };
     }
     case 'true_false': {
       const correct = config.correct_answer;
-      if (correct === undefined) return { is_correct: null, points_awarded: null };
+      if (correct === undefined || correct === null) return { is_correct: null, points_awarded: null };
       const isCorrect = String(answerValue) === String(correct);
       return { is_correct: isCorrect, points_awarded: isCorrect ? points : 0 };
     }
+    case 'checklist': {
+      const correctIds: string[] = Array.isArray(config.correct_ids) ? config.correct_ids.map(String) : [];
+      if (!correctIds.length) return { is_correct: null, points_awarded: null };
+      let userSelected: string[] = [];
+      try {
+        if (Array.isArray(answerValue)) {
+          userSelected = answerValue.map(String);
+        } else if (typeof answerValue === 'string') {
+          if (answerValue.startsWith('[')) {
+            userSelected = JSON.parse(answerValue).map(String);
+          } else if (answerValue.trim()) {
+            userSelected = answerValue.split(',').map((s) => s.trim());
+          }
+        }
+      } catch (e) {
+        userSelected = [];
+      }
+      const sortedCorrect = [...correctIds].sort();
+      const sortedUser = [...userSelected].sort();
+      const isCorrect =
+        sortedCorrect.length === sortedUser.length &&
+        sortedCorrect.every((val, idx) => val === sortedUser[idx]);
+      return { is_correct: isCorrect, points_awarded: isCorrect ? points : 0 };
+    }
+    case 'complete_sentence': {
+      const correct = config.correct_option;
+      if (!correct) return { is_correct: null, points_awarded: null };
+      const isCorrect = String(answerValue).trim().toLowerCase() === String(correct).trim().toLowerCase();
+      return { is_correct: isCorrect, points_awarded: isCorrect ? points : 0 };
+    }
+    case 'open':
     default:
       return { is_correct: null, points_awarded: null };
   }

@@ -1761,4 +1761,81 @@ export const detachQuizFromModule = async (
         console.error('Error detaching quiz from module:', error)
         throw error
     }
+}
+
+// ============================================
+// STUDENT QUIZ RESPONSES
+// ============================================
+
+export interface StudentQuizAnswer {
+    id?: string
+    response_id?: string
+    question_id: string
+    answer: string
+    is_correct?: boolean | null
+    points_awarded?: number | null
+    quiz_questions?: {
+        title: string
+        type: string
+        config: Record<string, any>
+        question_order: number
+    }
+}
+
+export interface StudentQuizResponse {
+    id: string
+    module_quiz_id: string
+    student_id: string
+    status: 'in_progress' | 'submitted'
+    started_at?: string
+    submitted_at?: string
+    score?: number | null
+    max_score?: number | null
+    student_quiz_answers?: StudentQuizAnswer[]
+}
+
+/** Fetch a student's existing response for a specific module_quiz attachment. Returns null if not yet answered. */
+export const getModuleQuizResponse = async (
+    moduleQuizId: string,
+    studentId: string
+): Promise<StudentQuizResponse | null> => {
+    try {
+        const response = await fetch(
+            `${API_URL}/api/quizzes/module-quizzes/${moduleQuizId}/my-response?student_id=${studentId}`
+        )
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching module quiz response:', error)
+        throw error
+    }
+}
+
+/** Submit a student's answers to a module quiz attachment. Auto-graded on the backend. */
+export const submitModuleQuizResponse = async (
+    moduleQuizId: string,
+    studentId: string,
+    answers: { question_id: string; answer: string | string[] | boolean }[]
+): Promise<StudentQuizResponse> => {
+    try {
+        const response = await fetch(
+            `${API_URL}/api/quizzes/module-quizzes/${moduleQuizId}/responses`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_id: studentId, answers }),
+            }
+        )
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error submitting module quiz response:', error)
+        throw error
+    }
 }
