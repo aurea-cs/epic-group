@@ -400,7 +400,6 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
 
 
     const uniqueLevels = Array.from(new Set(grades.map(g => g.name)))
-    const gradesInSelectedLevel = grades.filter(g => g.name === selectedLevelName).sort((a, b) => (a.level || 0) - (b.level || 0))
 
     return (
         <div className='course-content-screen'>
