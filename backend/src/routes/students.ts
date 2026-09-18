@@ -32,12 +32,26 @@ router.get('/api/students', async (req, res) => {
         // Expanded shape — fetch enrollments + centers and attach them.
         const studentIds = students.map(s => s.id);
 
-        const { data: enrollments, error: enrollmentsError } = await supabase
-            .from('enrollments')
-            .select('student_id, center_id')
-            .in('student_id', studentIds);
+        // Batch student IDs in chunks of 100 to avoid overloading the PostgREST URL.
+        const CHUNK_SIZE = 100;
+        const enrollmentChunks = [];
+        for (let i = 0; i < studentIds.length; i += CHUNK_SIZE) {
+            enrollmentChunks.push(studentIds.slice(i, i + CHUNK_SIZE));
+        }
 
+        const enrollmentResults = await Promise.all(
+            enrollmentChunks.map(chunk =>
+                supabase
+                    .from('enrollments')
+                    .select('student_id, center_id')
+                    .in('student_id', chunk)
+            )
+        );
+
+        const enrollmentsError = enrollmentResults.find(r => r.error)?.error ?? null;
         if (enrollmentsError) throw enrollmentsError;
+
+        const enrollments = enrollmentResults.flatMap(r => r.data ?? []);
 
         const centerIds = [...new Set((enrollments || []).map(e => e.center_id).filter(Boolean))];
         let centersMap: Record<string, string> = {};
