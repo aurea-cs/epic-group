@@ -88,6 +88,7 @@ export interface ThinkBlockPrompt {
     prompt_md: string
     prompt_order?: number
     created_at?: string
+    my_answer?: string | null
 }
 
 export interface ThinkBlock {
@@ -1525,6 +1526,52 @@ export const bulkReplaceThinkBlockPrompts = async (
         }
     } catch (error) {
         console.error('Error replacing think block prompts:', error)
+        throw error
+    }
+}
+
+/** Save or update a student's open response for a single think block prompt. */
+export const saveStudentThinkBlockAnswer = async (
+    promptId: string,
+    studentId: string,
+    answerMd: string
+): Promise<any> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/prompts/${promptId}/answer`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: studentId, answer_md: answerMd }),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error saving think block prompt answer:', error)
+        throw error
+    }
+}
+
+/** Save or update multiple student open responses for a think block. */
+export const saveStudentThinkBlockAnswers = async (
+    blockId: string,
+    studentId: string,
+    answers: { prompt_id: string; answer_md: string }[]
+): Promise<any> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/${blockId}/answers`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: studentId, answers }),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error saving think block answers:', error)
         throw error
     }
 }

@@ -853,6 +853,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
       {showThinkBlocks && (
         <ThinkBlockViewerScreen
           blocks={thinkBlocks}
+          user={user}
           onClose={() => setShowThinkBlocks(false)}
           moduleTitle={moduleData?.title}
         />

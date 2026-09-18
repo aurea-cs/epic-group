@@ -1,10 +1,17 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { ArrowLeft, Lightbulb, Compass, FlaskConical, HelpCircle, ChevronDown } from 'lucide-react'
-import { type ThinkBlock, type ThinkBlockPrompt, type ThinkBlockPromptType } from '../lib/adminApi'
+import { ArrowLeft, Lightbulb, Compass, FlaskConical, HelpCircle, CheckCircle2, Send } from 'lucide-react'
+import { User } from '@supabase/supabase-js'
+import {
+  type ThinkBlock,
+  type ThinkBlockPrompt,
+  type ThinkBlockPromptType,
+  saveStudentThinkBlockAnswer,
+} from '../lib/adminApi'
 
 interface ThinkBlockViewerScreenProps {
   blocks: ThinkBlock[]
+  user: User
   onClose: () => void
   moduleTitle?: string
 }
@@ -45,12 +52,54 @@ const PROMPT_TYPE_CONFIG: Record<
 
 const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
   blocks,
+  user,
   onClose,
   moduleTitle,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const shouldReduceMotion = useReducedMotion()
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [savingMap, setSavingMap] = useState<Record<string, boolean>>({})
+  const [savedMap, setSavedMap] = useState<Record<string, boolean>>({})
+
+  // Initialize student answers from my_answer
+  useEffect(() => {
+    const initial: Record<string, string> = {}
+    blocks.forEach((b) => {
+      const prompts = Array.isArray(b.prompts)
+        ? b.prompts
+        : Array.isArray(b.think_block_prompts)
+        ? (b.think_block_prompts as ThinkBlockPrompt[])
+        : []
+      prompts.forEach((p) => {
+        if (p.id) {
+          initial[p.id] = p.my_answer || ''
+        }
+      })
+    })
+    setAnswers(initial)
+  }, [blocks])
+
+  const handleSavePrompt = async (promptId: string) => {
+    if (!promptId || !user?.id) return
+    const text = answers[promptId] || ''
+    try {
+      setSavingMap((prev) => ({ ...prev, [promptId]: true }))
+      setSavedMap((prev) => ({ ...prev, [promptId]: false }))
+      await saveStudentThinkBlockAnswer(promptId, user.id, text)
+      setSavedMap((prev) => ({ ...prev, [promptId]: true }))
+      setTimeout(() => {
+        setSavedMap((prev) => ({ ...prev, [promptId]: false }))
+      }, 3000)
+    } catch (err: any) {
+      console.error('Error al guardar respuesta:', err)
+      alert(err.message || 'Error al guardar respuesta')
+    } finally {
+      setSavingMap((prev) => ({ ...prev, [promptId]: false }))
+    }
+  }
 
   // ── Particle background canvas (emerald/teal glowing aura) ──────────
   useEffect(() => {
@@ -236,7 +285,7 @@ const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
               margin: 0,
             }}
           >
-            Explora estos experimentos, datos curiosos y retos para observar y analizar los conceptos de este módulo.
+            Explora estos experimentos y registra tus observaciones y reflexiones en cada actividad.
           </p>
         </header>
 
@@ -284,7 +333,7 @@ const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
                     overflow: 'hidden',
                   }}
                 >
-                  {/* Card Banner Image / Icon */}
+                  {/* Card Banner Image */}
                   {block.image_url ? (
                     <div style={{ width: '100%', height: '220px', overflow: 'hidden', position: 'relative' }}>
                       <img
@@ -303,7 +352,7 @@ const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
                   ) : null}
 
                   <div style={{ padding: '2rem' }}>
-                    {/* Card Index & Title Header */}
+                    {/* Card Header */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem' }}>
                       <span
                         style={{
@@ -376,7 +425,7 @@ const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
 
                     {/* Prompts list */}
                     {prompts.length > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div
                           style={{
                             fontSize: '0.82rem',
@@ -401,52 +450,152 @@ const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
                                 borderRadius: '16px',
                                 padding: '1.25rem',
                                 display: 'flex',
-                                gap: '14px',
-                                alignItems: 'flex-start',
+                                flexDirection: 'column',
+                                gap: '12px',
                               }}
                             >
-                              <div
-                                style={{
-                                  color: typeCfg.color,
-                                  background: 'rgba(0,0,0,0.2)',
-                                  borderRadius: '12px',
-                                  padding: '8px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {prompt.icon ? (
-                                  <span style={{ fontSize: '1.2rem' }}>{prompt.icon}</span>
-                                ) : (
-                                  typeCfg.icon
-                                )}
-                              </div>
-                              <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
                                 <div
                                   style={{
-                                    fontSize: '0.8rem',
-                                    fontWeight: 800,
                                     color: typeCfg.color,
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.04em',
-                                    marginBottom: '4px',
+                                    background: 'rgba(0,0,0,0.2)',
+                                    borderRadius: '12px',
+                                    padding: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
                                   }}
                                 >
-                                  {prompt.label || typeCfg.label}
+                                  {prompt.icon ? (
+                                    <span style={{ fontSize: '1.2rem' }}>{prompt.icon}</span>
+                                  ) : (
+                                    typeCfg.icon
+                                  )}
                                 </div>
-                                <div
-                                  style={{
-                                    fontSize: '0.98rem',
-                                    color: 'rgba(255, 255, 255, 0.92)',
-                                    lineHeight: 1.55,
-                                    whiteSpace: 'pre-wrap',
-                                  }}
-                                >
-                                  {prompt.prompt_md}
+                                <div style={{ flex: 1 }}>
+                                  <div
+                                    style={{
+                                      fontSize: '0.8rem',
+                                      fontWeight: 800,
+                                      color: typeCfg.color,
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.04em',
+                                      marginBottom: '4px',
+                                    }}
+                                  >
+                                    {prompt.label || typeCfg.label}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: '0.98rem',
+                                      color: 'rgba(255, 255, 255, 0.92)',
+                                      lineHeight: 1.55,
+                                      whiteSpace: 'pre-wrap',
+                                    }}
+                                  >
+                                    {prompt.prompt_md}
+                                  </div>
                                 </div>
                               </div>
+
+                              {/* Student Answer Input */}
+                              {prompt.id && (
+                                <div
+                                  style={{
+                                    marginTop: '0.25rem',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '8px',
+                                  }}
+                                >
+                                  <label
+                                    style={{
+                                      fontSize: '0.8rem',
+                                      fontWeight: 600,
+                                      color: 'rgba(255,255,255,0.6)',
+                                    }}
+                                  >
+                                    Tu respuesta / observaciones:
+                                  </label>
+                                  <textarea
+                                    value={answers[prompt.id] ?? ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value
+                                      setAnswers((prev) => ({ ...prev, [prompt.id!]: val }))
+                                    }}
+                                    onBlur={() => handleSavePrompt(prompt.id!)}
+                                    placeholder="Escribe aquí tu respuesta o conclusiones..."
+                                    rows={3}
+                                    style={{
+                                      width: '100%',
+                                      backgroundColor: 'rgba(0, 0, 0, 0.35)',
+                                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                                      borderRadius: '12px',
+                                      padding: '0.85rem 1rem',
+                                      color: 'white',
+                                      fontSize: '0.95rem',
+                                      lineHeight: '1.5',
+                                      resize: 'vertical',
+                                      outline: 'none',
+                                      boxSizing: 'border-box',
+                                      fontFamily: 'inherit',
+                                    }}
+                                  />
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      justifyContent: 'flex-end',
+                                      alignItems: 'center',
+                                      gap: '10px',
+                                    }}
+                                  >
+                                    {savedMap[prompt.id] && (
+                                      <span
+                                        style={{
+                                          fontSize: '0.82rem',
+                                          color: '#4ade80',
+                                          fontWeight: 600,
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                        }}
+                                      >
+                                        <CheckCircle2 size={14} /> Respuesta guardada
+                                      </span>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSavePrompt(prompt.id!)}
+                                      disabled={savingMap[prompt.id]}
+                                      style={{
+                                        background: savingMap[prompt.id]
+                                          ? 'rgba(52, 211, 153, 0.4)'
+                                          : 'linear-gradient(135deg, #34d399, #059669)',
+                                        color: '#042f2e',
+                                        border: 'none',
+                                        padding: '7px 16px',
+                                        borderRadius: '8px',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 700,
+                                        cursor: savingMap[prompt.id] ? 'not-allowed' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        transition: 'all 0.2s ease',
+                                      }}
+                                    >
+                                      {savingMap[prompt.id] ? (
+                                        'Guardando...'
+                                      ) : (
+                                        <>
+                                          Enviar respuesta <Send size={14} />
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )
                         })}
