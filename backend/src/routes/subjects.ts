@@ -89,7 +89,8 @@ router.post('/api/subjects/:subjectId/clone', async (req, res) => {
                 schedule_days: sourceSubject.schedule_days,
                 schedule_start_time: sourceSubject.schedule_start_time,
                 schedule_end_time: sourceSubject.schedule_end_time,
-                campo_formativo: sourceSubject.campo_formativo
+                campo_formativo: sourceSubject.campo_formativo,
+                curriculum_subject_id: sourceSubject.curriculum_subject_id
             })
             .select()
             .single();
@@ -114,7 +115,8 @@ router.post('/api/subjects/:subjectId/clone', async (req, res) => {
                         subject_id: newSubject.id,
                         title: sourceMod.title,
                         description: sourceMod.description,
-                        order_index: sourceMod.order_index
+                        order_index: sourceMod.order_index,
+                        curriculum_module_id: sourceMod.curriculum_module_id
                     })
                     .select()
                     .single();

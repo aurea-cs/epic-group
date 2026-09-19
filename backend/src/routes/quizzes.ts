@@ -98,6 +98,40 @@ function gradeAnswer(question: any, answerValue: any): { is_correct: boolean | n
       const isCorrect = String(answerValue).trim().toLowerCase() === String(correct).trim().toLowerCase();
       return { is_correct: isCorrect, points_awarded: isCorrect ? points : 0 };
     }
+    case 'matching': {
+      const pairs: Array<{ id: string; left: string; right: string }> = config.pairs || [];
+      if (!pairs.length) return { is_correct: null, points_awarded: null };
+      let userMap: Record<string, string> = {};
+      try {
+        userMap = typeof answerValue === 'string' ? JSON.parse(answerValue) : (answerValue || {});
+      } catch (e) {
+        userMap = {};
+      }
+      const isCorrect = pairs.every((p) => {
+        const userChoice = userMap[p.id];
+        return userChoice && String(userChoice).trim() === String(p.right || p.id).trim();
+      });
+      return { is_correct: isCorrect, points_awarded: isCorrect ? points : 0 };
+    }
+    case 'ordering': {
+      const items: Array<{ id: string; text: string }> = config.items || [];
+      const correctSequence: string[] = config.correct_order || items.map((item) => item.id);
+      if (!correctSequence.length) return { is_correct: null, points_awarded: null };
+      let userSequence: string[] = [];
+      try {
+        userSequence = Array.isArray(answerValue)
+          ? answerValue
+          : typeof answerValue === 'string'
+          ? JSON.parse(answerValue)
+          : [];
+      } catch (e) {
+        userSequence = [];
+      }
+      const isCorrect =
+        userSequence.length === correctSequence.length &&
+        correctSequence.every((val, idx) => String(userSequence[idx]) === String(val));
+      return { is_correct: isCorrect, points_awarded: isCorrect ? points : 0 };
+    }
     case 'open':
     default:
       return { is_correct: null, points_awarded: null };

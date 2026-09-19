@@ -12,6 +12,8 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
     checklist: 'Casillas (múltiples correctas)',
     open: 'Respuesta abierta',
     complete_sentence: 'Completa la oración',
+    matching: 'Relacionar conceptos (líneas)',
+    ordering: 'Ordenar en secuencia',
 }
 
 const QuizViewerModal: React.FC<QuizViewerModalProps> = ({ quizId, onClose }) => {
@@ -175,6 +177,28 @@ const QuizViewerModal: React.FC<QuizViewerModalProps> = ({ quizId, onClose }) =>
                                     {q.type === 'true_false' && (
                                         <div style={{ fontSize: '0.85rem', marginTop: '0.4rem', color: '#4ade80' }}>
                                             Respuesta correcta: {q.config?.correct_answer === 'true' ? 'Verdadero' : 'Falso'}
+                                        </div>
+                                    )}
+
+                                    {q.type === 'matching' && q.config?.pairs && Array.isArray(q.config.pairs) && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.5rem', paddingLeft: '0.5rem' }}>
+                                            {q.config.pairs.map((p: any, pi: number) => (
+                                                <div key={pi} style={{ fontSize: '0.85rem', color: '#4ade80', display: 'flex', gap: '0.4rem' }}>
+                                                    <span>🔗</span>
+                                                    <span>{p.left} ➔ {p.right}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {q.type === 'ordering' && q.config?.items && Array.isArray(q.config.items) && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.5rem', paddingLeft: '0.5rem' }}>
+                                            {q.config.items.map((it: any, ii: number) => (
+                                                <div key={ii} style={{ fontSize: '0.85rem', color: '#4ade80', display: 'flex', gap: '0.4rem' }}>
+                                                    <span>{ii + 1}.</span>
+                                                    <span>{it.text}</span>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>

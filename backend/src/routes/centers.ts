@@ -162,7 +162,8 @@ router.post('/api/centers/:centerId/clone', async (req, res) => {
                                 schedule_days: sourceSubj.schedule_days,
                                 schedule_start_time: sourceSubj.schedule_start_time,
                                 schedule_end_time: sourceSubj.schedule_end_time,
-                                campo_formativo: sourceSubj.campo_formativo
+                                campo_formativo: sourceSubj.campo_formativo,
+                                curriculum_subject_id: sourceSubj.curriculum_subject_id
                             })
                             .select()
                             .single();
@@ -187,7 +188,8 @@ router.post('/api/centers/:centerId/clone', async (req, res) => {
                                         subject_id: newSubj.id,
                                         title: sourceMod.title,
                                         description: sourceMod.description,
-                                        order_index: sourceMod.order_index
+                                        order_index: sourceMod.order_index,
+                                        curriculum_module_id: sourceMod.curriculum_module_id
                                     })
                                     .select()
                                     .single();

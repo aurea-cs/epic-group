@@ -1586,6 +1586,8 @@ export type QuizQuestionType =
     | 'checklist'
     | 'open'
     | 'complete_sentence'
+    | 'matching'
+    | 'ordering'
 
 export interface QuizQuestion {
     id: string
