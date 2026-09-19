@@ -357,9 +357,8 @@ router.put('/questions/:questionId', async (req: Request, res: Response) => {
 router.delete('/questions/:questionId', async (req: Request, res: Response) => {
   const { questionId } = req.params;
 
-  // Clean up any answers already given to this question first.
-  await supabase.from('student_quiz_answers').delete().eq('question_id', questionId);
-
+  // NOTE: Do NOT delete student_quiz_answers here. The FK is now ON DELETE SET NULL,
+  // and question_snapshot preserves the full question data on the answer row.
   const { error } = await supabase.from('quiz_questions').delete().eq('id', questionId);
   if (error) return res.status(500).json({ error: error.message });
 
@@ -397,9 +396,8 @@ router.put('/:id/questions/bulk', async (req: Request, res: Response) => {
 
   const existingIds = (existingQuestions ?? []).map((q: any) => q.id);
 
-  if (existingIds.length > 0) {
-    await supabase.from('student_quiz_answers').delete().in('question_id', existingIds);
-  }
+  // NOTE: Do NOT delete student_quiz_answers — the FK is ON DELETE SET NULL and
+  // question_snapshot on each answer row keeps history intact without the live row.
 
   const { error: deleteErr } = await supabase.from('quiz_questions').delete().eq('quiz_id', id);
   if (deleteErr) return res.status(500).json({ error: deleteErr.message });
@@ -602,7 +600,9 @@ router.get('/module-quizzes/:moduleQuizId/my-response', async (req: Request, res
 
   const { data: response, error } = await supabase
     .from('student_quiz_responses')
-    .select('*, student_quiz_answers(*, quiz_questions(title, type, config, question_order))')
+    // question_snapshot is the primary source of truth; quiz_questions join is kept as
+    // a legacy fallback for older rows that were backfilled or had no snapshot yet.
+    .select('*, quiz_snapshot, student_quiz_answers(*, question_snapshot, quiz_questions(title, type, config, question_order))')
     .eq('module_quiz_id', moduleQuizId)
     .eq('student_id', userId)
     .maybeSingle();
@@ -659,7 +659,14 @@ router.post('/module-quizzes/:moduleQuizId/responses', async (req: Request, res:
   const questionById = new Map((questions ?? []).map((q: any) => [q.id, q]));
   const now = new Date().toISOString();
 
-  // 3. Create the response as in_progress first.
+  // Load the quiz metadata for quiz_snapshot
+  const { data: quizMeta } = await supabase
+    .from('quizzes')
+    .select('title, description')
+    .eq('id', moduleQuiz.quiz_id)
+    .single();
+
+  // 3. Create the response as in_progress first, including quiz_snapshot.
   const { data: response, error: respErr } = await supabase
     .from('student_quiz_responses')
     .insert({
@@ -667,13 +674,16 @@ router.post('/module-quizzes/:moduleQuizId/responses', async (req: Request, res:
       student_id: userId,
       status: 'in_progress',
       started_at: now,
+      quiz_snapshot: quizMeta
+        ? { title: quizMeta.title, description: quizMeta.description ?? null }
+        : null,
     })
     .select()
     .single();
 
   if (respErr) return res.status(500).json({ error: respErr.message });
 
-  // 4. Grade + insert answers.
+  // 4. Grade + insert answers, writing question_snapshot at the moment of answering.
   let totalScore = 0;
   let totalMax = 0;
   let anyGraded = false;
@@ -694,6 +704,18 @@ router.post('/module-quizzes/:moduleQuizId/responses', async (req: Request, res:
       answer: typeof a.answer === 'object' ? JSON.stringify(a.answer) : String(a.answer),
       is_correct,
       points_awarded,
+      // Snapshot the full question definition so this answer is self-contained
+      // even if the question is later edited or deleted.
+      question_snapshot: question
+        ? {
+            id: question.id,
+            title: question.title,
+            type: question.type,
+            config: question.config ?? {},
+            question_order: question.question_order,
+            required: question.required ?? true,
+          }
+        : null,
     };
   });
 
@@ -773,7 +795,7 @@ router.get('/modules/:moduleId/:quizId/responses', async (req: Request, res: Res
   const { data, error } = await supabase
     .from('student_quiz_responses')
     .select(
-      '*, users:student_id(id, full_name, email), student_quiz_answers(*, quiz_questions(title, type, question_order))'
+      '*, quiz_snapshot, users:student_id(id, full_name, email), student_quiz_answers(*, question_snapshot, quiz_questions(title, type, question_order))'
     )
     .eq('module_quiz_id', moduleQuiz.id)
     .order('submitted_at', { ascending: false });
@@ -795,7 +817,7 @@ router.get('/responses/:responseId', async (req: Request, res: Response) => {
   const { data: response, error } = await supabase
     .from('student_quiz_responses')
     .select(
-      '*, users:student_id(id, full_name, email), module_quizzes(module_id, quizzes(title)), student_quiz_answers(*, quiz_questions(title, type, config, question_order))'
+      '*, quiz_snapshot, users:student_id(id, full_name, email), module_quizzes(module_id, quizzes(title)), student_quiz_answers(*, question_snapshot, quiz_questions(title, type, config, question_order))'
     )
     .eq('id', responseId)
     .single();

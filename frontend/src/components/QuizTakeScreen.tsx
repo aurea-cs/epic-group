@@ -249,8 +249,9 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
       // Pre-populate answers from existing response
       if (responseData?.student_quiz_answers) {
         const init: Record<string, string> = {}
-        responseData.student_quiz_answers.forEach((a: StudentQuizAnswer) => {
-          init[a.question_id] = a.answer
+        responseData.student_quiz_answers.forEach((a: StudentQuizAnswer, idx: number) => {
+          const key = a.question_id || a.question_snapshot?.id || a.id || `ans-idx-${idx}`
+          init[key] = a.answer
         })
         setAnswers(init)
       }
@@ -262,9 +263,36 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
   }
 
   // ── Quiz state ─────────────────────────────────────────────────────────────
-  const questions = ((quiz?.questions || []) as QuizQuestion[])
-    .slice()
-    .sort((a, b) => a.question_order - b.question_order)
+  const resultSource = submittedResult ?? existingResponse
+
+  // Build list of questions. If reviewing an answered response, prefer the snapshotted questions
+  // from student_quiz_answers so that deleted/edited questions are rendered exactly as answered.
+  const questions: QuizQuestion[] = React.useMemo(() => {
+    if (resultSource?.student_quiz_answers && resultSource.student_quiz_answers.length > 0) {
+      return resultSource.student_quiz_answers
+        .map((ans: StudentQuizAnswer, idx: number) => {
+          const snap = ans.question_snapshot || (ans as any).quiz_questions
+          const liveQ = (quiz?.questions || []).find((q) => q.id && q.id === ans.question_id)
+          const targetId = ans.question_id || ans.question_snapshot?.id || ans.id || `ans-idx-${idx}`
+          return {
+            id: targetId,
+            quiz_id: liveQ?.quiz_id || quizId,
+            title: snap?.title ?? liveQ?.title ?? '',
+            type: snap?.type ?? liveQ?.type ?? 'multiple_choice',
+            config: snap?.config ?? liveQ?.config ?? {},
+            question_order: snap?.question_order ?? liveQ?.question_order ?? idx,
+            required: snap?.required ?? liveQ?.required ?? true,
+            created_at: liveQ?.created_at || '',
+            updated_at: liveQ?.updated_at || '',
+          }
+        })
+        .sort((a, b) => a.question_order - b.question_order)
+    }
+
+    return ((quiz?.questions || []) as QuizQuestion[])
+      .slice()
+      .sort((a, b) => a.question_order - b.question_order)
+  }, [resultSource, quiz, quizId])
 
   const totalSlides = questions.length + 2
   const finalSlideIndex = totalSlides - 1
@@ -312,11 +340,11 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
   const answeredCount = questions.filter(isQuestionAnswered).length
 
   // Build per-question correctness map from existing response or just-submitted result
-  const resultSource = submittedResult ?? existingResponse
   const answerCorrectness: Record<string, boolean | null> = {}
   if (resultSource?.student_quiz_answers) {
-    resultSource.student_quiz_answers.forEach((a: StudentQuizAnswer) => {
-      answerCorrectness[a.question_id] = a.is_correct ?? null
+    resultSource.student_quiz_answers.forEach((a: StudentQuizAnswer, idx: number) => {
+      const key = a.question_id || a.question_snapshot?.id || a.id || `ans-idx-${idx}`
+      answerCorrectness[key] = a.is_correct ?? null
     })
   }
 
@@ -428,8 +456,9 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
       // Populate answers from the result for review
       if (result.student_quiz_answers) {
         const map: Record<string, string> = {}
-        result.student_quiz_answers.forEach((a: StudentQuizAnswer) => {
-          map[a.question_id] = a.answer
+        result.student_quiz_answers.forEach((a: StudentQuizAnswer, idx: number) => {
+          const key = a.question_id || a.question_snapshot?.id || a.id || `ans-idx-${idx}`
+          map[key] = a.answer
         })
         setAnswers(map)
       }
@@ -711,7 +740,7 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
                   lineHeight: 1.2,
                 }}
               >
-                {quiz?.title || 'Cuestionario'}
+                {resultSource?.quiz_snapshot?.title || quiz?.title || 'Cuestionario'}
               </h1>
               <p
                 style={{
@@ -721,7 +750,7 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
                   margin: 0,
                 }}
               >
-                {quiz?.description ||
+                {resultSource?.quiz_snapshot?.description ?? quiz?.description ??
                   'Responde este cuestionario para poner a prueba tus conocimientos sobre este módulo. Tus respuestas serán calificadas automáticamente.'}
               </p>
 

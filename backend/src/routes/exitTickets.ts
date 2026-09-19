@@ -256,9 +256,8 @@ router.put('/questions/:questionId', async (req: Request, res: Response) => {
 router.delete('/questions/:questionId', async (req: Request, res: Response) => {
   const { questionId } = req.params;
 
-  // Clean up any answers already given to this question first.
-  await supabase.from('student_exit_ticket_answers').delete().eq('question_id', questionId);
-
+  // NOTE: Do NOT delete student_exit_ticket_answers here. The FK is now ON DELETE SET NULL,
+  // and question_snapshot preserves the full question data on the answer row.
   const { error } = await supabase.from('exit_ticket_questions').delete().eq('id', questionId);
   if (error) return res.status(500).json({ error: error.message });
 
@@ -299,12 +298,8 @@ router.put('/:id/questions/bulk', async (req: Request, res: Response) => {
 
   const existingIds = (existingQuestions ?? []).map((q: any) => q.id);
 
-  if (existingIds.length > 0) {
-    await supabase
-      .from('student_exit_ticket_answers')
-      .delete()
-      .in('question_id', existingIds);
-  }
+  // NOTE: Do NOT delete student_exit_ticket_answers — the FK is ON DELETE SET NULL and
+  // question_snapshot on each answer row keeps history intact without the live row.
 
   // 2. Delete all existing questions for this ticket.
   const { error: deleteErr } = await supabase
@@ -530,7 +525,22 @@ router.post('/:id/responses', async (req: Request, res: Response) => {
 
   const now = new Date().toISOString();
 
-  // 3. Create the response as in_progress FIRST
+  // Load the exit ticket metadata for exit_ticket_snapshot
+  const { data: ticketMeta } = await supabase
+    .from('module_exit_tickets')
+    .select('title, description')
+    .eq('id', id)
+    .single();
+
+  // Load questions for snapshotting
+  const { data: etQuestions } = await supabase
+    .from('exit_ticket_questions')
+    .select('*')
+    .eq('exit_ticket_id', id);
+
+  const questionById = new Map((etQuestions ?? []).map((q: any) => [q.id, q]));
+
+  // 3. Create the response as in_progress FIRST, with exit_ticket_snapshot.
   const { data: response, error: respErr } = await supabase
     .from('student_exit_ticket_responses')
     .insert({
@@ -539,18 +549,37 @@ router.post('/:id/responses', async (req: Request, res: Response) => {
       module_id,
       status: 'in_progress',
       started_at: now,
+      exit_ticket_snapshot: ticketMeta
+        ? { title: ticketMeta.title, description: ticketMeta.description ?? null }
+        : null,
     })
     .select()
     .single();
 
   if (respErr) return res.status(500).json({ error: respErr.message });
 
-  // 4. Insert answers while still in_progress.
-  const answerRows = answers.map((a: any) => ({
-    response_id: response.id,
-    question_id: a.question_id,
-    answer: typeof a.answer === 'object' ? JSON.stringify(a.answer) : String(a.answer),
-  }));
+  // 4. Insert answers while still in_progress, writing question_snapshot per answer.
+  const answerRows = answers.map((a: any) => {
+    const question = questionById.get(a.question_id);
+    return {
+      response_id: response.id,
+      question_id: a.question_id,
+      answer: typeof a.answer === 'object' ? JSON.stringify(a.answer) : String(a.answer),
+      // Snapshot the question definition so the answer is self-contained even if
+      // the question is later edited or deleted.
+      question_snapshot: question
+        ? {
+            id: question.id,
+            title: question.title,
+            type: question.type,
+            description: question.description ?? null,
+            config: question.config ?? {},
+            question_order: question.question_order,
+            required: question.required ?? true,
+          }
+        : null,
+    };
+  });
 
   const { error: ansErr } = await supabase.from('student_exit_ticket_answers').insert(answerRows);
 
@@ -604,7 +633,9 @@ router.get(
     const { data, error } = await supabase
       .from('student_exit_ticket_responses')
       .select(
-        '*, users:student_id(id, full_name, email), student_exit_ticket_answers(*, exit_ticket_questions(title, type))'
+        // question_snapshot is the primary source of truth; exit_ticket_questions join
+        // is kept as a legacy fallback for older rows backfilled before this migration.
+        '*, exit_ticket_snapshot, users:student_id(id, full_name, email), student_exit_ticket_answers(*, question_snapshot, exit_ticket_questions(title, type))'
       )
       .eq('exit_ticket_id', exitTicketId)
       .eq('module_id', moduleId)
@@ -627,7 +658,9 @@ router.get('/responses/:responseId', async (req: Request, res: Response) => {
   const { data: response, error } = await supabase
     .from('student_exit_ticket_responses')
     .select(
-      '*, users:student_id(id, full_name, email), student_exit_ticket_answers(*, exit_ticket_questions(title, type, config))'
+      // question_snapshot is the primary source of truth; exit_ticket_questions join
+      // is kept as a legacy fallback for older rows backfilled before this migration.
+      '*, exit_ticket_snapshot, users:student_id(id, full_name, email), student_exit_ticket_answers(*, question_snapshot, exit_ticket_questions(title, type, config))'
     )
     .eq('id', responseId)
     .single();
