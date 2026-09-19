@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getCurriculumTree, CurriculumGradeTree } from '../../../lib/adminApi'
+import { formatGradeDisplayName } from '../hooks/gradeFormat'
 
 const CATEGORY_ORDER = ['primaria', 'secundaria', 'preparatoria', 'otros'] as const
 type GradeCategory = (typeof CATEGORY_ORDER)[number]
@@ -30,16 +31,8 @@ function categorizeGrade(name: string): GradeCategory {
 }
 
 /** Strips the repeated category word from a grade name for compact chips, e.g. "1° Primaria" -> "Nivel 1". */
-function getShortGradeLabel(grade: CurriculumGradeTree, category: GradeCategory): string {
-    if (grade.level !== undefined && grade.level !== null) {
-        return `Nivel ${grade.level}`
-    }
-    const name = grade.name
-    if (category === 'otros') return name
-    const stripped = name.replace(new RegExp(category, 'i'), '').trim()
-    if (!stripped) return name
-    const matchNum = stripped.match(/\d+/)
-    return matchNum ? `Nivel ${matchNum[0]}` : stripped
+function getShortGradeLabel(t: any, grade: CurriculumGradeTree, category: GradeCategory): string {
+    return formatGradeDisplayName(t, grade.name, grade.level)
 }
 
 const GlobalCurriculumTab: React.FC = () => {
@@ -124,16 +117,30 @@ const GlobalCurriculumTab: React.FC = () => {
 
         return result
             .map((grade) => {
-                const gradeMatches = grade.name.toLowerCase().includes(term)
+                const translatedGradeName = formatGradeDisplayName(t, grade.name, grade.level)
+                const gradeMatches =
+                    grade.name.toLowerCase().includes(term) ||
+                    translatedGradeName.toLowerCase().includes(term)
 
                 const matchingSubjects = (grade.subjects || []).filter((subj) => {
+                    const translatedSubjName = t(`dynamicSubjects.${subj.name}`, { defaultValue: subj.name })
+                    const translatedShortName = subj.short_name
+                        ? t(`dynamicSubjects.${subj.short_name}`, { defaultValue: subj.short_name })
+                        : ''
                     const subjMatches =
                         subj.name.toLowerCase().includes(term) ||
-                        (subj.short_name && subj.short_name.toLowerCase().includes(term))
+                        translatedSubjName.toLowerCase().includes(term) ||
+                        (subj.short_name &&
+                            (subj.short_name.toLowerCase().includes(term) ||
+                                translatedShortName.toLowerCase().includes(term)))
 
-                    const matchingModules = (subj.modules || []).filter((mod) =>
-                        mod.title.toLowerCase().includes(term)
-                    )
+                    const matchingModules = (subj.modules || []).filter((mod) => {
+                        const translatedModTitle = t(`dynamicSubjects.${mod.title}`, { defaultValue: mod.title })
+                        return (
+                            mod.title.toLowerCase().includes(term) ||
+                            translatedModTitle.toLowerCase().includes(term)
+                        )
+                    })
 
                     return subjMatches || matchingModules.length > 0 || gradeMatches
                 })
@@ -147,7 +154,7 @@ const GlobalCurriculumTab: React.FC = () => {
                 return null
             })
             .filter(Boolean) as CurriculumGradeTree[]
-    }, [tree, groupedGrades, selectedCategory, selectedGradeId, searchTerm])
+    }, [tree, groupedGrades, selectedCategory, selectedGradeId, searchTerm, t])
 
     return (
         <div className="global-curriculum-tab">
@@ -157,8 +164,8 @@ const GlobalCurriculumTab: React.FC = () => {
                     <h2>{t('extraContent.globalCurriculumTitle', 'Global Curriculum Structure')}</h2>
                     <p>{t('extraContent.globalCurriculumSubtitle', 'Visualization and administration of canonical grades, subjects, and modules')}</p>
                 </div>
-                <button className="gc-refresh-btn" onClick={loadData} disabled={loading} title="Reload Curriculum">
-                    🔄 {loading ? 'Loading...' : 'Refresh'}
+                <button className="gc-refresh-btn" onClick={loadData} disabled={loading} title={t('extraContent.reloadTitle', 'Reload Curriculum')}>
+                    🔄 {loading ? t('extraContent.loading', 'Loading...') : t('extraContent.refresh', 'Refresh')}
                 </button>
             </div>
 
@@ -166,7 +173,7 @@ const GlobalCurriculumTab: React.FC = () => {
                 <div className="error-banner">
                     <p>⚠️ {error}</p>
                     <button className="btn-preview-category" onClick={loadData} style={{ marginTop: '0.5rem' }}>
-                        Retry
+                        {t('extraContent.retry', 'Retry')}
                     </button>
                 </div>
             )}
@@ -216,7 +223,7 @@ const GlobalCurriculumTab: React.FC = () => {
                     )}
                 </div>
 
-                {/* Level 1: segmented by school level, instead of one chip per grade */}
+                {/* Level 1: segmented by school level */}
                 <div className="gc-category-filters">
                     <button
                         className={`gc-category-chip ${selectedCategory === 'ALL' ? 'active' : ''}`}
@@ -230,7 +237,7 @@ const GlobalCurriculumTab: React.FC = () => {
                             className={`gc-category-chip gc-category-${cat} ${selectedCategory === cat ? 'active' : ''}`}
                             onClick={() => handleSelectCategory(cat)}
                         >
-                            {CATEGORY_ICONS[cat]} {CATEGORY_LABELS[cat]}
+                            {CATEGORY_ICONS[cat]} {t(`dynamicSubjects.${CATEGORY_LABELS[cat]}`, { defaultValue: CATEGORY_LABELS[cat] })}
                             <span className="gc-category-count">({groupedGrades[cat].length})</span>
                         </button>
                     ))}
@@ -251,7 +258,7 @@ const GlobalCurriculumTab: React.FC = () => {
                                 className={`gc-grade-chip ${selectedGradeId === grade.id ? 'active' : ''}`}
                                 onClick={() => setSelectedGradeId(grade.id)}
                             >
-                                {getShortGradeLabel(grade, selectedCategory)}
+                                {getShortGradeLabel(t, grade, selectedCategory)}
                             </button>
                         ))}
                     </div>
@@ -264,7 +271,7 @@ const GlobalCurriculumTab: React.FC = () => {
                     <div className="add-ticket-icon" style={{ margin: '0 auto 1rem', animation: 'spin 1s linear infinite' }}>
                         🌀
                     </div>
-                    <p>Loading canonical curriculum structure...</p>
+                    <p>{t('extraContent.loadingCurriculum', 'Loading canonical curriculum structure...')}</p>
                 </div>
             ) : filteredTree.length === 0 ? (
                 <div className="notice-box">
@@ -280,9 +287,9 @@ const GlobalCurriculumTab: React.FC = () => {
                                 <div className="gc-grade-card-header">
                                     <div className="gc-grade-header-left">
                                         <span className="gc-grade-icon">🏫</span>
-                                        <h3>{grade.name}</h3>
+                                        <h3>{formatGradeDisplayName(t, grade.name, grade.level)}</h3>
                                         <span className={`level-badge ${badgeClass}`}>
-                                            Level {grade.level ?? '-'}
+                                            {t(`dynamicSubjects.${CATEGORY_LABELS[badgeClass]}`, { defaultValue: CATEGORY_LABELS[badgeClass] })} • {t('professorCourses.level', { defaultValue: 'Nivel' })} {grade.level ?? '-'}
                                         </span>
                                     </div>
                                     <div className="gc-grade-meta">
@@ -295,7 +302,7 @@ const GlobalCurriculumTab: React.FC = () => {
                                 <div className="gc-subjects-grid">
                                     {(!grade.subjects || grade.subjects.length === 0) ? (
                                         <div className="gc-empty-subject-notice">
-                                            No subjects registered in this grade.
+                                            {t('extraContent.noSubjectsInGrade', 'No subjects registered in this grade.')}
                                         </div>
                                     ) : (
                                         grade.subjects.map((subj) => (
@@ -303,20 +310,22 @@ const GlobalCurriculumTab: React.FC = () => {
                                                 <div className="gc-subject-header">
                                                     <div className="gc-subject-title-area">
                                                         <span className="gc-subj-icon">📖</span>
-                                                        <h4>{subj.name}</h4>
+                                                        <h4>{t(`dynamicSubjects.${subj.name}`, { defaultValue: subj.name })}</h4>
                                                     </div>
                                                     {subj.short_name && (
-                                                        <span className="gc-shortname-badge">{subj.short_name}</span>
+                                                        <span className="gc-shortname-badge">
+                                                            {t(`dynamicSubjects.${subj.short_name}`, { defaultValue: subj.short_name })}
+                                                        </span>
                                                     )}
                                                 </div>
 
                                                 <div className="gc-modules-section">
                                                     <div className="gc-modules-header">
-                                                        <span>Módulos ({subj.modules?.length || 0})</span>
+                                                        <span>{t('extraContent.modules', { defaultValue: 'Módulos' })} ({subj.modules?.length || 0})</span>
                                                     </div>
 
                                                     {(!subj.modules || subj.modules.length === 0) ? (
-                                                        <p className="gc-no-modules">No modules created yet.</p>
+                                                        <p className="gc-no-modules">{t('extraContent.noModulesCreated', 'No modules created yet.')}</p>
                                                     ) : (
                                                         <div className="gc-modules-list">
                                                             {subj.modules.map((mod, idx) => (
@@ -324,7 +333,9 @@ const GlobalCurriculumTab: React.FC = () => {
                                                                     <span className="gc-module-order">
                                                                         #{mod.order_index ?? idx + 1}
                                                                     </span>
-                                                                    <span className="gc-module-title">{mod.title}</span>
+                                                                    <span className="gc-module-title">
+                                                                        {t(`dynamicSubjects.${mod.title}`, { defaultValue: mod.title })}
+                                                                    </span>
                                                                 </div>
                                                             ))}
                                                         </div>
