@@ -339,7 +339,9 @@ router.put('/:id/prompts/bulk', async (req: Request, res: Response) => {
  */
 router.get('/modules/:moduleId', async (req: Request, res: Response) => {
   const { moduleId } = req.params;
+  const { student_id } = req.query;
   const user = (req as any).user;
+  const studentId = (student_id as string) || (req.headers['x-user-id'] as string) || user?.id;
 
   const { data: moduleRow, error: modErr } = await supabase
     .from('modules')
@@ -376,27 +378,22 @@ router.get('/modules/:moduleId', async (req: Request, res: Response) => {
     ),
   }));
 
-  if (user?.role === 'student') {
-    const enrolled = await studentEnrolledInModule(user.id, moduleId);
-    if (!enrolled) return res.status(403).json({ error: 'Not enrolled in this module' });
+  const promptIds = rows.flatMap((b: any) => (b.think_block_prompts ?? []).map((p: any) => p.id));
+  if (studentId && promptIds.length > 0) {
+    const { data: answers } = await supabase
+      .from('student_think_block_answers')
+      .select('prompt_id, answer_md, updated_at')
+      .eq('student_id', studentId)
+      .in('prompt_id', promptIds);
 
-    const promptIds = rows.flatMap((b: any) => b.think_block_prompts.map((p: any) => p.id));
-    if (promptIds.length > 0) {
-      const { data: answers } = await supabase
-        .from('student_think_block_answers')
-        .select('prompt_id, answer_md, updated_at')
-        .eq('student_id', user.id)
-        .in('prompt_id', promptIds);
-
-      const byPrompt = new Map((answers ?? []).map((a: any) => [a.prompt_id, a]));
-      rows = rows.map((b: any) => ({
-        ...b,
-        think_block_prompts: b.think_block_prompts.map((p: any) => ({
-          ...p,
-          my_answer: byPrompt.get(p.id)?.answer_md ?? null,
-        })),
-      }));
-    }
+    const byPrompt = new Map((answers ?? []).map((a: any) => [a.prompt_id, a]));
+    rows = rows.map((b: any) => ({
+      ...b,
+      think_block_prompts: (b.think_block_prompts ?? []).map((p: any) => ({
+        ...p,
+        my_answer: byPrompt.get(p.id)?.answer_md ?? null,
+      })),
+    }));
   }
 
   res.json(rows);

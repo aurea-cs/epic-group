@@ -1420,9 +1420,12 @@ export const getThinkBlocks = async (curriculumModuleId?: string): Promise<Think
 }
 
 /** Fetch think blocks for a specific module instance (resolves via curriculum_module_id). */
-export const getModuleThinkBlocks = async (moduleId: string): Promise<ThinkBlock[]> => {
+export const getModuleThinkBlocks = async (moduleId: string, studentId?: string): Promise<ThinkBlock[]> => {
     try {
-        const response = await fetch(`${API_URL}/api/think-blocks/modules/${moduleId}`)
+        const url = studentId
+            ? `${API_URL}/api/think-blocks/modules/${moduleId}?student_id=${studentId}`
+            : `${API_URL}/api/think-blocks/modules/${moduleId}`
+        const response = await fetch(url)
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
             throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
@@ -1431,6 +1434,24 @@ export const getModuleThinkBlocks = async (moduleId: string): Promise<ThinkBlock
     } catch (error) {
         console.error('Error fetching module think blocks:', error)
         throw error
+    }
+}
+
+/** Fetch a student's saved answers for a single think block template. */
+export const getStudentThinkBlockAnswers = async (
+    blockId: string,
+    studentId: string
+): Promise<any[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/${blockId}/my-answers?student_id=${studentId}`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching student think block answers:', error)
+        return []
     }
 }
 

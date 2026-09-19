@@ -646,7 +646,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
         getModuleVrCode(moduleId!),
         getModuleExitTickets(moduleId!).catch(() => []),
         getModuleQuizzes(moduleId!).catch(() => []),
-        getModuleThinkBlocks(moduleId!).catch(() => [])
+        getModuleThinkBlocks(moduleId!, user?.id).catch(() => [])
       ])
 
       const targetModule = modules.find(m => m.id === moduleId)
