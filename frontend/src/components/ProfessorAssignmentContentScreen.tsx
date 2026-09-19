@@ -10,7 +10,7 @@ import {
 import { getUserRole } from '../utils/getUserRole'
 import './HierarchyConfig.css'
 
-import type { Assignment, CalendarEvent, Student, ModuleWithItems, Center, Submission, TabKey, StudentExitTicketResponse } from './ProfessorContentScreen/types'
+import type { Assignment, CalendarEvent, Student, ModuleWithItems, Center, Submission, TabKey, StudentExitTicketResponse, StudentQuizSubjectResponse } from './ProfessorContentScreen/types'
 
 import { ActionButton, TabButton } from './general/SharedUI'
 import ContentTab from './ProfessorContentScreen/ContentTab'
@@ -24,6 +24,7 @@ import StudentFormModal from './ProfessorContentScreen/StudentFormModal'
 import SubmissionsTab from './ProfessorContentScreen/SubmissionsTab'
 import GradingModal from './ProfessorContentScreen/GradingModal'
 import TicketsTab from './ProfessorContentScreen/TicketsTab'
+import QuizzesTab from './ProfessorContentScreen/QuizzesTab'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -202,6 +203,12 @@ async function fetchTickets(subjectId: string): Promise<StudentExitTicketRespons
     return res.json()
 }
 
+async function fetchQuizResponses(subjectId: string): Promise<StudentQuizSubjectResponse[]> {
+    const res = await fetch(`${API_URL}/api/subjects/${subjectId}/quizzes/responses`)
+    if (!res.ok) throw new Error(`Error al cargar entregas de quizes: ${res.status}`)
+    return res.json()
+}
+
 
 const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScreenProps> = ({ user }) => {
     const { courseId } = useParams<{ courseId: string }>()
@@ -236,6 +243,9 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
 
     const [tickets, setTickets] = useState<StudentExitTicketResponse[]>([])
     const [ticketsLoading, setTicketsLoading] = useState(false)
+
+    const [quizResponses, setQuizResponses] = useState<StudentQuizSubjectResponse[]>([])
+    const [quizResponsesLoading, setQuizResponsesLoading] = useState(false)
     
     const [error, setError] = useState<string | null>(null)
     const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState<string | null>(null)
@@ -331,9 +341,20 @@ const loadStudents = useCallback(async () => {
                 .finally(() => setTicketsLoading(false))
     }, [courseId])
 
+    const loadQuizResponses = useCallback(() => {
+        if (!courseId) return
+        setQuizResponsesLoading(true)
+        setError(null)
+        fetchQuizResponses(courseId)
+            .then(setQuizResponses)
+            .catch(e => setError(e.message))
+            .finally(() => setQuizResponsesLoading(false))
+    }, [courseId])
+
     // Reload all tab data whenever the subject (courseId) changes
     useEffect(() => {
         setTickets([])
+        setQuizResponses([])
         setAssignments([])
         setSubmissions([])
         setStudents([])
@@ -346,6 +367,7 @@ const loadStudents = useCallback(async () => {
         if (activeTab === 'students') loadStudents()
         if (activeTab === 'submissions') {loadAssignments(); loadSubmissions()} 
         if (activeTab === 'tickets') loadTickets() 
+        if (activeTab === 'quizzes') loadQuizResponses()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, courseId])
 
@@ -496,6 +518,7 @@ const loadStudents = useCallback(async () => {
                 <TabButton label="📒 Contenido" active={activeTab === 'content'} onClick={() => setActiveTab('content')} />
                 <TabButton label="📂 Tareas" active={activeTab === 'assignments'} onClick={() => setActiveTab('assignments')} />
                 <TabButton label="📝 Entregas" active={activeTab === 'submissions'} onClick={() => setActiveTab('submissions')} />
+                <TabButton label="📋 Quizes" active={activeTab === 'quizzes'} onClick={() => setActiveTab('quizzes')} />
                 <TabButton label="🎟️ Tickets" active={activeTab === 'tickets'} onClick={() => setActiveTab('tickets')} />
                 <TabButton label="📅 Eventos" active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} />
                 <TabButton label="👥 Alumnos" active={activeTab === 'students'} onClick={() => setActiveTab('students')} />
@@ -553,6 +576,13 @@ const loadStudents = useCallback(async () => {
                 <TicketsTab
                     loading={ticketsLoading}
                     tickets={tickets}
+                />
+            )}
+
+            {activeTab === 'quizzes' && (
+                <QuizzesTab
+                    loading={quizResponsesLoading}
+                    quizResponses={quizResponses}
                 />
             )}
 

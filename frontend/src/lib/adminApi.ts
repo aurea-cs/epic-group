@@ -1586,6 +1586,8 @@ export type QuizQuestionType =
     | 'checklist'
     | 'open'
     | 'complete_sentence'
+    | 'matching'
+    | 'ordering'
 
 export interface QuizQuestion {
     id: string
@@ -1821,6 +1823,15 @@ export interface StudentQuizAnswer {
     answer: string
     is_correct?: boolean | null
     points_awarded?: number | null
+    question_snapshot?: {
+        title?: string
+        type?: string
+        config?: Record<string, any>
+        points?: number
+        question_order?: number
+        required?: boolean
+        [key: string]: any
+    }
     quiz_questions?: {
         title: string
         type: string
@@ -1838,6 +1849,10 @@ export interface StudentQuizResponse {
     submitted_at?: string
     score?: number | null
     max_score?: number | null
+    quiz_snapshot?: {
+        title?: string
+        description?: string | null
+    }
     student_quiz_answers?: StudentQuizAnswer[]
 }
 

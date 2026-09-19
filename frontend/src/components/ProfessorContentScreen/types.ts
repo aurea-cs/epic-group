@@ -45,6 +45,53 @@ export interface StudentExitTicketResponseAnswer {
     question_title?: string
     question_type?: string
     answer_text: string
+    /** Snapshot of the question at submission time. Prefer over live join. */
+    question_snapshot?: {
+        title: string
+        type: string
+        description?: string | null
+        config: any
+        question_order: number
+        required: boolean
+    } | null
+}
+
+export interface StudentQuizSubjectResponseAnswer {
+    question_id: string
+    question_title?: string
+    question_type?: string
+    config?: any
+    answer: any
+    is_correct?: boolean | null
+    points_awarded?: number | null
+    /** Snapshot of the question at submission time. Prefer over live join. */
+    question_snapshot?: {
+        title: string
+        type: string
+        config: any
+        question_order: number
+        required: boolean
+    } | null
+}
+
+export interface StudentQuizSubjectResponse {
+    id: string
+    module_quiz_id: string
+    quiz_id: string
+    quiz_title?: string
+    /** Snapshot of quiz metadata (title, description) at submission time. */
+    quiz_snapshot?: { title: string; description?: string | null } | null
+    module_id?: string | null
+    module_title?: string
+    student_id: string
+    student_name?: string
+    student_email?: string
+    score?: number | null
+    max_score?: number | null
+    status?: string
+    started_at?: string | null
+    submitted_at: string
+    answers?: StudentQuizSubjectResponseAnswer[]
 }
 
 export interface CalendarEvent {
@@ -73,7 +120,7 @@ export interface Center {
   name: string
 }
 
-export type TabKey = 'content' | 'assignments' | 'reminders' | 'tickets' | 'students' | 'pov-students' | 'submissions'
+export type TabKey = 'content' | 'assignments' | 'reminders' | 'quizzes' | 'tickets' | 'students' | 'pov-students' | 'submissions'
 
 // ============================================================================
 // Local module item interface (content tab)

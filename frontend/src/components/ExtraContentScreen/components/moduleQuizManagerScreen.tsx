@@ -35,6 +35,8 @@ const QUESTION_TYPE_LABELS: Record<QuizQuestionType, string> = {
     checklist: 'Casillas (múltiples correctas)',
     open: 'Respuesta abierta',
     complete_sentence: 'Completa la oración',
+    matching: 'Relacionar conceptos (líneas)',
+    ordering: 'Ordenar en secuencia',
 }
 
 const QUESTION_TYPE_ICONS: Record<QuizQuestionType, string> = {
@@ -43,6 +45,8 @@ const QUESTION_TYPE_ICONS: Record<QuizQuestionType, string> = {
     checklist: '✅',
     open: '✏️',
     complete_sentence: '📝',
+    matching: '🔗',
+    ordering: '🔢',
 }
 
 const EMPTY_QUESTION = (): QuestionFormState => ({
@@ -88,6 +92,21 @@ function defaultConfigForType(type: QuizQuestionType): Record<string, any> {
                 sentence_template: 'El ___ es importante.',
                 options: ['concepto', 'color', 'número'],
                 correct_option: 'concepto',
+            }
+        case 'matching':
+            return {
+                pairs: [
+                    { id: '1', left: 'Concepto A', right: 'Definición A' },
+                    { id: '2', left: 'Concepto B', right: 'Definición B' },
+                ],
+            }
+        case 'ordering':
+            return {
+                items: [
+                    { id: '1', text: 'Primer paso' },
+                    { id: '2', text: 'Segundo paso' },
+                    { id: '3', text: 'Tercer paso' },
+                ],
             }
         default:
             return {}
@@ -310,6 +329,112 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, index, total,
                     >+ Agregar opción</button>
                 </div>
             )}
+
+            {question.type === 'matching' && (
+                <div className="qm-options-block">
+                    <div className="qm-options-label">Parejas a relacionar (Concepto ➔ Respuesta/Definición):</div>
+                    {(question.config.pairs || []).map((pair: any, pi: number) => (
+                        <div key={pair.id || pi} className="qm-option-row" style={{ gap: '0.5rem' }}>
+                            <input
+                                className="qm-option-input"
+                                placeholder={`Concepto ${pi + 1}`}
+                                value={pair.left || ''}
+                                onChange={(e) => {
+                                    const newPairs = [...(question.config.pairs || [])]
+                                    newPairs[pi] = { ...pair, left: e.target.value }
+                                    onChange({ ...question, config: { ...question.config, pairs: newPairs } })
+                                }}
+                            />
+                            <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>➔</span>
+                            <input
+                                className="qm-option-input"
+                                placeholder={`Respuesta / Definición ${pi + 1}`}
+                                value={pair.right || ''}
+                                onChange={(e) => {
+                                    const newPairs = [...(question.config.pairs || [])]
+                                    newPairs[pi] = { ...pair, right: e.target.value }
+                                    onChange({ ...question, config: { ...question.config, pairs: newPairs } })
+                                }}
+                            />
+                            <button
+                                className="btn-icon-action btn-icon-danger"
+                                disabled={(question.config.pairs || []).length <= 2}
+                                onClick={() => {
+                                    const newPairs = (question.config.pairs || []).filter((_: any, i: number) => i !== pi)
+                                    onChange({ ...question, config: { ...question.config, pairs: newPairs } })
+                                }}
+                            >✕</button>
+                        </div>
+                    ))}
+                    <button
+                        className="qm-add-option-btn"
+                        onClick={() => {
+                            const newPairs = [...(question.config.pairs || []), { id: genId(), left: `Concepto ${(question.config.pairs || []).length + 1}`, right: `Definición ${(question.config.pairs || []).length + 1}` }]
+                            onChange({ ...question, config: { ...question.config, pairs: newPairs } })
+                        }}
+                    >+ Agregar pareja</button>
+                </div>
+            )}
+
+            {question.type === 'ordering' && (
+                <div className="qm-options-block">
+                    <div className="qm-options-label">Elementos en la secuencia correcta (de arriba a abajo):</div>
+                    {(question.config.items || []).map((item: any, ii: number) => (
+                        <div key={item.id || ii} className="qm-option-row">
+                            <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600, minWidth: '24px' }}>{ii + 1}.</span>
+                            <input
+                                className="qm-option-input"
+                                placeholder={`Elemento ${ii + 1}`}
+                                value={item.text || ''}
+                                onChange={(e) => {
+                                    const newItems = [...(question.config.items || [])]
+                                    newItems[ii] = { ...item, text: e.target.value }
+                                    onChange({ ...question, config: { ...question.config, items: newItems } })
+                                }}
+                            />
+                            <div style={{ display: 'flex', gap: '0.2rem' }}>
+                                <button
+                                    className="btn-icon-action"
+                                    disabled={ii === 0}
+                                    onClick={() => {
+                                        const newItems = [...(question.config.items || [])]
+                                        const tmp = newItems[ii]
+                                        newItems[ii] = newItems[ii - 1]
+                                        newItems[ii - 1] = tmp
+                                        onChange({ ...question, config: { ...question.config, items: newItems } })
+                                    }}
+                                >↑</button>
+                                <button
+                                    className="btn-icon-action"
+                                    disabled={ii === (question.config.items || []).length - 1}
+                                    onClick={() => {
+                                        const newItems = [...(question.config.items || [])]
+                                        const tmp = newItems[ii]
+                                        newItems[ii] = newItems[ii + 1]
+                                        newItems[ii + 1] = tmp
+                                        onChange({ ...question, config: { ...question.config, items: newItems } })
+                                    }}
+                                >↓</button>
+                                <button
+                                    className="btn-icon-action btn-icon-danger"
+                                    disabled={(question.config.items || []).length <= 2}
+                                    onClick={() => {
+                                        const newItems = (question.config.items || []).filter((_: any, i: number) => i !== ii)
+                                        onChange({ ...question, config: { ...question.config, items: newItems } })
+                                    }}
+                                >✕</button>
+                            </div>
+                        </div>
+                    ))}
+                    <button
+                        className="qm-add-option-btn"
+                        onClick={() => {
+                            const newItems = [...(question.config.items || []), { id: genId(), text: `Paso ${(question.config.items || []).length + 1}` }]
+                            onChange({ ...question, config: { ...question.config, items: newItems } })
+                        }}
+                    >+ Agregar elemento</button>
+                </div>
+            )}
         </div>
     )
 }
@@ -430,6 +555,35 @@ const LivePreview: React.FC<LivePreviewProps> = ({ title, questions }) => {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {q.type === 'matching' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', margin: 0 }}>
+                                (Vista previa de parejas a relacionar):
+                            </p>
+                            {(q.config.pairs || []).map((p: any, pi: number) => (
+                                <div key={pi} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.04)', padding: '0.5rem', borderRadius: '8px', fontSize: '0.85rem' }}>
+                                    <span style={{ flex: 1, color: '#38bdf8' }}>{p.left}</span>
+                                    <span>↔</span>
+                                    <span style={{ flex: 1, color: 'rgba(255,255,255,0.8)' }}>{p.right}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {q.type === 'ordering' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', margin: 0 }}>
+                                (Vista previa de ordenamiento):
+                            </p>
+                            {(q.config.items || []).map((item: any, ii: number) => (
+                                <div key={ii} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.04)', padding: '0.5rem', borderRadius: '8px', fontSize: '0.85rem' }}>
+                                    <span style={{ background: '#38bdf8', color: '#000', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.75rem' }}>{ii + 1}</span>
+                                    <span>{item.text}</span>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>

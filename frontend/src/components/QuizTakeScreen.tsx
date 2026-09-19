@@ -33,7 +33,9 @@ function isAutoGraded(type: string) {
     type === 'multiple_choice' ||
     type === 'true_false' ||
     type === 'checklist' ||
-    type === 'complete_sentence'
+    type === 'complete_sentence' ||
+    type === 'matching' ||
+    type === 'ordering'
   )
 }
 
@@ -61,6 +63,14 @@ function getCorrectLabel(q: QuizQuestion): string | null {
   }
   if (q.type === 'complete_sentence') {
     return cfg.correct_option ? String(cfg.correct_option) : null
+  }
+  if (q.type === 'matching') {
+    const pairs: { id: string; left: string; right: string }[] = cfg.pairs || []
+    return pairs.map((p) => `${p.left} ➔ ${p.right}`).join(' | ')
+  }
+  if (q.type === 'ordering') {
+    const items: { id: string; text: string }[] = cfg.items || []
+    return items.map((it, idx) => `${idx + 1}. ${it.text}`).join(' → ')
   }
   return null
 }
@@ -239,8 +249,9 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
       // Pre-populate answers from existing response
       if (responseData?.student_quiz_answers) {
         const init: Record<string, string> = {}
-        responseData.student_quiz_answers.forEach((a: StudentQuizAnswer) => {
-          init[a.question_id] = a.answer
+        responseData.student_quiz_answers.forEach((a: StudentQuizAnswer, idx: number) => {
+          const key = a.question_id || a.question_snapshot?.id || a.id || `ans-idx-${idx}`
+          init[key] = a.answer
         })
         setAnswers(init)
       }
@@ -252,9 +263,35 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
   }
 
   // ── Quiz state ─────────────────────────────────────────────────────────────
-  const questions = ((quiz?.questions || []) as QuizQuestion[])
-    .slice()
-    .sort((a, b) => a.question_order - b.question_order)
+  const resultSource = submittedResult ?? existingResponse
+
+  // Build list of questions. If reviewing an answered response, prefer the snapshotted questions
+  // from student_quiz_answers so that deleted/edited questions are rendered exactly as answered.
+  const questions: QuizQuestion[] = React.useMemo(() => {
+    if (resultSource?.student_quiz_answers && resultSource.student_quiz_answers.length > 0) {
+      return resultSource.student_quiz_answers
+        .map((ans: StudentQuizAnswer, idx: number) => {
+          const snap = ans.question_snapshot || (ans as any).quiz_questions
+          const liveQ = (quiz?.questions || []).find((q) => q.id && q.id === ans.question_id)
+          const targetId = ans.question_id || ans.question_snapshot?.id || ans.id || `ans-idx-${idx}`
+          return {
+            id: targetId,
+            quiz_id: liveQ?.quiz_id || quizId,
+            title: snap?.title ?? liveQ?.title ?? '',
+            type: snap?.type ?? liveQ?.type ?? 'multiple_choice',
+            config: snap?.config ?? liveQ?.config ?? {},
+            question_order: snap?.question_order ?? liveQ?.question_order ?? idx,
+            required: snap?.required ?? liveQ?.required ?? true,
+            created_at: liveQ?.created_at || '',
+          }
+        })
+        .sort((a, b) => a.question_order - b.question_order)
+    }
+
+    return ((quiz?.questions || []) as QuizQuestion[])
+      .slice()
+      .sort((a, b) => a.question_order - b.question_order)
+  }, [resultSource, quiz, quizId])
 
   const totalSlides = questions.length + 2
   const finalSlideIndex = totalSlides - 1
@@ -275,17 +312,38 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
         return false
       }
     }
+    if (q.type === 'matching') {
+      try {
+        const pairs = q.config?.pairs || []
+        let map: Record<string, string> = {}
+        if (typeof v === 'string' && v.startsWith('{')) map = JSON.parse(v)
+        else if (typeof v === 'object' && v !== null) map = v
+        return pairs.length > 0 && pairs.every((p: any) => Boolean(map[p.id]))
+      } catch {
+        return false
+      }
+    }
+    if (q.type === 'ordering') {
+      try {
+        let arr: string[] = []
+        if (Array.isArray(v)) arr = v
+        else if (typeof v === 'string' && v.startsWith('[')) arr = JSON.parse(v)
+        return Array.isArray(arr) && arr.length === (q.config?.items || []).length
+      } catch {
+        return false
+      }
+    }
     return true
   }
 
   const answeredCount = questions.filter(isQuestionAnswered).length
 
   // Build per-question correctness map from existing response or just-submitted result
-  const resultSource = submittedResult ?? existingResponse
   const answerCorrectness: Record<string, boolean | null> = {}
   if (resultSource?.student_quiz_answers) {
-    resultSource.student_quiz_answers.forEach((a: StudentQuizAnswer) => {
-      answerCorrectness[a.question_id] = a.is_correct ?? null
+    resultSource.student_quiz_answers.forEach((a: StudentQuizAnswer, idx: number) => {
+      const key = a.question_id || a.question_snapshot?.id || a.id || `ans-idx-${idx}`
+      answerCorrectness[key] = a.is_correct ?? null
     })
   }
 
@@ -397,8 +455,9 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
       // Populate answers from the result for review
       if (result.student_quiz_answers) {
         const map: Record<string, string> = {}
-        result.student_quiz_answers.forEach((a: StudentQuizAnswer) => {
-          map[a.question_id] = a.answer
+        result.student_quiz_answers.forEach((a: StudentQuizAnswer, idx: number) => {
+          const key = a.question_id || a.question_snapshot?.id || a.id || `ans-idx-${idx}`
+          map[key] = a.answer
         })
         setAnswers(map)
       }
@@ -680,7 +739,7 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
                   lineHeight: 1.2,
                 }}
               >
-                {quiz?.title || 'Cuestionario'}
+                {resultSource?.quiz_snapshot?.title || quiz?.title || 'Cuestionario'}
               </h1>
               <p
                 style={{
@@ -690,7 +749,7 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
                   margin: 0,
                 }}
               >
-                {quiz?.description ||
+                {resultSource?.quiz_snapshot?.description ?? quiz?.description ??
                   'Responde este cuestionario para poner a prueba tus conocimientos sobre este módulo. Tus respuestas serán calificadas automáticamente.'}
               </p>
 
@@ -1248,6 +1307,216 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
                             })}
                           </div>
                         )}
+                      </div>
+                    )
+                  })()}
+
+                  {/* ── Matching (Connect concepts) ── */}
+                  {q.type === 'matching' && (() => {
+                    const pairs: Array<{ id: string; left: string; right: string }> = q.config?.pairs || []
+                    let userMap: Record<string, string> = {}
+                    try {
+                      if (typeof currentAnswer === 'string' && currentAnswer.startsWith('{')) userMap = JSON.parse(currentAnswer)
+                      else if (typeof currentAnswer === 'object' && currentAnswer !== null) userMap = currentAnswer
+                    } catch {
+                      userMap = {}
+                    }
+
+                    const rightOptions = pairs.map((p) => p.right).sort((a, b) => a.localeCompare(b))
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', margin: 0 }}>
+                          Conecta cada concepto de la izquierda con su correspondiente definición a la derecha:
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                          {pairs.map((p) => {
+                            const selectedRight = userMap[p.id] || ''
+                            const isCorrectPair = selectedRight === p.right
+                            return (
+                              <div
+                                key={p.id}
+                                style={{
+                                  background: 'rgba(0, 0, 0, 0.3)',
+                                  border: isReviewing
+                                    ? isCorrectPair
+                                      ? '1px solid rgba(34, 197, 94, 0.6)'
+                                      : '1px solid rgba(239, 68, 68, 0.6)'
+                                    : selectedRight
+                                    ? '1px solid rgba(56, 189, 248, 0.5)'
+                                    : '1px solid rgba(255, 255, 255, 0.1)',
+                                  borderRadius: '14px',
+                                  padding: '1rem 1.25rem',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '0.75rem',
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontWeight: 600, color: '#38bdf8', fontSize: '1rem' }}>
+                                    {p.left}
+                                  </span>
+                                  {isReviewing && (
+                                    isCorrectPair ? <CheckCircle2 size={18} color="#4ade80" /> : <XCircle size={18} color="#f87171" />
+                                  )}
+                                </div>
+                                <div>
+                                  <select
+                                    disabled={isReviewing}
+                                    value={selectedRight}
+                                    onChange={(e) => {
+                                      const nextMap = { ...userMap, [p.id]: e.target.value }
+                                      handleTextChange(q.id, JSON.stringify(nextMap))
+                                    }}
+                                    style={{
+                                      width: '100%',
+                                      background: '#131b2e',
+                                      border: '1px solid rgba(255,255,255,0.2)',
+                                      borderRadius: '8px',
+                                      padding: '0.6rem 0.8rem',
+                                      color: 'white',
+                                      fontSize: '0.9rem',
+                                      outline: 'none',
+                                      cursor: isReviewing ? 'default' : 'pointer',
+                                    }}
+                                  >
+                                    <option value="">-- Selecciona el concepto correspondiente --</option>
+                                    {rightOptions.map((opt, oIdx) => (
+                                      <option key={oIdx} value={opt}>
+                                        {opt}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                {isReviewing && !isCorrectPair && (
+                                  <div style={{ fontSize: '0.8rem', color: '#4ade80', marginTop: '2px' }}>
+                                    Correcto: {p.right}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })()}
+
+                  {/* ── Ordering (Rank in order) ── */}
+                  {q.type === 'ordering' && (() => {
+                    const items: Array<{ id: string; text: string }> = q.config?.items || []
+                    let userOrderIds: string[] = []
+                    try {
+                      if (typeof currentAnswer === 'string' && currentAnswer.startsWith('[')) userOrderIds = JSON.parse(currentAnswer)
+                      else if (Array.isArray(currentAnswer)) userOrderIds = currentAnswer
+                    } catch {
+                      userOrderIds = []
+                    }
+
+                    if (userOrderIds.length !== items.length) {
+                      userOrderIds = items.map((it) => it.id)
+                    }
+
+                    const currentOrderedItems = userOrderIds
+                      .map((id) => items.find((it) => it.id === id))
+                      .filter(Boolean) as Array<{ id: string; text: string }>
+
+                    const moveItem = (fromIdx: number, toIdx: number) => {
+                      if (toIdx < 0 || toIdx >= currentOrderedItems.length) return
+                      const next = [...currentOrderedItems]
+                      const [moved] = next.splice(fromIdx, 1)
+                      next.splice(toIdx, 0, moved)
+                      const nextIds = next.map((it) => it.id)
+                      handleTextChange(q.id, JSON.stringify(nextIds))
+                    }
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', margin: 0 }}>
+                          Ordena los siguientes elementos en la secuencia correcta (1 es el primero):
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {currentOrderedItems.map((item, idx) => {
+                            const correctItemAtPos = items[idx]
+                            const isPosCorrect = correctItemAtPos?.id === item.id
+
+                            return (
+                              <div
+                                key={item.id}
+                                style={{
+                                  background: 'rgba(0, 0, 0, 0.3)',
+                                  border: isReviewing
+                                    ? isPosCorrect
+                                      ? '1px solid rgba(34, 197, 94, 0.6)'
+                                      : '1px solid rgba(239, 68, 68, 0.6)'
+                                    : '1px solid rgba(56, 189, 248, 0.3)',
+                                  borderRadius: '12px',
+                                  padding: '0.85rem 1rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '12px',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: '50%',
+                                    background: isReviewing ? (isPosCorrect ? '#22c55e' : '#ef4444') : '#38bdf8',
+                                    color: 'white',
+                                    fontWeight: 700,
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {idx + 1}
+                                </div>
+                                <span style={{ flex: 1, fontSize: '0.95rem', color: 'rgba(255,255,255,0.9)' }}>
+                                  {item.text}
+                                </span>
+                                {!isReviewing && (
+                                  <div style={{ display: 'flex', gap: '4px' }}>
+                                    <button
+                                      disabled={idx === 0}
+                                      onClick={() => moveItem(idx, idx - 1)}
+                                      style={{
+                                        background: 'rgba(255,255,255,0.1)',
+                                        border: 'none',
+                                        color: 'white',
+                                        borderRadius: '6px',
+                                        padding: '4px 8px',
+                                        cursor: idx === 0 ? 'default' : 'pointer',
+                                        opacity: idx === 0 ? 0.3 : 1,
+                                      }}
+                                    >
+                                      ▲
+                                    </button>
+                                    <button
+                                      disabled={idx === currentOrderedItems.length - 1}
+                                      onClick={() => moveItem(idx, idx + 1)}
+                                      style={{
+                                        background: 'rgba(255,255,255,0.1)',
+                                        border: 'none',
+                                        color: 'white',
+                                        borderRadius: '6px',
+                                        padding: '4px 8px',
+                                        cursor: idx === currentOrderedItems.length - 1 ? 'default' : 'pointer',
+                                        opacity: idx === currentOrderedItems.length - 1 ? 0.3 : 1,
+                                      }}
+                                    >
+                                      ▼
+                                    </button>
+                                  </div>
+                                )}
+                                {isReviewing && (
+                                  isPosCorrect ? <CheckCircle2 size={18} color="#4ade80" /> : <XCircle size={18} color="#f87171" />
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
                     )
                   })()}
