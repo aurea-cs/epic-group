@@ -31,7 +31,7 @@ function categorizeGrade(name: string): GradeCategory {
 }
 
 /** Strips the repeated category word from a grade name for compact chips, e.g. "1° Primaria" -> "Nivel 1". */
-function getShortGradeLabel(t: any, grade: CurriculumGradeTree, category: GradeCategory): string {
+function getShortGradeLabel(t: any, grade: CurriculumGradeTree, _category: GradeCategory): string {
     return formatGradeDisplayName(t, grade.name, grade.level)
 }
 

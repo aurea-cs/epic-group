@@ -283,7 +283,6 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
             question_order: snap?.question_order ?? liveQ?.question_order ?? idx,
             required: snap?.required ?? liveQ?.required ?? true,
             created_at: liveQ?.created_at || '',
-            updated_at: liveQ?.updated_at || '',
           }
         })
         .sort((a, b) => a.question_order - b.question_order)
