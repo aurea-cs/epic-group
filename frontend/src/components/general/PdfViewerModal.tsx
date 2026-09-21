@@ -427,6 +427,11 @@ return (
     }}
   >
     <style>{`
+        @media print {
+          body {
+            display: none !important;
+          }
+        }
         /* Allow form interactions on editable pages */
         .react-pdf__Page__annotations, .annotationLayer {
           z-index: 5;
