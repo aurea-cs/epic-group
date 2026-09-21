@@ -75,34 +75,34 @@ const getPageOffsetInSubmittedRange = (pageNum: number, rangeStr: string): numbe
 /**
  * Returns 0-based page indices corresponding to the assignedPages range.
  */
-const getAssignedPageIndices = (assignedPages: string | null | undefined, maxPages: number): number[] => {
-  if (!assignedPages) {
-    return Array.from({ length: maxPages }, (_, i) => i)
-  }
-  const cleaned = assignedPages.trim()
-  if (/^\d+-\d+$/.test(cleaned)) {
-    const [start, end] = cleaned.split('-').map(Number)
-    const indices: number[] = []
-    for (let p = start; p <= end; p++) {
-      if (p >= 1 && p <= maxPages) {
-        indices.push(p - 1)
-      }
-    }
-    return indices
-  }
-  if (cleaned.includes(',')) {
-    return cleaned.split(',')
-      .map(p => Number(p.trim()) - 1)
-      .filter(idx => idx >= 0 && idx < maxPages)
-  }
-  if (/^\d+$/.test(cleaned)) {
-    const p = Number(cleaned)
-    if (p >= 1 && p <= maxPages) {
-      return [p - 1]
-    }
-  }
-  return Array.from({ length: maxPages }, (_, i) => i)
-}
+// const getAssignedPageIndices = (assignedPages: string | null | undefined, maxPages: number): number[] => {
+//   if (!assignedPages) {
+//     return Array.from({ length: maxPages }, (_, i) => i)
+//   }
+//   const cleaned = assignedPages.trim()
+//   if (/^\d+-\d+$/.test(cleaned)) {
+//     const [start, end] = cleaned.split('-').map(Number)
+//     const indices: number[] = []
+//     for (let p = start; p <= end; p++) {
+//       if (p >= 1 && p <= maxPages) {
+//         indices.push(p - 1)
+//       }
+//     }
+//     return indices
+//   }
+//   if (cleaned.includes(',')) {
+//     return cleaned.split(',')
+//       .map(p => Number(p.trim()) - 1)
+//       .filter(idx => idx >= 0 && idx < maxPages)
+//   }
+//   if (/^\d+$/.test(cleaned)) {
+//     const p = Number(cleaned)
+//     if (p >= 1 && p <= maxPages) {
+//       return [p - 1]
+//     }
+//   }
+//   return Array.from({ length: maxPages }, (_, i) => i)
+// }
 
 interface DetectedDrawingBox {
   name: string
@@ -127,7 +127,7 @@ const ALLOW_CLIENT_DYNAMIC_INPUTS = false
 
 const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, assignedPages, submittedRanges, itemId: _itemId, studentId: _studentId, isEditable = false }) => {
   const [numPages, setNumPages] = useState<number>(0)
-  const [isSaving, setIsSaving] = useState(false)
+  // const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // PDF occupies ~60% of the viewport; the remaining space is filled with the banner
   const PDF_WIDTH_RATIO = 0.60
@@ -254,168 +254,168 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
     setError('No se pudo cargar el documento.')
   }
 
-  const handleSave = async () => {
-    if (!onSave) return
-    setIsSaving(true)
-    try {
-      const response = await fetch(url)
-      const originalPdfBytes = await response.arrayBuffer()
-      const pdfDoc = await PDFDocument.load(originalPdfBytes)
-      const form = pdfDoc.getForm()
+//   const handleSave = async () => {
+//     if (!onSave) return
+//     setIsSaving(true)
+//     try {
+//       const response = await fetch(url)
+//       const originalPdfBytes = await response.arrayBuffer()
+//       const pdfDoc = await PDFDocument.load(originalPdfBytes)
+//       const form = pdfDoc.getForm()
 
-      const inputs = document.querySelectorAll(
-        '.react-pdf__Page__annotations input, .react-pdf__Page__annotations textarea, .react-pdf__Page__annotations select'
-      )
+//       const inputs = document.querySelectorAll(
+//         '.react-pdf__Page__annotations input, .react-pdf__Page__annotations textarea, .react-pdf__Page__annotations select'
+//       )
 
-      // 1. Process standard AcroForm text / checkbox / radio fields
-      inputs.forEach((element) => {
-        const name = element.getAttribute('name')
-        if (!name || /draw_|draw_box_|sig_/i.test(name)) return
+//       // 1. Process standard AcroForm text / checkbox / radio fields
+//       inputs.forEach((element) => {
+//         const name = element.getAttribute('name')
+//         if (!name || /draw_|draw_box_|sig_/i.test(name)) return
 
-        try {
-          if (element instanceof HTMLInputElement) {
-            if (element.type === 'checkbox') {
-              try {
-                const checkBox = form.getCheckBox(name)
-                if (element.checked) {
-                  checkBox.check()
-                } else {
-                  checkBox.uncheck()
-                }
-              } catch (e) {
-                console.warn(`Could not set checkbox ${name}`, e)
-              }
-            } else if (element.type === 'radio') {
-              if (element.checked) {
-                try {
-                  const radioGroup = form.getRadioGroup(name)
-                  radioGroup.select(element.value)
-                } catch (e) {
-                  try {
-                    const radioGroup = form.getRadioGroup(name)
-                    const options = radioGroup.getOptions()
-                    if (options.length > 0) {
-                      radioGroup.select(options[0])
-                    }
-                  } catch (err) { }
-                }
-              }
-            } else {
-              try {
-                form.getTextField(name).setText(element.value || '')
-              } catch (e) { }
-            }
-          } else if (element instanceof HTMLTextAreaElement) {
-            try {
-              form.getTextField(name).setText(element.value || '')
-            } catch (e) { }
-          }
-        } catch (err) {
-          console.warn(`Could not set field ${name}`, err)
-        }
-      })
+//         try {
+//           if (element instanceof HTMLInputElement) {
+//             if (element.type === 'checkbox') {
+//               try {
+//                 const checkBox = form.getCheckBox(name)
+//                 if (element.checked) {
+//                   checkBox.check()
+//                 } else {
+//                   checkBox.uncheck()
+//                 }
+//               } catch (e) {
+//                 console.warn(`Could not set checkbox ${name}`, e)
+//               }
+//             } else if (element.type === 'radio') {
+//               if (element.checked) {
+//                 try {
+//                   const radioGroup = form.getRadioGroup(name)
+//                   radioGroup.select(element.value)
+//                 } catch (e) {
+//                   try {
+//                     const radioGroup = form.getRadioGroup(name)
+//                     const options = radioGroup.getOptions()
+//                     if (options.length > 0) {
+//                       radioGroup.select(options[0])
+//                     }
+//                   } catch (err) { }
+//                 }
+//               }
+//             } else {
+//               try {
+//                 form.getTextField(name).setText(element.value || '')
+//               } catch (e) { }
+//             }
+//           } else if (element instanceof HTMLTextAreaElement) {
+//             try {
+//               form.getTextField(name).setText(element.value || '')
+//             } catch (e) { }
+//           }
+//         } catch (err) {
+//           console.warn(`Could not set field ${name}`, err)
+//         }
+//       })
 
-      // Helper function to decode base64 dataUrl synchronously into Uint8Array
-      const dataUrlToBytes = (dataUrl: string): Uint8Array => {
-        const base64 = dataUrl.split(',')[1] || dataUrl
-        const binaryString = atob(base64)
-        const bytes = new Uint8Array(binaryString.length)
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i)
-        }
-        return bytes
-      }
+//       // Helper function to decode base64 dataUrl synchronously into Uint8Array
+//       const dataUrlToBytes = (dataUrl: string): Uint8Array => {
+//         const base64 = dataUrl.split(',')[1] || dataUrl
+//         const binaryString = atob(base64)
+//         const bytes = new Uint8Array(binaryString.length)
+//         for (let i = 0; i < binaryString.length; i++) {
+//           bytes[i] = binaryString.charCodeAt(i)
+//         }
+//         return bytes
+//       }
 
-      // 2. Embed student drawings into draw_box_* fields
-      const pages = pdfDoc.getPages()
-      for (const [name, dataUrl] of Object.entries(drawings)) {
-        if (!dataUrl) continue
+//       // 2. Embed student drawings into draw_box_* fields
+//       const pages = pdfDoc.getPages()
+//       for (const [name, dataUrl] of Object.entries(drawings)) {
+//         if (!dataUrl) continue
 
-        try {
-          const field = form.getField(name)
-          if (!field) continue
+//         try {
+//           const field = form.getField(name)
+//           if (!field) continue
 
-          const widgets = field.acroField.getWidgets()
-          if (widgets.length === 0) continue
+//           const widgets = field.acroField.getWidgets()
+//           if (widgets.length === 0) continue
 
-          const widget = widgets[0]
-          const rect = widget.getRectangle() // { x, y, width, height }
+//           const widget = widgets[0]
+//           const rect = widget.getRectangle() // { x, y, width, height }
 
-          // Locate exact page for this widget
-          let targetPage = pages[0]
-          const widgetP = widget.P()
-          if (widgetP) {
-            const found = pages.find((p) => p.ref === widgetP)
-            if (found) targetPage = found
-          } else {
-            for (const page of pages) {
-              const annots = page.node.Annots()
-              // pdf-lib doesn't expose widget.ref publicly; access via acroField.ref
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const widgetRef = (widget as any).ref
-              if (annots && annots.asArray().includes(widgetRef)) {
-                targetPage = page
-                break
-              }
-            }
-          }
+//           // Locate exact page for this widget
+//           let targetPage = pages[0]
+//           const widgetP = widget.P()
+//           if (widgetP) {
+//             const found = pages.find((p) => p.ref === widgetP)
+//             if (found) targetPage = found
+//           } else {
+//             for (const page of pages) {
+//               const annots = page.node.Annots()
+//               // pdf-lib doesn't expose widget.ref publicly; access via acroField.ref
+//               // eslint-disable-next-line @typescript-eslint/no-explicit-any
+//               const widgetRef = (widget as any).ref
+//               if (annots && annots.asArray().includes(widgetRef)) {
+//                 targetPage = page
+//                 break
+//               }
+//             }
+//           }
 
-          // Convert base64 dataUrl directly to Uint8Array bytes
-          const pngImageBytes = dataUrlToBytes(dataUrl)
-          const pngImage = await pdfDoc.embedPng(pngImageBytes)
+//           // Convert base64 dataUrl directly to Uint8Array bytes
+//           const pngImageBytes = dataUrlToBytes(dataUrl)
+//           const pngImage = await pdfDoc.embedPng(pngImageBytes)
 
-          targetPage.drawImage(pngImage, {
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: rect.height,
-          })
+//           targetPage.drawImage(pngImage, {
+//             x: rect.x,
+//             y: rect.y,
+//             width: rect.width,
+//             height: rect.height,
+//           })
 
-          // Remove original form field so default button background doesn't cover drawing
-          try {
-            form.removeField(field)
-          } catch (e) {
-            console.warn(`Could not remove form field ${name}:`, e)
-          }
-        } catch (err) {
-          console.warn(`Could not embed drawing for field ${name}`, err)
-        }
-      }
+//           // Remove original form field so default button background doesn't cover drawing
+//           try {
+//             form.removeField(field)
+//           } catch (e) {
+//             console.warn(`Could not remove form field ${name}:`, e)
+//           }
+//         } catch (err) {
+//           console.warn(`Could not embed drawing for field ${name}`, err)
+//         }
+//       }
 
-      // 3. Flatten the entire PDF form so text, checkboxes, and drawings become static and uneditable
-      try {
-        form.flatten()
-      } catch (flattenErr) {
-        console.warn('Could not flatten PDF form fields:', flattenErr)
-      }
+//       // 3. Flatten the entire PDF form so text, checkboxes, and drawings become static and uneditable
+//       try {
+//         form.flatten()
+//       } catch (flattenErr) {
+//         console.warn('Could not flatten PDF form fields:', flattenErr)
+//       }
 
-      let finalPdfBytes
-      if (assignedPages) {
-        try {
-          console.log('[PdfViewerModal] Extracting only assigned pages for submission:', assignedPages)
-          const subPdfDoc = await PDFDocument.create()
-          const indices = getAssignedPageIndices(assignedPages, pdfDoc.getPageCount())
-          const copiedPages = await subPdfDoc.copyPages(pdfDoc, indices)
-          copiedPages.forEach((page) => subPdfDoc.addPage(page))
-          finalPdfBytes = await subPdfDoc.save()
-        } catch (copyErr) {
-          console.warn('[PdfViewerModal] Could not extract only assigned pages, falling back to full PDF:', copyErr)
-          finalPdfBytes = await pdfDoc.save()
-        }
-      } else {
-        finalPdfBytes = await pdfDoc.save()
-      }
+//       let finalPdfBytes
+//       if (assignedPages) {
+//         try {
+//           console.log('[PdfViewerModal] Extracting only assigned pages for submission:', assignedPages)
+//           const subPdfDoc = await PDFDocument.create()
+//           const indices = getAssignedPageIndices(assignedPages, pdfDoc.getPageCount())
+//           const copiedPages = await subPdfDoc.copyPages(pdfDoc, indices)
+//           copiedPages.forEach((page) => subPdfDoc.addPage(page))
+//           finalPdfBytes = await subPdfDoc.save()
+//         } catch (copyErr) {
+//           console.warn('[PdfViewerModal] Could not extract only assigned pages, falling back to full PDF:', copyErr)
+//           finalPdfBytes = await pdfDoc.save()
+//         }
+//       } else {
+//         finalPdfBytes = await pdfDoc.save()
+//       }
 
-      const blob = new Blob([finalPdfBytes as unknown as BlobPart], { type: 'application/pdf' })
-      await onSave(blob)
-      onClose()
-  } catch (err) {
-    console.error('Error saving PDF', err)
-    alert('Hubo un error al guardar el documento.')
-  } finally {
-    setIsSaving(false)
-  }
-}
+//       const blob = new Blob([finalPdfBytes as unknown as BlobPart], { type: 'application/pdf' })
+//       await onSave(blob)
+//       onClose()
+//   } catch (err) {
+//     console.error('Error saving PDF', err)
+//     alert('Hubo un error al guardar el documento.')
+//   } finally {
+//     setIsSaving(false)
+//   }
+// }
 
 return (
   <div
