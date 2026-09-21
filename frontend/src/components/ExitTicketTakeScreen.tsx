@@ -40,6 +40,10 @@ const ExitTicketTakeScreen: React.FC<ExitTicketTakeScreenProps> = ({
   const [missingIds, setMissingIds] = useState<string[]>([])
   const [activeIndex, setActiveIndex] = useState(0)
 
+  // AI states
+  const [hints, setHints] = useState<Record<string, string>>({})
+  const [loadingHints, setLoadingHints] = useState<Record<string, boolean>>({})
+
   const containerRef = useRef<HTMLDivElement | null>(null)
   const sectionRefs = useRef<(HTMLElement | null)[]>([])
   const shouldReduceMotion = useReducedMotion()
@@ -270,6 +274,51 @@ const ExitTicketTakeScreen: React.FC<ExitTicketTakeScreenProps> = ({
     }))
     setValidationError(null)
     clearMissing(questionId)
+  }
+
+  const requestHint = async (q: any) => {
+    try {
+      setLoadingHints(prev => ({...prev, [q.id]: true}))
+      const res = await fetch('http://localhost:3001/api/ai/hint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: q.title,
+          options: q.config?.options
+        })
+      });
+      const data = await res.json();
+      if(data.hint) {
+        setHints(prev => ({...prev, [q.id]: data.hint}))
+      }
+    } catch(e) {
+      console.error(e)
+    } finally {
+      setLoadingHints(prev => ({...prev, [q.id]: false}))
+    }
+  }
+
+  const requestExplanation = async (q: any, studentAnswer: any) => {
+    try {
+      setLoadingHints(prev => ({...prev, [q.id]: true}))
+      const res = await fetch('http://localhost:3001/api/ai/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: q.title,
+          studentAnswer: studentAnswer,
+          correctAnswer: q.config?.correctAnswer || "No especificada (Por favor infiere la respuesta correcta de las opciones)"
+        })
+      });
+      const data = await res.json();
+      if(data.explanation) {
+        setHints(prev => ({...prev, [q.id]: data.explanation}))
+      }
+    } catch(e) {
+      console.error(e)
+    } finally {
+      setLoadingHints(prev => ({...prev, [q.id]: false}))
+    }
   }
 
   const questions = (template?.questions || []).slice().sort((a, b) => a.question_order - b.question_order)
@@ -738,6 +787,69 @@ const ExitTicketTakeScreen: React.FC<ExitTicketTakeScreenProps> = ({
                   <p style={{ color: '#fca5a5', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem' }}>
                     Esta pregunta es obligatoria.
                   </p>
+                )}
+
+                {/* AI HINT BUTTON */}
+                {q.type === 'multiple_choice' && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    {!existingResponse ? (
+                      <button
+                        onClick={() => requestHint(q)}
+                        disabled={loadingHints[q.id]}
+                        style={{
+                          background: 'rgba(168, 85, 247, 0.15)',
+                          border: '1px solid rgba(168, 85, 247, 0.4)',
+                          color: '#c084fc',
+                          padding: '8px 16px',
+                          borderRadius: '10px',
+                          cursor: loadingHints[q.id] ? 'wait' : 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(168, 85, 247, 0.25)')}
+                        onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(168, 85, 247, 0.15)')}
+                      >
+                        💡 {loadingHints[q.id] ? 'Generando Pista...' : 'Pedir Pista (IA)'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => requestExplanation(q, currentAnswer)}
+                        disabled={loadingHints[q.id]}
+                        style={{
+                          background: 'rgba(59, 130, 246, 0.15)',
+                          border: '1px solid rgba(59, 130, 246, 0.4)',
+                          color: '#60a5fa',
+                          padding: '8px 16px',
+                          borderRadius: '10px',
+                          cursor: loadingHints[q.id] ? 'wait' : 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.25)')}
+                        onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)')}
+                      >
+                        🤖 {loadingHints[q.id] ? 'Analizando respuesta...' : 'Pedir Explicación a IA'}
+                      </button>
+                    )}
+
+                    {hints[q.id] && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }} 
+                        animate={{ opacity: 1, height: 'auto' }}
+                        style={{ marginTop: '12px', padding: '14px', background: 'rgba(168, 85, 247, 0.1)', borderLeft: '4px solid #a855f7', borderRadius: '0 8px 8px 0', fontSize: '0.95rem', color: '#e9d5ff', lineHeight: '1.5' }}
+                      >
+                        <strong>Tutor IA:</strong> <br/>{hints[q.id]}
+                      </motion.div>
+                    )}
+                  </div>
                 )}
 
                 {/* 1. TEXT / OPEN ANSWER */}

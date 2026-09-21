@@ -20,6 +20,7 @@ import { markItemAsRead } from '../lib/api'
 import ExitTicketTakeScreen from './ExitTicketTakeScreen'
 import QuizTakeScreen from './QuizTakeScreen'
 import ThinkBlockViewerScreen from './ThinkBlockViewerScreen'
+import { ChatbotTutor } from './ChatbotTutor'
 import bannerImg from '../assets/banner.png'
 
 import ciberImg from '../assets/ciber.png'
@@ -857,6 +858,11 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
           onClose={() => setShowThinkBlocks(false)}
           moduleTitle={moduleData?.title}
         />
+      )}
+
+      {/* Chatbot Tutor */}
+      {userRole === 'student' && (
+        <ChatbotTutor moduleId={moduleId!} studentId={user.id} />
       )}
     </div>
   )

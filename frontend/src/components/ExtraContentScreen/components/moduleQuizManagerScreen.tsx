@@ -613,6 +613,11 @@ const QuizEditor: React.FC<QuizEditorProps> = ({ quizId, curriculumModuleId, onB
     const [isActive, setIsActive] = useState(true)
     const [questions, setQuestions] = useState<QuestionFormState[]>([])
 
+    // AI Generation states
+    const [aiTextContext, setAiTextContext] = useState('')
+    const [generatingQuiz, setGeneratingQuiz] = useState(false)
+    const [showAiModal, setShowAiModal] = useState(false)
+
     const prevLenRef = useRef(0)
     const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -715,6 +720,45 @@ const QuizEditor: React.FC<QuizEditorProps> = ({ quizId, curriculumModuleId, onB
         }
     }
 
+    const handleGenerateAiQuiz = async () => {
+        if (!aiTextContext.trim()) {
+            alert('Por favor ingresa un texto de contexto.');
+            return;
+        }
+        setGeneratingQuiz(true);
+        try {
+            const res = await fetch('http://localhost:3001/api/ai/generate_quiz', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: aiTextContext })
+            });
+            const data = await res.json();
+            if (data.questions && Array.isArray(data.questions)) {
+                const mapped: QuestionFormState[] = data.questions.map((q: any, i: number) => ({
+                    id: '',
+                    type: 'multiple_choice',
+                    title: q.question,
+                    required: true,
+                    question_order: questions.length + i,
+                    config: {
+                        options: q.options,
+                        correctAnswer: q.correctAnswer
+                    }
+                }));
+                setQuestions(prev => [...prev, ...mapped]);
+                setShowAiModal(false);
+                setAiTextContext('');
+            } else {
+                alert('La IA no devolvió preguntas en el formato esperado.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error al generar quiz con IA');
+        } finally {
+            setGeneratingQuiz(false);
+        }
+    }
+
     if (loading) {
         return <div className="notice-box">⏳ Cargando cuestionario…</div>
     }
@@ -805,11 +849,69 @@ const QuizEditor: React.FC<QuizEditorProps> = ({ quizId, curriculumModuleId, onB
 
                         <div ref={bottomRef} />
 
-                        <button className="qm-add-question-btn" onClick={addQuestion}>
-                            + Agregar pregunta
-                        </button>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button className="qm-add-question-btn" onClick={addQuestion} style={{ flex: 1 }}>
+                                + Agregar pregunta
+                            </button>
+                            <button 
+                                className="qm-add-question-btn" 
+                                onClick={() => setShowAiModal(true)}
+                                style={{ flex: 1, background: 'linear-gradient(135deg, #a855f7, #6c5ce7)', border: 'none', color: 'white' }}
+                            >
+                                ✨ Generar con IA
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                {/* AI Generation Modal Overlay (inline) */}
+                {showAiModal && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999,
+                        display: 'flex', justifyContent: 'center', alignItems: 'center'
+                    }}>
+                        <div style={{
+                            background: '#1a1625', padding: '24px', borderRadius: '16px',
+                            width: '90%', maxWidth: '500px', border: '1px solid rgba(168, 85, 247, 0.4)'
+                        }}>
+                            <h3 style={{ color: 'white', marginTop: 0 }}>Generar Preguntas con IA</h3>
+                            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>
+                                Ingresa un texto, artículo o tema del cual quieres generar preguntas de opción múltiple.
+                            </p>
+                            <textarea
+                                value={aiTextContext}
+                                onChange={e => setAiTextContext(e.target.value)}
+                                rows={6}
+                                placeholder="Escribe o pega el texto aquí..."
+                                style={{
+                                    width: '100%', padding: '12px', borderRadius: '8px',
+                                    background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.2)',
+                                    color: 'white', outline: 'none', resize: 'vertical', marginTop: '10px'
+                                }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                                <button 
+                                    onClick={() => setShowAiModal(false)}
+                                    disabled={generatingQuiz}
+                                    style={{ padding: '8px 16px', borderRadius: '8px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white', cursor: 'pointer' }}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleGenerateAiQuiz}
+                                    disabled={generatingQuiz || !aiTextContext.trim()}
+                                    style={{
+                                        padding: '8px 16px', borderRadius: '8px', background: 'linear-gradient(135deg, #a855f7, #6c5ce7)',
+                                        border: 'none', color: 'white', cursor: generatingQuiz ? 'wait' : 'pointer', opacity: (generatingQuiz || !aiTextContext.trim()) ? 0.6 : 1
+                                    }}
+                                >
+                                    {generatingQuiz ? 'Generando...' : 'Generar Preguntas'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Right: live preview */}
                 <div className="preview-sticky-wrapper">

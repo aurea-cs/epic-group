@@ -16,3 +16,4 @@ export { default as exitTicketsRouter } from './exitTickets';
 export { default as quizzesRouter } from './quizzes';
 export { default as curriculumRouter } from './curriculum';
 export { default as thinkBlocksRouter } from './thinkBlocks';
+export { default as aiRouter } from './ai';

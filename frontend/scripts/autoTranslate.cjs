@@ -22,7 +22,7 @@ if (!apiKey) {
 
 const genAI = new GoogleGenerativeAI(apiKey);
 // Using a reliable model for translation
-const model = genAI.getGenerativeModel({ model: "gemini-3.8-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 const esPath = path.resolve(__dirname, '../src/locales/es.json');
 const enPath = path.resolve(__dirname, '../src/locales/en.json');
