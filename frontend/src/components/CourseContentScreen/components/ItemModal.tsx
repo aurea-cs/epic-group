@@ -87,21 +87,7 @@ const ItemModal: React.FC<ItemModalProps> = ({
                                 }}
                             />
                         </div>
-                        <div className="form-group" style={{
-                            gridColumn: 'span 2', display: 'flex',
-                            alignItems: 'center', gap: '8px', marginTop: '8px',
-                        }}>
-                            <input
-                                type="checkbox"
-                                id="add-is-editable"
-                                checked={itemForm.is_editable}
-                                onChange={e => onFormChange({ ...itemForm, is_editable: e.target.checked })}
-                                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                            />
-                            <label htmlFor="add-is-editable" style={{ margin: 0, cursor: 'pointer', fontWeight: 'normal', color: 'white' }}>
-                                Este PDF es un cuaderno interactivo (los alumnos podrán dibujar, rellenar campos y entregarlo)
-                            </label>
-                        </div>
+
                     </>
                 )}
 
