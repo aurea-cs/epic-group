@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
     getExitTicket,
     createExitTicket,
@@ -24,12 +25,13 @@ interface ExitTicketEditorScreenProps {
     onSaved: () => void
 }
 
-const DEFAULT_NEW_QUESTIONS: ExitTicketQuestionFormState[] = [
-    { title: '¿Qué concepto principal aprendiste hoy en clase?', type: 'text', required: true, question_order: 0 },
-    { title: '¿Qué tan clara fue la lección de hoy?', type: 'rating', required: true, question_order: 1 },
+const getDefaultNewQuestions = (i18n: any): ExitTicketQuestionFormState[] => [
+    { title: i18n.language.startsWith('en') ? 'What main concept did you learn today in class?' : '¿Qué concepto principal aprendiste hoy en clase?', type: 'text', required: true, question_order: 0 },
+    { title: i18n.language.startsWith('en') ? 'How clear was today\'s lesson?' : '¿Qué tan clara fue la lección de hoy?', type: 'rating', required: true, question_order: 1 },
 ]
 
 const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templateId, onBack, onSaved }) => {
+    const { t, i18n } = useTranslation()
     const isEditing = !!templateId
 
     const [loadingDetail, setLoadingDetail] = useState(isEditing)
@@ -41,7 +43,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
     const [description, setDescription] = useState('')
     const [isActive, setIsActive] = useState(true)
     const [questions, setQuestions] = useState<ExitTicketQuestionFormState[]>(
-        isEditing ? [] : DEFAULT_NEW_QUESTIONS
+        isEditing ? [] : getDefaultNewQuestions(i18n)
     )
 
     // Question form fields (for add / edit modal)
@@ -50,7 +52,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
     const [newTitle, setNewTitle] = useState('')
     const [newType, setNewType] = useState<'multiple_choice' | 'text' | 'rating'>('multiple_choice')
     const [newRequired, setNewRequired] = useState(true)
-    const [newOptions, setNewOptions] = useState<string[]>(['Opción 1', 'Opción 2'])
+    const [newOptions, setNewOptions] = useState<string[]>(i18n.language.startsWith('en') ? ['Option 1', 'Option 2'] : ['Opción 1', 'Opción 2'])
     const [newOptionInput, setNewOptionInput] = useState('')
 
     // Live preview state (for testing interactive elements)
@@ -102,7 +104,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
         setNewTitle('')
         setNewType('multiple_choice')
         setNewRequired(true)
-        setNewOptions(['Opción 1', 'Opción 2'])
+        setNewOptions(i18n.language.startsWith('en') ? ['Option 1', 'Option 2'] : ['Opción 1', 'Opción 2'])
         setNewOptionInput('')
         setIsQuestionModalOpen(true)
     }
@@ -125,7 +127,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
         if (q.type === 'multiple_choice' && q.config?.options && q.config.options.length > 0) {
             setNewOptions(q.config.options.map((o) => o.label))
         } else {
-            setNewOptions(['Opción 1', 'Opción 2'])
+            setNewOptions(i18n.language.startsWith('en') ? ['Option 1', 'Option 2'] : ['Opción 1', 'Opción 2'])
         }
         setNewOptionInput('')
         setIsQuestionModalOpen(true)
@@ -136,7 +138,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
         setNewTitle('')
         setNewType('multiple_choice')
         setNewRequired(true)
-        setNewOptions(['Opción 1', 'Opción 2'])
+        setNewOptions(i18n.language.startsWith('en') ? ['Option 1', 'Option 2'] : ['Opción 1', 'Opción 2'])
         setNewOptionInput('')
         setIsQuestionModalOpen(false)
     }
@@ -250,7 +252,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                     </button>
                     <div>
                         <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#fff' }}>
-                            {isEditing ? `${title}` : 'Nuevo ticket de salida'}
+                            {isEditing ? `${title}` : i18n.language.startsWith('en') ? 'New exit ticket' : 'Nuevo ticket de salida'}
                         </h2>
                     </div>
                 </div>
@@ -286,7 +288,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         {/* Panel 1: General Info */}
                         <div className="glass-panel">
-                            <h3 className="glass-panel-title">Información</h3>
+                            <h3 className="glass-panel-title">{i18n.language.startsWith('en') ? 'Information' : 'Información'}</h3>
                             <div className="form-group" style={{ marginBottom: '1rem' }}>
                                 <label style={{ color: 'rgba(255,255,255,0.9)', fontWeight: '600', display: 'block', marginBottom: '0.4rem' }}>
                                     Título *
@@ -296,7 +298,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                                     className="modern-input"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="Ej: Ticket de Salida - Reflexión Diaria"
+                                    placeholder={i18n.language.startsWith('en') ? 'Ex: Exit Ticket - Daily Reflection' : 'Ej: Ticket de Salida - Reflexión Diaria'}
                                 />
                             </div>
 
@@ -308,7 +310,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                                     className="modern-input"
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Instrucciones breves para el alumno..."
+                                    placeholder={i18n.language.startsWith('en') ? 'Brief instructions for the student...' : 'Instrucciones breves para el alumno...'}
                                     rows={3}
                                 />
                             </div>
@@ -359,8 +361,8 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                                                         {q.type === 'rating'
                                                             ? '⭐ Calificación 1-5'
                                                             : q.type === 'text'
-                                                                ? '✍️ Respuesta Abierta'
-                                                                : '🔘 Opción Múltiple'}{' '}
+                                                                ? (i18n.language.startsWith('en') ? '✍️ Open Answer' : '✍️ Respuesta Abierta')
+                                                                : (i18n.language.startsWith('en') ? '🔘 Multiple Choice' : '🔘 Opción Múltiple')}{' '}
                                                         {q.config?.options && (
                                                             <span style={{ display: 'block', color: 'rgba(255,255,255,0.6)', marginTop: '0.2rem' }}>
                                                                 Opciones: {q.config.options.map((o) => o.label).join(', ')}
@@ -400,10 +402,10 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                                 Vista Previa (Estudiante)
                             </div>
                             <h3 style={{ margin: '0 0 0.4rem 0', color: '#fff', fontSize: '1.2rem' }}>
-                                {title.trim() || 'Título del Cuestionario'}
+                                {title.trim() || (i18n.language.startsWith('en') ? 'Questionnaire Title' : 'Título del Cuestionario')}
                             </h3>
                             <p style={{ margin: '0 0 1.25rem 0', color: 'rgba(255,255,255,0.7)', fontSize: '0.88rem' }}>
-                                {description.trim() || 'Sin instrucciones adicionales.'}
+                                {description.trim() || (i18n.language.startsWith('en') ? 'No additional instructions.' : 'Sin instrucciones adicionales.')}
                             </p>
 
                             {questions.length === 0 ? (
@@ -424,7 +426,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                                                     <textarea
                                                         className="modern-input"
                                                         rows={2}
-                                                        placeholder="El alumno escribirá su respuesta aquí..."
+                                                        placeholder={i18n.language.startsWith('en') ? 'The student will write their answer here...' : 'El alumno escribirá su respuesta aquí...'}
                                                         value={currentVal || ''}
                                                         onChange={(e) =>
                                                             setPreviewAnswers((prev) => ({ ...prev, [idx]: e.target.value }))
@@ -521,7 +523,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                                         onChange={(e) => setNewType(e.target.value as any)}
                                     >
                                         <option value="multiple_choice">Opción Múltiple</option>
-                                        <option value="text">Respuesta Abierta (Texto)</option>
+                                        <option value="text">{i18n.language.startsWith('en') ? 'Open Answer' : 'Respuesta Abierta'} (Texto)</option>
                                         <option value="rating">Calificación 1-5 ⭐</option>
                                     </select>
                                 </div>

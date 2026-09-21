@@ -350,7 +350,16 @@
     "Saberes y Pensamiento Científico": "Scientific Knowledge and Thinking",
     "De lo humano a lo comunitario": "From Human to Community",
     "Ética, naturaleza y sociedades": "Ethics, Nature, and Societies",
-    "Lenguajes": "Languages"
+    "Lenguajes": "Languages",
+    "Primer Trimestre": "First Trimester",
+    "Segundo Trimestre": "Second Trimester",
+    "Tercer Trimestre": "Third Trimester",
+    "Semestre 1": "Semester 1",
+    "Semestre 2": "Semester 2",
+    "Semestre 3": "Semester 3",
+    "Semestre 4": "Semester 4",
+    "Semestre 5": "Semester 5",
+    "Semestre 6": "Semester 6"
   },
   "extraContent": {
     "title": "[Under Construction] Global Content Management",

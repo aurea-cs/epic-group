@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { type CourseModule, type CurriculumModule } from '../../../lib/adminApi'
 
 interface ModuleModalProps {
@@ -20,6 +21,8 @@ const ModuleModal: React.FC<ModuleModalProps> = ({
     onSave,
     onClose,
 }) => {
+    const { t, i18n } = useTranslation()
+
     const handleCurriculumModuleSelect = (cmId: string) => {
         if (!cmId) {
             onFormChange({ ...moduleForm, curriculum_module_id: null })
@@ -37,11 +40,13 @@ const ModuleModal: React.FC<ModuleModalProps> = ({
         <div className="modal-overlay" onClick={onClose}>
             <div className="school-modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h2>{editingModule ? 'Editar Módulo' : 'Nuevo Módulo'}</h2>
+                    <h2>{editingModule 
+                        ? (i18n.language.startsWith('en') ? 'Edit Module' : 'Editar Módulo') 
+                        : (i18n.language.startsWith('en') ? 'New Module' : 'Nuevo Módulo')}</h2>
                 </div>
 
                 <div className="form-group">
-                    <label>Nombre del Módulo (Ej: Tema 1) *</label>
+                    <label>{i18n.language.startsWith('en') ? 'Module Name (Ex: Topic 1) *' : 'Nombre del Módulo (Ej: Tema 1) *'}</label>
                     <input
                         type="text"
                         className="modern-input"
@@ -53,7 +58,7 @@ const ModuleModal: React.FC<ModuleModalProps> = ({
 
                 {curriculumModules.length > 0 && (
                     <div className="form-group" style={{ marginTop: '1.25rem' }}>
-                        <label>Módulo Canónico del Currículum (Opcional)</label>
+                        <label>{i18n.language.startsWith('en') ? 'Canonical Curriculum Module (Optional)' : 'Módulo Canónico del Currículum (Opcional)'}</label>
                         <select
                             className="selection-select"
                             style={{
@@ -70,7 +75,7 @@ const ModuleModal: React.FC<ModuleModalProps> = ({
                             value={moduleForm.curriculum_module_id || ''}
                             onChange={(e) => handleCurriculumModuleSelect(e.target.value)}
                         >
-                            <option value="">-- Ninguno (Sin vincular) --</option>
+                            <option value="">-- {i18n.language.startsWith('en') ? 'None (Unlinked)' : 'Ninguno (Sin vincular)'} --</option>
                             {curriculumModules.map((cm) => (
                                 <option key={cm.id} value={cm.id}>
                                     #{cm.order_index ?? '-'} {cm.title}
@@ -78,21 +83,21 @@ const ModuleModal: React.FC<ModuleModalProps> = ({
                             ))}
                         </select>
                         <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', marginTop: '0.35rem', display: 'block' }}>
-                            Al vincular este módulo a un módulo canónico, heredará automáticamente sus Cuestionarios y Experimentos (Piensa, Observa y Experimenta).
+                            {i18n.language.startsWith('en') ? 'By linking this module to a canonical module, it will automatically inherit its Quizzes and Experiments (Think, Observe and Experiment).' : 'Al vincular este módulo a un módulo canónico, heredará automáticamente sus Cuestionarios y Experimentos (Piensa, Observa y Experimenta).'}
                         </span>
                     </div>
                 )}
 
                 <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
                     <button className="btn-cancel-modern" onClick={onClose}>
-                        Cancelar
+                        {i18n.language.startsWith('en') ? 'Cancel' : 'Cancelar'}
                     </button>
                     <button
                         className="btn-save-modern"
                         onClick={() => onSave(modulesCount)}
                         disabled={!moduleForm.title.trim()}
                     >
-                        Guardar
+                        {i18n.language.startsWith('en') ? 'Save' : 'Guardar'}
                     </button>
                 </div>
             </div>

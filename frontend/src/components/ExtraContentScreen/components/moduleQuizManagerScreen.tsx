@@ -29,13 +29,13 @@ interface QuestionFormState {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const QUESTION_TYPE_LABELS: Record<QuizQuestionType, string> = {
-    multiple_choice: 'Opción múltiple',
-    true_false: 'Verdadero / Falso',
-    checklist: 'Casillas (múltiples correctas)',
-    open: 'Respuesta abierta',
-    complete_sentence: 'Completa la oración',
-}
+const QUESTION_TYPE_LABELS = (i18n: any): Record<QuizQuestionType, string> => ({
+    multiple_choice: i18n.language.startsWith('en') ? 'Multiple choice' : 'Opción múltiple',
+    true_false: i18n.language.startsWith('en') ? 'True / False' : 'Verdadero / Falso',
+    checklist: i18n.language.startsWith('en') ? 'Checkboxes' : 'Casillas (múltiples correctas)',
+    open: i18n.language.startsWith('en') ? 'Open answer' : 'Respuesta abierta',
+    complete_sentence: i18n.language.startsWith('en') ? 'Complete the sentence' : 'Completa la oración',
+})
 
 const QUESTION_TYPE_ICONS: Record<QuizQuestionType, string> = {
     multiple_choice: '🔘',
@@ -108,9 +108,10 @@ interface QuestionEditorProps {
     onRemove: () => void
     onMoveUp: () => void
     onMoveDown: () => void
+    i18n: any
 }
 
-const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, index, total, onChange, onRemove, onMoveUp, onMoveDown }) => {
+const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, index, total, onChange, onRemove, onMoveUp, onMoveDown, i18n }) => {
     const handleTypeChange = (newType: QuizQuestionType) => {
         onChange({ ...question, type: newType, config: defaultConfigForType(newType) })
     }
@@ -150,8 +151,8 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, index, total,
                     value={question.type}
                     onChange={(e) => handleTypeChange(e.target.value as QuizQuestionType)}
                 >
-                    {(Object.keys(QUESTION_TYPE_LABELS) as QuizQuestionType[]).map((t) => (
-                        <option key={t} value={t}>{QUESTION_TYPE_ICONS[t]} {QUESTION_TYPE_LABELS[t]}</option>
+                    {(Object.keys(QUESTION_TYPE_LABELS(i18n)) as QuizQuestionType[]).map((t) => (
+                        <option key={t} value={t}>{QUESTION_TYPE_ICONS[t]} {QUESTION_TYPE_LABELS(i18n)[t]}</option>
                     ))}
                 </select>
                 <div style={{ display: 'flex', gap: '0.3rem', marginLeft: 'auto' }}>
@@ -164,7 +165,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, index, total,
             {/* Title */}
             <input
                 className="qm-question-input"
-                placeholder="Escribe la pregunta aquí…"
+                placeholder={i18n.language.startsWith('en') ? "Write the question here..." : "Escribe la pregunta aquí…"}
                 value={question.title}
                 onChange={(e) => onChange({ ...question, title: e.target.value })}
             />
@@ -176,7 +177,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, index, total,
                     checked={question.required}
                     onChange={(e) => onChange({ ...question, required: e.target.checked })}
                 />
-                Obligatoria
+                {i18n.language.startsWith('en') ? 'Required' : 'Obligatoria'}
             </label>
 
             {/* ─── Type-specific config ─── */}
@@ -220,7 +221,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, index, total,
                                     checked={question.config.correct_answer === val}
                                     onChange={() => onChange({ ...question, config: { ...question.config, correct_answer: val } })}
                                 />
-                                {val === 'true' ? '✅ Verdadero' : '❌ Falso'}
+                                {val === 'true' ? (i18n.language.startsWith('en') ? '✅ True' : '✅ Verdadero') : (i18n.language.startsWith('en') ? '❌ False' : '❌ Falso')}
                             </label>
                         ))}
                     </div>
@@ -319,9 +320,10 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, index, total,
 interface LivePreviewProps {
     title: string
     questions: QuestionFormState[]
+    i18n: any
 }
 
-const LivePreview: React.FC<LivePreviewProps> = ({ title, questions }) => {
+const LivePreview: React.FC<LivePreviewProps> = ({ title, questions, i18n }) => {
     const [answers, setAnswers] = useState<Record<number, any>>({})
 
     return (
@@ -372,7 +374,7 @@ const LivePreview: React.FC<LivePreviewProps> = ({ title, questions }) => {
                                     onClick={() => setAnswers((prev) => ({ ...prev, [i]: val }))}
                                     style={answers[i] === val ? { background: 'rgba(108,92,231,0.3)', borderColor: '#c084fc', flex: 1 } : { flex: 1 }}
                                 >
-                                    {val === 'true' ? '✅ Verdadero' : '❌ Falso'}
+                                    {val === 'true' ? (i18n.language.startsWith('en') ? '✅ True' : '✅ Verdadero') : (i18n.language.startsWith('en') ? '❌ False' : '❌ Falso')}
                                 </div>
                             ))}
                         </div>
@@ -448,6 +450,7 @@ interface QuizEditorProps {
 }
 
 const QuizEditor: React.FC<QuizEditorProps> = ({ quizId, curriculumModuleId, onBack, onSaved }) => {
+    const { t, i18n } = useTranslation()
     const isEditing = !!quizId
 
     const [loading, setLoading] = useState(isEditing)
@@ -618,13 +621,13 @@ const QuizEditor: React.FC<QuizEditorProps> = ({ quizId, curriculumModuleId, onB
             {/* Editor header */}
             <div className="workspace-header">
                 <div className="workspace-header-info">
-                    <button className="btn-back-link" onClick={onBack}>← Volver a lista</button>
+                    <button className="btn-back-link" onClick={onBack}>← {i18n.language.startsWith('en') ? 'Back to list' : 'Volver a lista'}</button>
                     <div>
                         <h2 style={{ margin: 0, color: '#fff', fontSize: '1.25rem', fontWeight: 700 }}>
-                            {isEditing ? '✏️ Editar cuestionario' : '➕ Nuevo cuestionario'}
+                            {isEditing ? (i18n.language.startsWith('en') ? '✏️ Edit questionnaire' : '✏️ Editar cuestionario') : (i18n.language.startsWith('en') ? '➕ New questionnaire' : '➕ Nuevo cuestionario')}
                         </h2>
                         <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.55)' }}>
-                            Los cambios se guardan al hacer clic en Guardar
+                            {i18n.language.startsWith('en') ? 'Changes are saved by clicking Save' : 'Los cambios se guardan al hacer clic en Guardar'}
                         </span>
                     </div>
                 </div>
@@ -635,11 +638,11 @@ const QuizEditor: React.FC<QuizEditorProps> = ({ quizId, curriculumModuleId, onB
                             checked={isActive}
                             onChange={(e) => setIsActive(e.target.checked)}
                         />
-                        Activo
+                        {i18n.language.startsWith('en') ? 'Active' : 'Activo'}
                     </label>
-                    <button className="btn-back-link" onClick={onBack} disabled={saving}>Cancelar</button>
+                    <button className="btn-back-link" onClick={onBack} disabled={saving}>{i18n.language.startsWith('en') ? 'Cancel' : 'Cancelar'}</button>
                     <button className="btn-save-quiz" onClick={handleSave} disabled={saving}>
-                        {saving ? '⏳ Guardando…' : '💾 Guardar'}
+                        {saving ? (i18n.language.startsWith('en') ? '⏳ Saving...' : '⏳ Guardando…') : (i18n.language.startsWith('en') ? '💾 Save' : '💾 Guardar')}
                     </button>
                 </div>
             </div>
@@ -650,17 +653,17 @@ const QuizEditor: React.FC<QuizEditorProps> = ({ quizId, curriculumModuleId, onB
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                     {/* Meta panel */}
                     <div className="glass-panel">
-                        <div className="glass-panel-title">📋 Información del cuestionario</div>
+                        <div className="glass-panel-title">📋 {i18n.language.startsWith('en') ? 'Questionnaire Information' : 'Información del cuestionario'}</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <input
                                 className="qm-meta-input"
-                                placeholder="Título del cuestionario *"
+                                placeholder={i18n.language.startsWith('en') ? "Questionnaire Title *" : "Título del cuestionario *"}
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
                             />
                             <textarea
                                 className="qm-meta-textarea"
-                                placeholder="Descripción / instrucciones para los alumnos (opcional)"
+                                placeholder={i18n.language.startsWith('en') ? "Description / instructions for students (optional)" : "Descripción / instrucciones para los alumnos (opcional)"}
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 rows={2}
@@ -671,7 +674,7 @@ const QuizEditor: React.FC<QuizEditorProps> = ({ quizId, curriculumModuleId, onB
                     {/* Questions panel */}
                     <div className="glass-panel">
                         <div className="glass-panel-title" style={{ justifyContent: 'space-between' }}>
-                            <span>❓ Preguntas ({questions.length})</span>
+                            <span>❓ {i18n.language.startsWith('en') ? 'Questions' : 'Preguntas'} ({questions.length})</span>
                         </div>
 
                         {questions.length === 0 && (
@@ -690,6 +693,7 @@ const QuizEditor: React.FC<QuizEditorProps> = ({ quizId, curriculumModuleId, onB
                                 onRemove={() => removeQuestion(i)}
                                 onMoveUp={() => moveQuestion(i, i - 1)}
                                 onMoveDown={() => moveQuestion(i, i + 1)}
+                                i18n={i18n}
                             />
                         ))}
 
@@ -697,14 +701,14 @@ const QuizEditor: React.FC<QuizEditorProps> = ({ quizId, curriculumModuleId, onB
 
                         <div style={{ display: 'flex', gap: '10px' }}>
                             <button className="qm-add-question-btn" onClick={addQuestion} style={{ flex: 1 }}>
-                                + Agregar pregunta
+                                + {i18n.language.startsWith('en') ? 'Add question' : 'Agregar pregunta'}
                             </button>
                             <button 
                                 className="qm-add-question-btn" 
                                 onClick={() => setShowAiModal(true)}
                                 style={{ flex: 1, background: 'linear-gradient(135deg, #a855f7, #6c5ce7)', border: 'none', color: 'white' }}
                             >
-                                ✨ Generar con IA
+                                ✨ {i18n.language.startsWith('en') ? 'Generate with AI' : 'Generar con IA'}
                             </button>
                         </div>
                     </div>
@@ -762,7 +766,7 @@ const QuizEditor: React.FC<QuizEditorProps> = ({ quizId, curriculumModuleId, onB
                 {/* Right: live preview */}
                 <div className="preview-sticky-wrapper">
                     <div style={{ position: 'sticky', top: '1.5rem' }}>
-                        <LivePreview title={title} questions={questions} />
+                        <LivePreview title={title} questions={questions} i18n={i18n} />
                     </div>
                 </div>
             </div>
@@ -778,7 +782,7 @@ const ModuleQuizManagerScreen: React.FC<ModuleQuizManagerScreenProps> = ({
     module,
     onBack,
 }) => {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
 
     const [view, setView] = useState<'list' | 'editor'>('list')
     const [editingQuizId, setEditingQuizId] = useState<string | null>(null)
@@ -844,38 +848,38 @@ const ModuleQuizManagerScreen: React.FC<ModuleQuizManagerScreenProps> = ({
             <div className="workspace-header">
                 <div className="workspace-header-info">
                     <button className="btn-back-link" onClick={onBack}>
-                        ← {t('extraContent.btnBack', { defaultValue: 'Volver a Categorías' })}
+                        ← {i18n.language.startsWith('en') ? 'Back to Categories' : t('extraContent.btnBack', { defaultValue: 'Volver a Categorías' })}
                     </button>
                     <div>
                         <h2 style={{ margin: 0, color: '#fff', fontSize: '1.35rem', fontWeight: 700 }}>
-                            📝 Comprueba lo que aprendiste
+                            📝 {i18n.language.startsWith('en') ? 'Check what you learned' : 'Comprueba lo que aprendiste'}
                         </h2>
                         <span style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.55)' }}>
-                            Gestión de cuestionarios del módulo
+                            {i18n.language.startsWith('en') ? 'Module questionnaires management' : 'Gestión de cuestionarios del módulo'}
                         </span>
                     </div>
                 </div>
                 <button className="btn-save-quiz" onClick={() => openEditor(null)}>
-                    + Nuevo cuestionario
+                    + {i18n.language.startsWith('en') ? 'New questionnaire' : 'Nuevo cuestionario'}
                 </button>
             </div>
 
             {/* ─── Context breadcrumb ─── */}
             <div className="qm-context-bar">
                 <div className="qm-context-item">
-                    <span className="qm-context-label">Grado</span>
+                    <span className="qm-context-label">{i18n.language.startsWith('en') ? 'Grade' : 'Grado'}</span>
                     <span className="qm-context-value">{formatGradeDisplayName(t, grade.name, grade.level)}</span>
                 </div>
                 <span className="qm-context-sep">›</span>
                 <div className="qm-context-item">
-                    <span className="qm-context-label">Materia</span>
-                    <span className="qm-context-value" style={{ color: '#c084fc' }}>{subject.name}</span>
+                    <span className="qm-context-label">{i18n.language.startsWith('en') ? 'Subject' : 'Materia'}</span>
+                    <span className="qm-context-value" style={{ color: '#c084fc' }}>{i18n.language.startsWith('en') ? t(`dynamicSubjects.${subject.name}`, subject.name) : subject.name}</span>
                 </div>
                 <span className="qm-context-sep">›</span>
                 <div className="qm-context-item">
-                    <span className="qm-context-label">Módulo</span>
+                    <span className="qm-context-label">{i18n.language.startsWith('en') ? 'Module' : 'Módulo'}</span>
                     <span className="qm-context-value" style={{ color: '#4ade80' }}>
-                        {module ? module.title : 'Sin módulo seleccionado'}
+                        {module ? (i18n.language.startsWith('en') ? t(`dynamicSubjects.${module.title}`, module.title) : module.title) : (i18n.language.startsWith('en') ? 'No module selected' : 'Sin módulo seleccionado')}
                     </span>
                 </div>
             </div>
@@ -884,7 +888,7 @@ const ModuleQuizManagerScreen: React.FC<ModuleQuizManagerScreenProps> = ({
             {error && <div className="error-banner">⚠️ {error}</div>}
 
             {loading ? (
-                <div className="notice-box">⏳ Cargando cuestionarios…</div>
+                <div className="notice-box">⏳ {i18n.language.startsWith('en') ? 'Loading questionnaires...' : 'Cargando cuestionarios…'}</div>
             ) : (
                 <div className="qm-quiz-list">
                     {/* Add card */}
@@ -894,8 +898,8 @@ const ModuleQuizManagerScreen: React.FC<ModuleQuizManagerScreenProps> = ({
                         style={{ minHeight: '160px' }}
                     >
                         <div className="add-ticket-icon">➕</div>
-                        <h3 className="add-ticket-title">Nuevo cuestionario</h3>
-                        <p className="add-ticket-subtitle">Crea un nuevo cuestionario para este módulo</p>
+                        <h3 className="add-ticket-title">{i18n.language.startsWith('en') ? 'New questionnaire' : 'Nuevo cuestionario'}</h3>
+                        <p className="add-ticket-subtitle">{i18n.language.startsWith('en') ? 'Create a new questionnaire for this module' : 'Crea un nuevo cuestionario para este módulo'}</p>
                     </div>
 
                     {quizzes.map((quiz) => {
@@ -913,7 +917,7 @@ const ModuleQuizManagerScreen: React.FC<ModuleQuizManagerScreenProps> = ({
                                         <div className="category-info">
                                             <h3>{quiz.title}</h3>
                                             <span className={`level-badge ${quiz.is_active ? 'primaria' : 'secundaria'}`}>
-                                                {quiz.is_active ? 'Activo' : 'Inactivo'}
+                                                {quiz.is_active ? (i18n.language.startsWith('en') ? 'Active' : 'Activo') : (i18n.language.startsWith('en') ? 'Inactive' : 'Inactivo')}
                                             </span>
                                         </div>
                                     </div>
@@ -929,18 +933,18 @@ const ModuleQuizManagerScreen: React.FC<ModuleQuizManagerScreenProps> = ({
                                     </div>
                                 </div>
                                 <div className="category-card-body">
-                                    {quiz.description || <em style={{ opacity: 0.5 }}>Sin descripción</em>}
+                                    {quiz.description || <em style={{ opacity: 0.5 }}>{i18n.language.startsWith('en') ? 'No description' : 'Sin descripción'}</em>}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>
-                                        {qCount} {qCount === 1 ? 'pregunta' : 'preguntas'}
+                                        {qCount} {qCount === 1 ? (i18n.language.startsWith('en') ? 'question' : 'pregunta') : (i18n.language.startsWith('en') ? 'questions' : 'preguntas')}
                                     </span>
                                     <button
                                         className="btn-manage-category"
                                         style={{ maxWidth: '140px', padding: '0.5rem 0.9rem', fontSize: '0.83rem' }}
                                         onClick={(e) => { e.stopPropagation(); openEditor(quiz.id) }}
                                     >
-                                        ✏️ Editar
+                                        ✏️ {i18n.language.startsWith('en') ? 'Edit' : 'Editar'}
                                     </button>
                                 </div>
                             </div>
@@ -949,7 +953,7 @@ const ModuleQuizManagerScreen: React.FC<ModuleQuizManagerScreenProps> = ({
 
                     {quizzes.length === 0 && (
                         <div className="notice-box" style={{ gridColumn: '1 / -1' }}>
-                            No hay cuestionarios aún para este módulo. ¡Crea el primero!
+                            {i18n.language.startsWith('en') ? 'No questionnaires yet for this module. Create the first one!' : 'No hay cuestionarios aún para este módulo. ¡Crea el primero!'}
                         </div>
                     )}
                 </div>
