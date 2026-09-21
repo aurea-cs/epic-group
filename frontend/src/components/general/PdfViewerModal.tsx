@@ -119,7 +119,13 @@ const options = {
   standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`
 }
 
-const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, assignedPages, submittedRanges, itemId: _itemId, studentId: _studentId, isEditable = true }) => {
+/**
+ * Toggle to enable/disable dynamic PDF form inputs for clients.
+ * Set to true when dynamic inputs and submission flow should be re-enabled.
+ */
+const ALLOW_CLIENT_DYNAMIC_INPUTS = false
+
+const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, assignedPages, submittedRanges, itemId: _itemId, studentId: _studentId, isEditable = false }) => {
   const [numPages, setNumPages] = useState<number>(0)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -158,7 +164,7 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
 
   // Extract all drawing field coordinates directly from the PDF binary structure using pdf-lib
   useEffect(() => {
-    if (!isEditable) return
+    if (!ALLOW_CLIENT_DYNAMIC_INPUTS || !isEditable) return
 
     const extractDrawingBoxes = async () => {
       if (!url) return
@@ -224,8 +230,7 @@ const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ url, onClose, onSave, a
               topPercent,
               widthPercent,
               heightPercent,
-              isEditable
-            } as any)
+            })
           }
         }
 
@@ -478,31 +483,6 @@ return (
       ✕
     </button>
 
-    {/* Save Button */}
-    {onSave && (
-      <button
-        onClick={handleSave}
-        disabled={isSaving}
-        style={{
-          position: 'fixed',
-          top: '20px',
-          right: '70px',
-          background: isSaving ? '#6b7280' : '#8b5cf6',
-          border: 'none',
-          borderRadius: '8px',
-          padding: '8px 16px',
-          color: 'white',
-          fontSize: '1rem',
-          fontWeight: 600,
-          cursor: isSaving ? 'not-allowed' : 'pointer',
-          zIndex: 100,
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        }}
-      >
-        {isSaving ? 'Guardando...' : 'Guardar y Enviar'}
-      </button>
-    )}
-
     {/* Main PDF Canvas Scroll View */}
     <div
       style={{
@@ -564,6 +544,7 @@ return (
             const lockedBySubmittedRange = !!submittedInfo
 
             const pageEditable =
+              ALLOW_CLIENT_DYNAMIC_INPUTS &&
               isEditable &&
               !!onSave &&
               isPageAssigned(pageNum, assignedPages) &&
@@ -668,13 +649,13 @@ return (
                   <Page
                     pageNumber={pageNum}
                     width={pageWidth}
-                    renderAnnotationLayer={true}
-                    renderForms={true}
+                    renderAnnotationLayer={pageEditable}
+                    renderForms={pageEditable}
                     renderTextLayer={true}
                   />
 
                   {/* Locked-page visual overlay */}
-                  {isEditable && !pageEditable && (
+                  {ALLOW_CLIENT_DYNAMIC_INPUTS && isEditable && !pageEditable && (
                     <div
                       style={{
                         position: 'absolute',
