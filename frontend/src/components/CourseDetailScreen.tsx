@@ -244,7 +244,7 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
                                     >
                                         <h4 style={{ color: 'white', marginTop: 0, marginBottom: '0.5rem', fontSize: '1.1rem' }}>{mod.title}</h4>
                                         <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', margin: 0 }}>
-                                            {mod.description || 'Explora el contenido de este módulo.'}
+                                            {'Explora el contenido de este módulo.'}
                                         </p>
                                     </div>
                                 ))}

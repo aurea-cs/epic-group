@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, User, Bot, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, Loader2 } from 'lucide-react';
 
 interface ChatbotTutorProps {
   moduleId: string;
