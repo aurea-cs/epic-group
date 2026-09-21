@@ -26,6 +26,7 @@ interface ProfessorAssignmentCoursesScreenProps {
 interface Course {
   id: string
   title: string
+  title_en?: string
   description: string
   centerName: string
   gradeName?: string
@@ -34,7 +35,7 @@ interface Course {
 }
 
 const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScreenProps> = ({ user }) => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [radius, setRadius] = useState(250);
@@ -108,7 +109,10 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
             const asset = PLANET_ASSETS[i % PLANET_ASSETS.length];
             const x = Math.cos(angle) * radius;
             const y = Math.sin(angle) * radius;
-            const displayTitle = t(`dynamicSubjects.${course.title}`, { defaultValue: course.title });
+            
+            // Dynamic translation from database if available
+            const baseTitle = i18n.language.startsWith('en') && course.title_en ? course.title_en : course.title;
+            const displayTitle = t(`dynamicSubjects.${course.title}`, { defaultValue: baseTitle });
 
             return (
               <div

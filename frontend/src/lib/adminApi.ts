@@ -30,8 +30,10 @@ export interface Subject {
     id: string
     grade_id: string
     name: string
+    name_en?: string
     short_name?: string
     description?: string
+    description_en?: string
     start_date?: string
     end_date?: string
     visibility?: 'active' | 'hidden' | 'archived'
@@ -133,7 +135,9 @@ export interface ModuleItem {
     module_id: string
     type: 'pdf' | 'video' | 'link' | 'assignment'
     title: string
+    title_en?: string
     description?: string
+    description_en?: string
     content_url?: string
     order_index: number
     is_visible: boolean
@@ -149,6 +153,8 @@ export interface CourseModule {
     id: string
     subject_id: string
     title: string
+    title_en?: string
+    description_en?: string
     order_index: number
     is_active: boolean
     curriculum_module_id?: string | null

@@ -12,6 +12,15 @@
     "loginError": "Error signing in",
     "unexpectedError": "Unexpected error signing in"
   },
+  "tabs": {
+    "content": "Content",
+    "assignments": "Assignments",
+    "submissions": "Submissions",
+    "tickets": "Tickets",
+    "events": "Events",
+    "students": "Students",
+    "planetView": "Planet View"
+  },
   "sidebar": {
     "home": "Home",
     "students": "Students",
@@ -418,7 +427,30 @@
     "unassigning": "Unassigning...",
     "unassignConfirm": "Unassign {{name}} from this center? Doing so will also automatically unenroll them from all subjects in this center.",
     "unassignError": "Error unassigning professor",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "errorDeleteTemplate": "Error deleting template",
+    "editExitTicket": "Edit Exit Ticket",
+    "newExitTicket": "New Exit Ticket",
+    "configGlobalQuestions": "Configure the global questions for the quiz.",
+    "quizTitleLabel": "Quiz Title *",
+    "quizTitlePlaceholder": "e.g., Exit Ticket - General Concepts",
+    "descLabel": "Description / Instructions",
+    "descPlaceholder": "Write the instructions for students when responding to this ticket...",
+    "noQuestionsAdded": "You have not added questions to this quiz yet.",
+    "addQuestionTitle": "+ Add new question",
+    "questionTitlePlaceholder": "Question title...",
+    "typeMultiple": "Multiple Choice",
+    "typeOpen": "Open Response",
+    "typeRating": "Rating 1-5 ⭐",
+    "btnAdd": "Add",
+    "answerOptions": "Answer options:",
+    "optionPlaceholder": "Option",
+    "btnAddOption": "+ Add option",
+    "btnAddQuestion": "Add Question",
+    "btnCancel": "Cancel",
+    "btnSaveQuiz": "Save Quiz",
+    "btnSaving": "Saving...",
+    "delete": "Delete"
   },
   "uploadContent": {
     "title": "Subjects",

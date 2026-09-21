@@ -8,6 +8,7 @@ import {
     type Subject,
 } from '../lib/adminApi'
 import { getUserRole } from '../utils/getUserRole'
+import { useTranslation } from 'react-i18next'
 import './HierarchyConfig.css'
 
 import type { Assignment, CalendarEvent, Student, ModuleWithItems, Center, Submission, TabKey, StudentExitTicketResponse } from './ProfessorContentScreen/types'
@@ -205,6 +206,8 @@ async function fetchTickets(subjectId: string): Promise<StudentExitTicketRespons
 
 const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScreenProps> = ({ user }) => {
     const { courseId } = useParams<{ courseId: string }>()
+    const navigate = useNavigate()
+    const { t, i18n } = useTranslation()
     const isAdmin = getUserRole(user) === 'admin'
 
     const [subject, setSubject] = useState<Subject | null>(null)
@@ -241,7 +244,6 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
     const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState<string | null>(null)
     const [confirmDeleteEventId, setConfirmDeleteEventId] = useState<string | null>(null)
     const [confirmDeleteStudentId, setConfirmDeleteStudentId] = useState<string | null>(null)
-    const navigate = useNavigate()
 
     // ---- initial load: subject + modules ----
     useEffect(() => {
@@ -436,10 +438,12 @@ const loadStudents = useCallback(async () => {
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
                 <div>
                     <h1 style={{ margin: 0, fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-0.5px', background: 'linear-gradient(135deg, #c084fc 0%, #a855f7 40%, #7c3aed 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                        {subject?.name}
+                        {subject ? (i18n.language.startsWith('en') && subject.name_en ? subject.name_en : subject.name) : ''}
                     </h1>
                     <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.45)', fontSize: '0.92rem' }}>
-                        Mis materias {'> ' + (subject?.name || '') + ' >'} Configuración
+                        {t('professorCourses.myCourses', 'Mis materias')} {'> '}
+                        {subject ? (i18n.language.startsWith('en') && subject.name_en ? subject.name_en : subject.name) : ''} 
+                        {' > '} {t('general.configuration', 'Configuración')}
                     </p>
                 </div>
             </div>
@@ -493,13 +497,13 @@ const loadStudents = useCallback(async () => {
 
             {/* Tab bar */}
             <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <TabButton label="📒 Contenido" active={activeTab === 'content'} onClick={() => setActiveTab('content')} />
-                <TabButton label="📂 Tareas" active={activeTab === 'assignments'} onClick={() => setActiveTab('assignments')} />
-                <TabButton label="📝 Entregas" active={activeTab === 'submissions'} onClick={() => setActiveTab('submissions')} />
-                <TabButton label="🎟️ Tickets" active={activeTab === 'tickets'} onClick={() => setActiveTab('tickets')} />
-                <TabButton label="📅 Eventos" active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} />
-                <TabButton label="👥 Alumnos" active={activeTab === 'students'} onClick={() => setActiveTab('students')} />
-                <TabButton label="🌕 Vista planetas" active={false} onClick={() => navigate(`/course/${courseId}/planet/1`, { state: { title: subject?.name, courseTitle: subject?.name } })} />
+                <TabButton label={`📒 ${t('tabs.content', 'Contenido')}`} active={activeTab === 'content'} onClick={() => setActiveTab('content')} />
+                <TabButton label={`📂 ${t('tabs.assignments', 'Tareas')}`} active={activeTab === 'assignments'} onClick={() => setActiveTab('assignments')} />
+                <TabButton label={`📝 ${t('tabs.submissions', 'Entregas')}`} active={activeTab === 'submissions'} onClick={() => setActiveTab('submissions')} />
+                <TabButton label={`🎟️ ${t('tabs.tickets', 'Tickets')}`} active={activeTab === 'tickets'} onClick={() => setActiveTab('tickets')} />
+                <TabButton label={`📅 ${t('tabs.events', 'Eventos')}`} active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} />
+                <TabButton label={`👥 ${t('tabs.students', 'Alumnos')}`} active={activeTab === 'students'} onClick={() => setActiveTab('students')} />
+                <TabButton label={`🌕 ${t('tabs.planetView', 'Vista planetas')}`} active={false} onClick={() => navigate(`/course/${courseId}/planet/1`, { state: { title: subject?.name, courseTitle: subject?.name } })} />
 
                 <div style={{ flex: 1 }} />
 
