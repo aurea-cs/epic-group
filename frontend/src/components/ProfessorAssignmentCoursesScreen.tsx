@@ -40,14 +40,14 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
   const [loading, setLoading] = useState(true)
   const [selectedLevel, setSelectedLevel] = useState<string>('All');
   const [selectedGrade, setSelectedGrade] = useState<string>('All');
-  const [planetPositions, setPlanetPositions] = useState<{x: number, y: number}[]>([]);
+  const [planetPositions, setPlanetPositions] = useState<{ x: number, y: number }[]>([]);
   const gridRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate()
 
   useEffect(() => {
     const updatePositions = () => {
       if (!gridRef.current) return;
-      
+
       // Filter out the SVG from the children
       const items = Array.from(gridRef.current.children).filter(el => el.tagName.toLowerCase() !== 'svg') as HTMLElement[];
       const positions = items.map(item => ({
@@ -60,7 +60,7 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
     updatePositions();
     window.addEventListener('resize', updatePositions);
     const timeoutId = setTimeout(updatePositions, 150); // allow layout to settle
-    
+
     return () => {
       window.removeEventListener('resize', updatePositions);
       clearTimeout(timeoutId);
@@ -105,27 +105,27 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
     <div className="planet-detail-screen" style={{ overflowY: 'auto', justifyContent: 'flex-start' }}>
       <div className="pd-header" style={{ position: 'sticky', top: 0, height: 'auto', padding: '20px 0', background: 'linear-gradient(to bottom, rgba(11,12,16,1) 40%, rgba(11,12,16,0) 100%)', zIndex: 20 }}>
         <h1 className="pd-title">{t('professorCourses.myCourses', { defaultValue: 'Mis Cursos' })}</h1>
-        
+
         <div style={{ display: 'flex', gap: '15px', marginTop: '15px', justifyContent: 'center', zIndex: 10, position: 'relative', pointerEvents: 'auto' }}>
-          <select 
-            value={selectedLevel} 
+          <select
+            value={selectedLevel}
             onChange={(e) => setSelectedLevel(e.target.value)}
             style={{ padding: '8px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.3)', backgroundColor: 'rgba(0,0,0,0.5)', color: '#fff', outline: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
           >
             {uniqueLevels.map(lvl => (
               <option key={lvl} value={lvl} style={{ color: '#000' }}>
-                {lvl === 'All' ? t('filters.allLevels', { defaultValue: 'Todos los niveles' }) : lvl}
+                {lvl === 'All' ? t('filters.allLevels', { defaultValue: 'Todos los grados' }) : lvl}
               </option>
             ))}
           </select>
-          <select 
-            value={selectedGrade} 
+          <select
+            value={selectedGrade}
             onChange={(e) => setSelectedGrade(e.target.value)}
             style={{ padding: '8px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.3)', backgroundColor: 'rgba(0,0,0,0.5)', color: '#fff', outline: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
           >
             {uniqueGrades.map(grd => (
               <option key={grd} value={grd} style={{ color: '#000' }}>
-                {grd === 'All' ? t('filters.allGrades', { defaultValue: 'Todos los grados' }) : grd}
+                {grd === 'All' ? t('filters.allGrades', { defaultValue: 'Todos los niveles' }) : grd}
               </option>
             ))}
           </select>
@@ -144,20 +144,20 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
           <p>{t('professorCourses.noCoursesDesc')}</p>
         </div>
       ) : (
-        <div ref={gridRef} className="courses-grid" style={{ 
-          display: 'flex', 
-          flexWrap: 'wrap', 
-          gap: '70px 30px', 
-          justifyContent: 'center', 
+        <div ref={gridRef} className="courses-grid" style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '70px 30px',
+          justifyContent: 'center',
           alignItems: 'flex-start',
-          maxWidth: '1400px', 
-          margin: '0 auto', 
-          padding: '60px 40px 120px', 
-          zIndex: 10, 
+          maxWidth: '1400px',
+          margin: '0 auto',
+          padding: '60px 40px 120px',
+          zIndex: 10,
           position: 'relative',
           width: '100%'
         }}>
-          
+
           {planetPositions.length > 1 && (
             <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: -1 }}>
               <path
@@ -180,27 +180,27 @@ const ProfessorAssignmentCoursesScreen: React.FC<ProfessorAssignmentCoursesScree
                 key={course.id}
                 className="course-planet-item"
                 onClick={() => handleCourseClick(course.id)}
-                style={{ 
-                  position: 'relative', 
-                  cursor: 'pointer', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  width: '100px', 
-                  transition: 'transform 0.3s' 
+                style={{
+                  position: 'relative',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  width: '100px',
+                  transition: 'transform 0.3s'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
                 <img src={asset} alt={`Curso ${course.id}`} style={{ width: '100%', height: '65px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.4))' }} />
-                <div style={{ 
-                  marginTop: '10px', 
-                  color: 'white', 
-                  background: 'rgba(0, 0, 0, 0.7)', 
-                  padding: '4px 8px', 
-                  borderRadius: '8px', 
-                  fontSize: '0.75rem', 
-                  whiteSpace: 'normal', 
+                <div style={{
+                  marginTop: '10px',
+                  color: 'white',
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
+                  fontSize: '0.75rem',
+                  whiteSpace: 'normal',
                   border: '1px solid rgba(255, 255, 255, 0.2)',
                   fontWeight: 'bold',
                   textAlign: 'center',
