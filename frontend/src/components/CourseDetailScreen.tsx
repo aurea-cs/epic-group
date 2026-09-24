@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
 import { getUserRole } from '../utils/getUserRole'
-import { getSubjectById, Subject } from '../lib/adminApi'
+import { getSubjectById, Subject, getCourseModules, CourseModule } from '../lib/adminApi'
 import './DashboardScreen.css' // Reusing dashboard styles for consistency
 
 interface CourseDetailScreenProps {
@@ -19,14 +19,17 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    // Professors state
     const [professors, setProfessors] = useState<any[]>([])
     const [showProfessorModal, setShowProfessorModal] = useState(false)
+
+    // Modules state
+    const [modules, setModules] = useState<CourseModule[]>([])
 
     useEffect(() => {
         if (courseId) {
             loadSubject(courseId)
             loadProfessors(courseId)
+            loadModules(courseId)
         }
     }, [courseId])
 
@@ -59,6 +62,15 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
         }
     }
 
+    const loadModules = async (id: string) => {
+        try {
+            const data = await getCourseModules(id)
+            setModules(data)
+        } catch (error) {
+            console.error('Error loading modules:', error)
+        }
+    }
+
     const handleAssignProfessor = async (userId: string) => {
         if (!courseId) return
         try {
@@ -85,7 +97,7 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
     if (loading) {
         return (
             <div className="dashboard-screen">
-                
+
                 <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
                     <p>Cargando curso...</p>
                 </div>
@@ -96,7 +108,7 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
     if (error || !subject) {
         return (
             <div className="dashboard-screen">
-                
+
                 <div className="dashboard-content" style={{ padding: '2rem', textAlign: 'center' }}>
                     <h2>❌ Error</h2>
                     <p>{error || 'No se encontró el curso'}</p>
@@ -110,7 +122,7 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
 
     return (
         <div className="dashboard-screen">
-            
+
 
             <div className="dashboard-content">
                 <div className="welcome-section" style={{ minHeight: 'auto', padding: '3rem 2rem' }}>
@@ -199,17 +211,45 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
                         </div>
                     )}
 
-                    {/* Placeholder for course content */}
-                    <div className="empty-state" style={{
-                        background: '#1e1e2e',
-                        borderRadius: '24px',
-                        padding: '3rem',
-                        textAlign: 'center',
-                        border: '1px solid rgba(255,255,255,0.05)'
-                    }}>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🚧</div>
-                        <h3 style={{ color: 'white', marginBottom: '0.5rem' }}>Contenido de la Materia</h3>
-                        <p style={{ color: 'rgba(255,255,255,0.6)' }}>Próximamente podrás ver el contenido detallado aquí.</p>
+                    {/* Course Modules */}
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.5rem', color: 'white' }}>📚 Módulos de la Materia</h3>
+                            <button
+                                className="action-btn"
+                                onClick={() => navigate(`/course/${courseId}/planet/1`, { state: { title: subject.name, courseTitle: subject.name } })}
+                                style={{ background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', padding: '10px 20px', borderRadius: '8px', border: '1px solid rgba(168, 85, 247, 0.5)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
+                                🪐 Ver Vista Planetas
+                            </button>
+                        </div>
+                        {modules.length === 0 ? (
+                            <div className="empty-state" style={{
+                                background: '#1e1e2e',
+                                borderRadius: '24px',
+                                padding: '3rem',
+                                textAlign: 'center',
+                                border: '1px solid rgba(255,255,255,0.05)'
+                            }}>
+                                <p style={{ color: 'rgba(255,255,255,0.6)' }}>No hay módulos creados para esta materia.</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                                {modules.sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)).map(mod => (
+                                    <div key={mod.id}
+                                        style={{ background: '#2d2d44', borderRadius: '16px', padding: '1.5rem', border: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'transform 0.2s' }}
+                                        onClick={() => navigate(`/course/${courseId}/module/${mod.id}/items`)}
+                                        onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                        onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                    >
+                                        <h4 style={{ color: 'white', marginTop: 0, marginBottom: '0.5rem', fontSize: '1.1rem' }}>{mod.title}</h4>
+                                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', margin: 0 }}>
+                                            {'Explora el contenido de este módulo.'}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
 

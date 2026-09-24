@@ -113,18 +113,9 @@ const PdfViewerPage: React.FC = () => {
                 return
             }
 
-            // 2. Default fallback: trigger local download
-            console.log('PDF Blob generated successfully (local download):', blob.size, 'bytes')
-            const objectUrl = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = objectUrl;
-            link.download = 'documento_con_respuestas.pdf';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(objectUrl);
-
-            alert('¡El documento con tus respuestas y dibujos se ha guardado y descargado con éxito!');
+            // 2. Default fallback: save without local download
+            alert('¡Tu cuaderno de trabajo se ha guardado con éxito!')
+            navigate(-1)
         } catch (error: any) {
             console.error('Save error', error)
             alert(error.message || 'Error al guardar el PDF.')

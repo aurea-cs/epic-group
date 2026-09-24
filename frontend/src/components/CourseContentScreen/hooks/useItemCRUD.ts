@@ -68,7 +68,7 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
             description: '',
             content_url: '',
             image_url: '',
-            is_editable: true,
+            is_editable: false,
         })
         setSelectedFile(null)
         setShowAddModal(true)
@@ -83,11 +83,12 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
                     title: itemForm.title,
                     description: itemForm.description,
                     order_index: 999,
-                    is_editable: itemForm.is_editable,
+                    is_editable: false,
                 })
             } else {
                 await createModuleItem(activeModuleId, {
                     ...itemForm,
+                    is_editable: false,
                     image_url: itemForm.image_url || undefined,
                     order_index: 999,
                 })
@@ -108,7 +109,7 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
             description: item.description || '',
             content_url: item.content_url || '',
             image_url: item.image_url || '',
-            is_editable: !!item.is_editable,
+            is_editable: false,
         })
         setShowEditModal(true)
     }
@@ -122,7 +123,7 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
                 description: editItemForm.description,
                 content_url: editItemForm.content_url,
                 image_url: editItemForm.image_url || undefined,
-                is_editable: editItemForm.is_editable,
+                is_editable: false,
             })
             await onSuccess()
             setShowEditModal(false)

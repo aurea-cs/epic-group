@@ -3,6 +3,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
+dotenv.config();
+
 import {
     usersRouter,
     studentsRouter,
@@ -19,12 +21,11 @@ import {
     commentsRouter,
     uploadRouter,
     exitTicketsRouter,
+    aiRouter,
     quizzesRouter,
     curriculumRouter,
     thinkBlocksRouter
 } from './routes';
-
-dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -49,6 +50,7 @@ app.use(calendarRouter);
 app.use(commentsRouter);
 app.use(uploadRouter);
 app.use('/api/exit-tickets', exitTicketsRouter);
+app.use('/api/ai', aiRouter);
 app.use('/api/quizzes', quizzesRouter);
 app.use('/api/curriculum', curriculumRouter);
 app.use('/api/think-blocks', thinkBlocksRouter);
