@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { tdStyle, EyeToggle } from '../general/SharedUI'
 import { ITEM_TYPE_ICON, type ModuleWithItems, type ModuleItem } from './types'
 import { getModuleVrCode, type VrCodeEntry } from '../../lib/adminApi'
+import { useTranslation } from 'react-i18next'
 
 interface ContentTabProps {
     loading: boolean
@@ -20,6 +21,7 @@ const ContentTab: React.FC<ContentTabProps> = ({
     courseId
 }) => {
     const navigate = useNavigate()
+    const { i18n } = useTranslation()
     const [hoveredId, setHoveredId] = useState<string | null>(null)
     const [vrEntriesByModule, setVrEntriesByModule] = useState<Record<string, VrCodeEntry[]>>({})
 
@@ -86,7 +88,9 @@ const ContentTab: React.FC<ContentTabProps> = ({
                         <div key={m.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', overflow: 'hidden' }}>
                             {/* Module header */}
                             <div style={{ padding: '1.1rem 1.25rem', background: 'rgba(192,132,252,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#f3e8ff' }}>{m.title}</h3>
+                                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#f3e8ff' }}>
+                                    {i18n.language.startsWith('en') && m.title_en ? m.title_en : m.title}
+                                </h3>
                             </div>
 
                             {/* Items */}
@@ -182,10 +186,12 @@ const ContentTab: React.FC<ContentTabProps> = ({
                                                                     textDecoration: isHovered && isClickable ? 'underline' : 'none',
                                                                     transition: 'color 0.15s',
                                                                 }}>
-                                                                    {item.title}
+                                                                    {i18n.language.startsWith('en') && item.title_en ? item.title_en : item.title}
                                                                 </div>
                                                                 {item.description && (
-                                                                    <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{item.description}</div>
+                                                                    <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
+                                                                        {i18n.language.startsWith('en') && item.description_en ? item.description_en : item.description}
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         </div>

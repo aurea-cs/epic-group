@@ -1,5 +1,6 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import Toggle from './Toggle'
 import { type ModuleItem, type CourseModule } from '../../../lib/adminApi'
 
@@ -26,6 +27,7 @@ const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     onDelete,
     onClose,
 }) => {
+    const { t, i18n } = useTranslation()
     if (!openMenuItemId || !menuPosition) return null
 
     const item = modules.flatMap(m => m.items ?? []).find(i => i.id === openMenuItemId)
@@ -58,7 +60,7 @@ const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
                 onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
                 onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
             >
-                <span>Contenido para estudiantes</span>
+                <span>{i18n.language.startsWith('en') ? 'Content for students' : 'Contenido para estudiantes'}</span>
                 <Toggle on={item.show_student!} color="#22c55e" />
             </button>
 
@@ -73,7 +75,7 @@ const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
                 onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
                 onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
             >
-                <span>Contenido para profesores</span>
+                <span>{i18n.language.startsWith('en') ? 'Content for teachers' : 'Contenido para profesores'}</span>
                 <Toggle on={item.show_teacher!} color="#8b5cf6" />
             </button>
 
@@ -91,23 +93,23 @@ const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
                             cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem', textDecoration: 'none',
                         }}
                     >
-                        ⬇️ Ver contenido
+                        ⬇️ {i18n.language.startsWith('en') ? 'View content' : 'Ver contenido'}
                     </a>
                 </>
             )}
 
             <div style={{ height: '1px', background: 'rgba(31,41,90,0.1)' }} />
             <button
-                onClick={() => { onClose(); onDelete(item) }}
+                onClick={() => { onDelete(item); onClose() }}
                 style={{
                     width: '100%', padding: '0.65rem 0.9rem', background: 'transparent',
                     border: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                    cursor: 'pointer', color: '#dc2626', fontSize: '0.875rem',
+                    cursor: 'pointer', color: '#ff4757', fontSize: '0.875rem',
                 }}
-                onMouseOver={e => (e.currentTarget.style.background = 'rgba(220,38,38,0.06)')}
+                onMouseOver={e => (e.currentTarget.style.background = 'rgba(255,71,87,0.06)')}
                 onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
             >
-                🗑️ Eliminar
+                🗑️ {i18n.language.startsWith('en') ? 'Delete' : 'Eliminar'}
             </button>
         </div>,
         document.body

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
     DndContext,
     closestCenter,
@@ -107,6 +108,8 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
     onReorderItems,
     onReorderVr,
 }) => {
+    const { t, i18n } = useTranslation()
+
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: { distance: 5 },
@@ -281,15 +284,17 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
                 alignItems: 'center',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <h3 style={{ margin: 0, color: '#1f295a' }}>{module.title}</h3>
+                    <h3 style={{ margin: 0, color: '#1f295a' }}>
+                        {i18n.language.startsWith('en') && module.title_en ? module.title_en : module.title}
+                    </h3>
                     {anySaving && (
                         <span style={{ fontSize: '0.75rem', color: 'rgba(31, 41, 90, 0.5)' }}>
-                            Guardando orden…
+                            {i18n.language.startsWith('en') ? 'Saving order...' : 'Guardando orden…'}
                         </span>
                     )}
                     {!anySaving && anyDirty && (
                         <span style={{ fontSize: '0.75rem', color: '#6c5ce7' }}>
-                            Cambios de orden sin guardar
+                            {i18n.language.startsWith('en') ? 'Unsaved order changes' : 'Cambios de orden sin guardar'}
                         </span>
                     )}
                 </div>
@@ -309,7 +314,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
                                 width: 'auto',
                             }}
                         >
-                            Guardar orden
+                            {i18n.language.startsWith('en') ? 'Save order' : 'Guardar orden'}
                         </button>
                     )}
                     <button
@@ -382,7 +387,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
                     </div>
                 ) : (
                     <p style={{ color: 'rgba(31, 41, 90, 0.5)', fontStyle: 'italic', padding: '1rem' }}>
-                        Sin contenido
+                        {i18n.language.startsWith('en') ? 'No content' : 'Sin contenido'}
                     </p>
                 )}
 
