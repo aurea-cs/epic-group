@@ -170,8 +170,8 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, index, total,
                     value={question.type}
                     onChange={(e) => handleTypeChange(e.target.value as QuizQuestionType)}
                 >
-                    {(Object.keys(QUESTION_TYPE_LABELS(i18n)) as QuizQuestionType[]).map((t) => (
-                        <option key={t} value={t}>{QUESTION_TYPE_ICONS[t]} {QUESTION_TYPE_LABELS(i18n)[t]}</option>
+                    {(Object.keys(QUESTION_TYPE_LABELS) as QuizQuestionType[]).map((t) => (
+                        <option key={t} value={t}>{QUESTION_TYPE_ICONS[t]} {QUESTION_TYPE_LABELS[t]}</option>
                     ))}
                 </select>
                 <div style={{ display: 'flex', gap: '0.3rem', marginLeft: 'auto' }}>

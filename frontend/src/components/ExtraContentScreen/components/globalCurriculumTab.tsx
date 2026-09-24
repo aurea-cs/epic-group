@@ -237,7 +237,7 @@ const GlobalCurriculumTab: React.FC = () => {
                             className={`gc-category-chip gc-category-${cat} ${selectedCategory === cat ? 'active' : ''}`}
                             onClick={() => handleSelectCategory(cat)}
                         >
-                            {CATEGORY_ICONS[cat]} {i18n.language.startsWith('en') ? t(`dynamicSubjects.${CATEGORY_LABELS[cat]}`, CATEGORY_LABELS[cat]) : CATEGORY_LABELS[cat]}
+                            {CATEGORY_ICONS[cat]} {CATEGORY_LABELS[cat]}
                             <span className="gc-category-count">({groupedGrades[cat].length})</span>
                         </button>
                     ))}
@@ -287,7 +287,7 @@ const GlobalCurriculumTab: React.FC = () => {
                                 <div className="gc-grade-card-header">
                                     <div className="gc-grade-header-left">
                                         <span className="gc-grade-icon">🏫</span>
-                                        <h3>{i18n.language.startsWith('en') ? t(`dynamicSubjects.${grade.name}`, grade.name) : grade.name}</h3>
+                                        <h3>{grade.name}</h3>
                                         <span className={`level-badge ${badgeClass}`}>
                                             {t(`dynamicSubjects.${CATEGORY_LABELS[badgeClass]}`, { defaultValue: CATEGORY_LABELS[badgeClass] })} • {t('professorCourses.level', { defaultValue: 'Nivel' })} {grade.level ?? '-'}
                                         </span>
@@ -310,7 +310,7 @@ const GlobalCurriculumTab: React.FC = () => {
                                                 <div className="gc-subject-header">
                                                     <div className="gc-subject-title-area">
                                                         <span className="gc-subj-icon">📖</span>
-                                                        <h4>{i18n.language.startsWith('en') ? (t(`dynamicSubjects.${subj.name}`, subj.name_en || subj.name)) : subj.name}</h4>
+                                                        <h4>{subj.name}</h4>
                                                     </div>
                                                     {subj.short_name && (
                                                         <span className="gc-shortname-badge">
@@ -333,7 +333,7 @@ const GlobalCurriculumTab: React.FC = () => {
                                                                     <span className="gc-module-order">
                                                                         #{mod.order_index ?? idx + 1}
                                                                     </span>
-                                                                    <span className="gc-module-title">{i18n.language.startsWith('en') ? t(`dynamicSubjects.${mod.title}`, mod.title_en || mod.title) : mod.title}</span>
+                                                                    <span className="gc-module-title">{mod.title}</span>
                                                                 </div>
                                                             ))}
                                                         </div>
