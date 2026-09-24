@@ -108,7 +108,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
     onReorderItems,
     onReorderVr,
 }) => {
-    const { t, i18n } = useTranslation()
+    const { i18n } = useTranslation()
 
     const sensors = useSensors(
         useSensor(PointerSensor, {

@@ -31,7 +31,7 @@ const ItemModal: React.FC<ItemModalProps> = ({
     onSave,
     onClose,
 }) => {
-    const { t, i18n } = useTranslation()
+    const { i18n } = useTranslation()
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="school-modal-content" onClick={e => e.stopPropagation()}>

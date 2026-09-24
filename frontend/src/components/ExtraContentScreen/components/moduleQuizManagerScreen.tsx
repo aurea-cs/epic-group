@@ -604,7 +604,7 @@ interface QuizEditorProps {
 }
 
 const QuizEditor: React.FC<QuizEditorProps> = ({ quizId, curriculumModuleId, onBack, onSaved }) => {
-    const { t, i18n } = useTranslation()
+    const { i18n } = useTranslation()
     const isEditing = !!quizId
 
     const [loading, setLoading] = useState(isEditing)

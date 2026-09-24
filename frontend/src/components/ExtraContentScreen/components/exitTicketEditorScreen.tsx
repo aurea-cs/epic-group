@@ -31,7 +31,7 @@ const getDefaultNewQuestions = (i18n: any): ExitTicketQuestionFormState[] => [
 ]
 
 const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templateId, onBack, onSaved }) => {
-    const { t, i18n } = useTranslation()
+    const { i18n } = useTranslation()
     const isEditing = !!templateId
 
     const [loadingDetail, setLoadingDetail] = useState(isEditing)

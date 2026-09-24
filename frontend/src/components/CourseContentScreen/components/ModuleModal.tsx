@@ -21,7 +21,7 @@ const ModuleModal: React.FC<ModuleModalProps> = ({
     onSave,
     onClose,
 }) => {
-    const { t, i18n } = useTranslation()
+    const { i18n } = useTranslation()
 
     const handleCurriculumModuleSelect = (cmId: string) => {
         if (!cmId) {

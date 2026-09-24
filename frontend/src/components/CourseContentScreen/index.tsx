@@ -37,7 +37,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
         courseId: string
     }>()
     const navigate = useNavigate()
-    const { t, i18n } = useTranslation()
+    const { i18n } = useTranslation()
 
     // ── Data & state ──────────────────────────────────────────────────────────
     const content = useCourseContent(courseId)

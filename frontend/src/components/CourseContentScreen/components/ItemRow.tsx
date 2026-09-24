@@ -23,7 +23,7 @@ const ItemRow: React.FC<ItemRowProps> = ({
     onEdit,
     onKebabClick,
 }) => {
-    const { t, i18n } = useTranslation()
+    const { i18n } = useTranslation()
     return (
     <div className="module-item-row standard">
         <div style={{ fontSize: '1.5rem' }}>{typeIcon(item.type)}</div>

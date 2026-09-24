@@ -14,7 +14,7 @@ const ProfessorsPanel: React.FC<ProfessorsPanelProps> = ({
     onOpenModal,
     onUnassign,
 }) => {
-    const { t, i18n } = useTranslation()
+    const { i18n } = useTranslation()
     return (
     <div style={{
         background: 'rgba(108, 92, 231, 0.1)',

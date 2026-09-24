@@ -36,7 +36,7 @@ function getShortGradeLabel(t: any, grade: CurriculumGradeTree, _category: Grade
 }
 
 const GlobalCurriculumTab: React.FC = () => {
-    const { t, i18n } = useTranslation()
+    const { t } = useTranslation()
     const [tree, setTree] = useState<CurriculumGradeTree[]>([])
     const [loading, setLoading] = useState<boolean>(true)
     const [error, setError] = useState<string | null>(null)

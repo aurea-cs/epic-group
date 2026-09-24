@@ -601,7 +601,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                                 <option value="">-- {i18n.language.startsWith('en') ? 'Unassigned' : 'Sin asignar'} --</option>
                                                 {curriculumSubjects.map((cs) => (
                                                     <option key={cs.id} value={cs.id}>
-                                                        {cs.short_name ? `${i18n.language.startsWith('en') ? t(`dynamicSubjects.${cs.name}`, (cs as any).name_en || cs.name) : cs.name} (${cs.short_name})` : (i18n.language.startsWith('en') ? t(`dynamicSubjects.${cs.name}`, (cs as any).name_en || cs.name) : cs.name)}
+                                                        {cs.short_name ? `${i18n.language.startsWith('en') ? t(`dynamicSubjects.${cs.name}`, (cs as any).name_en || cs.name) as string : cs.name} (${cs.short_name})` : (i18n.language.startsWith('en') ? t(`dynamicSubjects.${cs.name}`, (cs as any).name_en || cs.name) as string : cs.name)}
                                                     </option>
                                                 ))}
                                             </select>

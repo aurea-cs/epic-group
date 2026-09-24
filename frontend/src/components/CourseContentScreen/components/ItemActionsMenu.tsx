@@ -27,7 +27,7 @@ const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     onDelete,
     onClose,
 }) => {
-    const { t, i18n } = useTranslation()
+    const { i18n } = useTranslation()
     if (!openMenuItemId || !menuPosition) return null
 
     const item = modules.flatMap(m => m.items ?? []).find(i => i.id === openMenuItemId)

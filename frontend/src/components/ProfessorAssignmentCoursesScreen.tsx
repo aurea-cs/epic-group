@@ -10,7 +10,7 @@ import planetasolito2 from '../assets/planetasolito2.png';
 import planetasolito3 from '../assets/planetasolito3.png';
 import planetasolito4 from '../assets/planetasolito4.png';
 import planetasolito5 from '../assets/planetasolito5.png';
-import image30 from '../assets/image30.png';
+
 
 // Import CSS
 import './PlanetDetailScreen.css'
