@@ -8,6 +8,7 @@ import {
     type Subject,
 } from '../lib/adminApi'
 import { getUserRole } from '../utils/getUserRole'
+import { useTranslation } from 'react-i18next'
 import './HierarchyConfig.css'
 
 import type { Assignment, CalendarEvent, Student, ModuleWithItems, Center, Submission, TabKey, StudentExitTicketResponse, StudentQuizSubjectResponse } from './ProfessorContentScreen/types'
@@ -126,7 +127,7 @@ async function deleteCalendarEventRequest(id: string): Promise<void> {
 
 // ---- students -------------------------------------------------------
 
-  async function fetchStudents(subjectId: string): Promise<Student[]> {
+async function fetchStudents(subjectId: string): Promise<Student[]> {
     const res = await fetch(`${API_URL}/api/subjects/${subjectId}/students`)
     if (!res.ok) throw new Error(`Error al cargar estudiantes: ${res.status}`)
     return res.json()
@@ -212,6 +213,8 @@ async function fetchQuizResponses(subjectId: string): Promise<StudentQuizSubject
 
 const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScreenProps> = ({ user }) => {
     const { courseId } = useParams<{ courseId: string }>()
+    const navigate = useNavigate()
+    const { t, i18n } = useTranslation()
     const isAdmin = getUserRole(user) === 'admin'
 
     const [subject, setSubject] = useState<Subject | null>(null)
@@ -246,12 +249,11 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
 
     const [quizResponses, setQuizResponses] = useState<StudentQuizSubjectResponse[]>([])
     const [quizResponsesLoading, setQuizResponsesLoading] = useState(false)
-    
+
     const [error, setError] = useState<string | null>(null)
     const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState<string | null>(null)
     const [confirmDeleteEventId, setConfirmDeleteEventId] = useState<string | null>(null)
     const [confirmDeleteStudentId, setConfirmDeleteStudentId] = useState<string | null>(null)
-    const navigate = useNavigate()
 
     // ---- initial load: subject + modules ----
     useEffect(() => {
@@ -264,9 +266,9 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
                 setModules(mods as ModuleWithItems[])
 
                 const visibilityMap: Record<string, boolean> = {}
-                ;(mods as ModuleWithItems[]).forEach(m => {
-                    (m.items || []).forEach(item => { visibilityMap[item.id] = item.show_student ?? true })
-                })
+                    ; (mods as ModuleWithItems[]).forEach(m => {
+                        (m.items || []).forEach(item => { visibilityMap[item.id] = item.show_student ?? true })
+                    })
                 setItemVisibility(visibilityMap)
             })
             .catch(e => setError(e.message))
@@ -294,51 +296,51 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
             .finally(() => setEventsLoading(false))
     }, [courseId])
 
-        const fetchCenters = useCallback(async () => {
+    const fetchCenters = useCallback(async () => {
         try {
-        const res = await fetch(`${API_URL}/api/centers`)
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const data = await res.json()
-        setAllCenters(Array.isArray(data) ? data : [])
+            const res = await fetch(`${API_URL}/api/centers`)
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            const data = await res.json()
+            setAllCenters(Array.isArray(data) ? data : [])
         } catch (err) { console.error('Error fetching centers:', err) }
     }, [])
 
-const loadStudents = useCallback(async () => {
-    if (!courseId) return
+    const loadStudents = useCallback(async () => {
+        if (!courseId) return
 
-    setStudentsLoading(true)
-    setError(null)
+        setStudentsLoading(true)
+        setError(null)
 
-    try {
-        await fetchCenters()
+        try {
+            await fetchCenters()
 
-        const students = await fetchStudents(courseId)
-        setStudents(students)
-    } catch (e) {
-        setError(e instanceof Error ? e.message : String(e))
-    } finally {
-        setStudentsLoading(false)
-    }
-}, [courseId, fetchCenters])
+            const students = await fetchStudents(courseId)
+            setStudents(students)
+        } catch (e) {
+            setError(e instanceof Error ? e.message : String(e))
+        } finally {
+            setStudentsLoading(false)
+        }
+    }, [courseId, fetchCenters])
 
     const loadSubmissions = useCallback(() => {
         if (!courseId) return
-            setSubmissionsLoading(true)
-            setError(null)
-            fetchSubmissions(courseId)
-                .then(setSubmissions)
-                .catch(e => setError(e.message))
-                .finally(() => setSubmissionsLoading(false))
+        setSubmissionsLoading(true)
+        setError(null)
+        fetchSubmissions(courseId)
+            .then(setSubmissions)
+            .catch(e => setError(e.message))
+            .finally(() => setSubmissionsLoading(false))
     }, [courseId])
 
     const loadTickets = useCallback(() => {
         if (!courseId) return
-            setTicketsLoading(true)
-            setError(null)
-            fetchTickets(courseId)
-                .then(setTickets)
-                .catch(e => setError(e.message))
-                .finally(() => setTicketsLoading(false))
+        setTicketsLoading(true)
+        setError(null)
+        fetchTickets(courseId)
+            .then(setTickets)
+            .catch(e => setError(e.message))
+            .finally(() => setTicketsLoading(false))
     }, [courseId])
 
     const loadQuizResponses = useCallback(() => {
@@ -365,8 +367,8 @@ const loadStudents = useCallback(async () => {
         if (activeTab === 'assignments') loadAssignments()
         if (activeTab === 'reminders') loadEvents()
         if (activeTab === 'students') loadStudents()
-        if (activeTab === 'submissions') {loadAssignments(); loadSubmissions()} 
-        if (activeTab === 'tickets') loadTickets() 
+        if (activeTab === 'submissions') { loadAssignments(); loadSubmissions() }
+        if (activeTab === 'tickets') loadTickets()
         if (activeTab === 'quizzes') loadQuizResponses()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, courseId])
@@ -458,10 +460,12 @@ const loadStudents = useCallback(async () => {
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
                 <div>
                     <h1 style={{ margin: 0, fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-0.5px', background: 'linear-gradient(135deg, #c084fc 0%, #a855f7 40%, #7c3aed 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                        {subject?.name}
+                        {subject ? (i18n.language.startsWith('en') && subject.name_en ? subject.name_en : subject.name) : ''}
                     </h1>
                     <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.45)', fontSize: '0.92rem' }}>
-                        Mis materias {'> ' + (subject?.name || '') + ' >'} Configuración
+                        {t('professorCourses.myCourses', 'Mis materias')} {'> '}
+                        {subject ? (i18n.language.startsWith('en') && subject.name_en ? subject.name_en : subject.name) : ''}
+                        {' > '} {t('general.configuration', 'Configuración')}
                     </p>
                 </div>
             </div>

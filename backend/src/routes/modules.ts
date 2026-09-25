@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabase } from '../config/supabase';
 import { upload } from '../middleware/upload';
+import { translateToEnglish } from '../utils/translator';
 
 const router = Router();
 
@@ -153,13 +154,18 @@ router.post('/api/modules/:moduleId/items', async (req, res) => {
         const { moduleId } = req.params;
         const { type, title, description, content_url, order_index, image_url, is_editable } = req.body;
 
+        const title_en = await translateToEnglish(title);
+        const description_en = description ? await translateToEnglish(description) : null;
+
         const { data, error } = await supabase
             .from('module_items')
             .insert({
                 module_id: moduleId,
                 type,
                 title,
+                title_en,
                 description,
+                description_en,
                 content_url,
                 order_index,
                 image_url,
@@ -203,14 +209,20 @@ router.post('/api/modules/:moduleId/items/upload', upload.single('file'), async 
 
         if (uploadError) throw uploadError;
 
+        const finalTitle = title || file.originalname;
+        const title_en = await translateToEnglish(finalTitle);
+        const description_en = description ? await translateToEnglish(description) : null;
+
         // Create DB record
         const { data, error } = await supabase
             .from('module_items')
             .insert({
                 module_id: moduleId,
                 type: 'pdf',
-                title: title || file.originalname,
+                title: finalTitle,
+                title_en,
                 description,
+                description_en,
                 content_url: filePath,
                 order_index: order_index || 999,
                 is_visible: true,

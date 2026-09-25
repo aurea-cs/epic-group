@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { ArrowLeft, Lightbulb, Compass, FlaskConical, HelpCircle, CheckCircle2, Send } from 'lucide-react'
+import { ArrowLeft, Lightbulb, Compass, FlaskConical, HelpCircle, CheckCircle2, Send, Globe } from 'lucide-react'
 import { User } from '@supabase/supabase-js'
+import { useTranslation } from 'react-i18next'
+import { useDynamicTranslation } from '../hooks/useDynamicTranslation'
 import {
   type ThinkBlock,
   type ThinkBlockPrompt,
@@ -51,12 +53,344 @@ const PROMPT_TYPE_CONFIG: Record<
   },
 }
 
+const PromptItem: React.FC<{
+  prompt: ThinkBlockPrompt
+  pIdx: number
+  answers: Record<string, string>
+  setAnswers: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  savingMap: Record<string, boolean>
+  savedMap: Record<string, boolean>
+  handleSavePrompt: (promptId: string) => void
+}> = ({ prompt, pIdx, answers, setAnswers, savingMap, savedMap, handleSavePrompt }) => {
+  const { t } = useTranslation()
+  const { text: translatedPromptMd } = useDynamicTranslation(prompt.prompt_md)
+  const { text: translatedLabel } = useDynamicTranslation(prompt.label)
+
+  const typeCfg = PROMPT_TYPE_CONFIG[prompt.prompt_type] || PROMPT_TYPE_CONFIG.otro
+  const defaultTypeLabel = t(`thinkBlockViewer.promptTypes.${prompt.prompt_type}`, typeCfg.label)
+
+  return (
+    <div
+      key={prompt.id || pIdx}
+      style={{
+        background: typeCfg.bg,
+        border: `1px solid ${typeCfg.border}`,
+        borderRadius: '16px',
+        padding: '1.25rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+      }}
+    >
+      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+        <div
+          style={{
+            color: typeCfg.color,
+            background: 'rgba(0,0,0,0.2)',
+            borderRadius: '12px',
+            padding: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {prompt.icon ? (
+            <span style={{ fontSize: '1.2rem' }}>{prompt.icon}</span>
+          ) : (
+            typeCfg.icon
+          )}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              fontSize: '0.8rem',
+              fontWeight: 800,
+              color: typeCfg.color,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              marginBottom: '4px',
+            }}
+          >
+            {translatedLabel || defaultTypeLabel}
+          </div>
+          <div
+            style={{
+              fontSize: '0.98rem',
+              color: 'rgba(255, 255, 255, 0.92)',
+              lineHeight: 1.55,
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {translatedPromptMd || prompt.prompt_md}
+          </div>
+        </div>
+      </div>
+
+      {/* Student Answer Input */}
+      {prompt.id && (
+        <div
+          style={{
+            marginTop: '0.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+          }}
+        >
+          <label
+            style={{
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              color: 'rgba(255,255,255,0.6)',
+            }}
+          >
+            {t('thinkBlockViewer.yourAnswerLabel')}
+          </label>
+          <textarea
+            value={answers[prompt.id] ?? ''}
+            onChange={(e) => {
+              const val = e.target.value
+              setAnswers((prev) => ({ ...prev, [prompt.id!]: val }))
+            }}
+            onBlur={() => handleSavePrompt(prompt.id!)}
+            placeholder={t('thinkBlockViewer.placeholderAnswer')}
+            rows={3}
+            style={{
+              width: '100%',
+              backgroundColor: 'rgba(0, 0, 0, 0.35)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '12px',
+              padding: '0.85rem 1rem',
+              color: 'white',
+              fontSize: '0.95rem',
+              lineHeight: '1.5',
+              resize: 'vertical',
+              outline: 'none',
+              boxSizing: 'border-box',
+              fontFamily: 'inherit',
+            }}
+          />
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              gap: '10px',
+            }}
+          >
+            {savedMap[prompt.id] && (
+              <span
+                style={{
+                  fontSize: '0.82rem',
+                  color: '#4ade80',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <CheckCircle2 size={14} /> {t('thinkBlockViewer.answerSaved')}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => handleSavePrompt(prompt.id!)}
+              disabled={savingMap[prompt.id]}
+              style={{
+                background: savingMap[prompt.id]
+                  ? 'rgba(52, 211, 153, 0.4)'
+                  : 'linear-gradient(135deg, #34d399, #059669)',
+                color: '#042f2e',
+                border: 'none',
+                padding: '7px 16px',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                cursor: savingMap[prompt.id] ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {savingMap[prompt.id] ? (
+                t('thinkBlockViewer.saving')
+              ) : (
+                <>
+                  {t('thinkBlockViewer.submitAnswer')} <Send size={14} />
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const BlockCardItem: React.FC<{
+  block: ThinkBlock
+  index: number
+  revealProps: any
+  answers: Record<string, string>
+  setAnswers: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  savingMap: Record<string, boolean>
+  savedMap: Record<string, boolean>
+  handleSavePrompt: (promptId: string) => void
+}> = ({ block, index, revealProps, answers, setAnswers, savingMap, savedMap, handleSavePrompt }) => {
+  const { t } = useTranslation()
+  const { text: translatedFunFact } = useDynamicTranslation(block.fun_fact_md)
+
+  const prompts: ThinkBlockPrompt[] = Array.isArray(block.prompts)
+    ? block.prompts
+    : Array.isArray(block.think_block_prompts)
+    ? (block.think_block_prompts as ThinkBlockPrompt[])
+    : []
+
+  return (
+    <motion.article
+      key={block.id || index}
+      {...revealProps}
+      style={{
+        background: '#0f1d24',
+        borderRadius: '24px',
+        border: '1px solid rgba(52, 211, 153, 0.25)',
+        boxShadow: '0 12px 36px rgba(0, 0, 0, 0.4)',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Card Banner Image */}
+      {block.image_url ? (
+        <div style={{ width: '100%', height: '220px', overflow: 'hidden', position: 'relative' }}>
+          <img
+            src={block.image_url}
+            alt={t('thinkBlockViewer.blockTitle')}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(to top, #0f1d24 0%, transparent 80%)',
+            }}
+          />
+        </div>
+      ) : null}
+
+      <div style={{ padding: '2rem' }}>
+        {/* Card Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem' }}>
+          <span
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #34d399, #059669)',
+              color: '#042f2e',
+              fontWeight: 800,
+              fontSize: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            #{index + 1}
+          </span>
+          <h2
+            style={{
+              fontSize: '1.4rem',
+              fontWeight: 700,
+              color: 'white',
+              margin: 0,
+            }}
+          >
+            {t('thinkBlockViewer.blockTitle')}
+          </h2>
+        </div>
+
+        {/* Fun Fact / Main MD Content */}
+        {block.fun_fact_md && (
+          <div
+            style={{
+              background: 'rgba(52, 211, 153, 0.08)',
+              border: '1px solid rgba(52, 211, 153, 0.2)',
+              borderRadius: '16px',
+              padding: '1.25rem 1.5rem',
+              marginBottom: prompts.length > 0 ? '1.75rem' : 0,
+            }}
+          >
+            <div
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                color: '#34d399',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              {t('thinkBlockViewer.funFactBadge')}
+            </div>
+            <p
+              style={{
+                fontSize: '1rem',
+                color: 'rgba(255, 255, 255, 0.9)',
+                lineHeight: 1.6,
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+              }}
+            >
+              {translatedFunFact || block.fun_fact_md}
+            </p>
+          </div>
+        )}
+
+        {/* Prompts list */}
+        {prompts.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div
+              style={{
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                color: 'rgba(255,255,255,0.5)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+              }}
+            >
+              {t('thinkBlockViewer.activitiesTag', { count: prompts.length })}
+            </div>
+            {prompts.map((prompt, pIdx) => (
+              <PromptItem
+                key={prompt.id || pIdx}
+                prompt={prompt}
+                pIdx={pIdx}
+                answers={answers}
+                setAnswers={setAnswers}
+                savingMap={savingMap}
+                savedMap={savedMap}
+                handleSavePrompt={handleSavePrompt}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.article>
+  )
+}
+
 const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
   blocks,
   user,
   onClose,
   moduleTitle,
 }) => {
+  const { t, i18n } = useTranslation()
+  const { text: translatedModuleTitle } = useDynamicTranslation(moduleTitle)
+
   const containerRef = useRef<HTMLDivElement | null>(null)
   const shouldReduceMotion = useReducedMotion()
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -65,7 +399,19 @@ const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
   const [savingMap, setSavingMap] = useState<Record<string, boolean>>({})
   const [savedMap, setSavedMap] = useState<Record<string, boolean>>({})
 
-  // Initialize and load student answers from my_answer & backend API
+  const toggleLanguage = () => {
+    const current = i18n.language || 'es'
+    const next = current.startsWith('es') ? 'en' : 'es'
+    i18n.changeLanguage(next)
+
+    const select = document.querySelector('.goog-te-combo') as HTMLSelectElement
+    if (select) {
+      select.value = next
+      select.dispatchEvent(new Event('change'))
+    }
+  }
+
+  // Initialize student answers from my_answer
   useEffect(() => {
     let isMounted = true
 
@@ -130,7 +476,7 @@ const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
       }, 3000)
     } catch (err: any) {
       console.error('Error al guardar respuesta:', err)
-      alert(err.message || 'Error al guardar respuesta')
+      alert(err.message || t('thinkBlockViewer.errorSave'))
     } finally {
       setSavingMap((prev) => ({ ...prev, [promptId]: false }))
     }
@@ -270,7 +616,37 @@ const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
           onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.18)')}
           onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)')}
         >
-          <ArrowLeft size={18} /> Volver al Módulo
+          <ArrowLeft size={18} /> {t('thinkBlockViewer.back')}
+        </button>
+
+        {/* Translation button */}
+        <button
+          onClick={toggleLanguage}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 100,
+            background: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            color: 'white',
+            borderRadius: '10px',
+            padding: '8px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            backdropFilter: 'blur(12px)',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.18)')}
+          onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)')}
+          title={i18n.language.startsWith('es') ? 'English' : 'Español'}
+        >
+          <Globe size={18} />
+          <span>{i18n.language.startsWith('es') ? 'EN' : 'ES'}</span>
         </button>
 
         {/* Top Header Banner */}
@@ -297,7 +673,7 @@ const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
               marginBottom: '1rem',
             }}
           >
-            🔬 Piensa, Observa y Experimenta {moduleTitle ? `· ${moduleTitle}` : ''}
+            {t('thinkBlockViewer.tagHeader')} {(translatedModuleTitle || moduleTitle) ? `· ${translatedModuleTitle || moduleTitle}` : ''}
           </div>
           <h1
             style={{
@@ -310,7 +686,7 @@ const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
               WebkitTextFillColor: 'transparent',
             }}
           >
-            Laboratorio de Pensamiento Crítico
+            {t('thinkBlockViewer.labTitle')}
           </h1>
           <p
             style={{
@@ -320,7 +696,7 @@ const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
               margin: 0,
             }}
           >
-            Explora estos experimentos y registra tus observaciones y reflexiones en cada actividad.
+            {t('thinkBlockViewer.labSubtitle')}
           </p>
         </header>
 
@@ -346,300 +722,22 @@ const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
                 color: 'rgba(255,255,255,0.5)',
               }}
             >
-              No hay bloques de experimentos disponibles en este momento.
+              {t('thinkBlockViewer.noBlocks')}
             </div>
           ) : (
-            blocks.map((block, index) => {
-              const prompts: ThinkBlockPrompt[] = Array.isArray(block.prompts)
-                ? block.prompts
-                : Array.isArray(block.think_block_prompts)
-                ? (block.think_block_prompts as ThinkBlockPrompt[])
-                : []
-
-              return (
-                <motion.article
-                  key={block.id || index}
-                  {...revealProps}
-                  style={{
-                    background: '#0f1d24',
-                    borderRadius: '24px',
-                    border: '1px solid rgba(52, 211, 153, 0.25)',
-                    boxShadow: '0 12px 36px rgba(0, 0, 0, 0.4)',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {/* Card Banner Image */}
-                  {block.image_url ? (
-                    <div style={{ width: '100%', height: '220px', overflow: 'hidden', position: 'relative' }}>
-                      <img
-                        src={block.image_url}
-                        alt="Piensa, observa y experimenta"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                      <div
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          background: 'linear-gradient(to top, #0f1d24 0%, transparent 80%)',
-                        }}
-                      />
-                    </div>
-                  ) : null}
-
-                  <div style={{ padding: '2rem' }}>
-                    {/* Card Header */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem' }}>
-                      <span
-                        style={{
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #34d399, #059669)',
-                          color: '#042f2e',
-                          fontWeight: 800,
-                          fontSize: '0.9rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        #{index + 1}
-                      </span>
-                      <h2
-                        style={{
-                          fontSize: '1.4rem',
-                          fontWeight: 700,
-                          color: 'white',
-                          margin: 0,
-                        }}
-                      >
-                        Piensa, Observa y Experimenta
-                      </h2>
-                    </div>
-
-                    {/* Fun Fact / Main MD Content */}
-                    {block.fun_fact_md && (
-                      <div
-                        style={{
-                          background: 'rgba(52, 211, 153, 0.08)',
-                          border: '1px solid rgba(52, 211, 153, 0.2)',
-                          borderRadius: '16px',
-                          padding: '1.25rem 1.5rem',
-                          marginBottom: prompts.length > 0 ? '1.75rem' : 0,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: '0.8rem',
-                            fontWeight: 700,
-                            color: '#34d399',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            marginBottom: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                          }}
-                        >
-                          💡 Dato Curioso / Contexto
-                        </div>
-                        <p
-                          style={{
-                            fontSize: '1rem',
-                            color: 'rgba(255, 255, 255, 0.9)',
-                            lineHeight: 1.6,
-                            margin: 0,
-                            whiteSpace: 'pre-wrap',
-                          }}
-                        >
-                          {block.fun_fact_md}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Prompts list */}
-                    {prompts.length > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                        <div
-                          style={{
-                            fontSize: '0.82rem',
-                            fontWeight: 700,
-                            color: 'rgba(255,255,255,0.5)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
-                          }}
-                        >
-                          Actividades ({prompts.length})
-                        </div>
-                        {prompts.map((prompt, pIdx) => {
-                          const typeCfg =
-                            PROMPT_TYPE_CONFIG[prompt.prompt_type] || PROMPT_TYPE_CONFIG.otro
-
-                          return (
-                            <div
-                              key={prompt.id || pIdx}
-                              style={{
-                                background: typeCfg.bg,
-                                border: `1px solid ${typeCfg.border}`,
-                                borderRadius: '16px',
-                                padding: '1.25rem',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '12px',
-                              }}
-                            >
-                              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                                <div
-                                  style={{
-                                    color: typeCfg.color,
-                                    background: 'rgba(0,0,0,0.2)',
-                                    borderRadius: '12px',
-                                    padding: '8px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  {prompt.icon ? (
-                                    <span style={{ fontSize: '1.2rem' }}>{prompt.icon}</span>
-                                  ) : (
-                                    typeCfg.icon
-                                  )}
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                  <div
-                                    style={{
-                                      fontSize: '0.8rem',
-                                      fontWeight: 800,
-                                      color: typeCfg.color,
-                                      textTransform: 'uppercase',
-                                      letterSpacing: '0.04em',
-                                      marginBottom: '4px',
-                                    }}
-                                  >
-                                    {prompt.label || typeCfg.label}
-                                  </div>
-                                  <div
-                                    style={{
-                                      fontSize: '0.98rem',
-                                      color: 'rgba(255, 255, 255, 0.92)',
-                                      lineHeight: 1.55,
-                                      whiteSpace: 'pre-wrap',
-                                    }}
-                                  >
-                                    {prompt.prompt_md}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Student Answer Input */}
-                              {prompt.id && (
-                                <div
-                                  style={{
-                                    marginTop: '0.25rem',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '8px',
-                                  }}
-                                >
-                                  <label
-                                    style={{
-                                      fontSize: '0.8rem',
-                                      fontWeight: 600,
-                                      color: 'rgba(255,255,255,0.6)',
-                                    }}
-                                  >
-                                    Tu respuesta / observaciones:
-                                  </label>
-                                  <textarea
-                                    value={answers[prompt.id] ?? ''}
-                                    onChange={(e) => {
-                                      const val = e.target.value
-                                      setAnswers((prev) => ({ ...prev, [prompt.id!]: val }))
-                                    }}
-                                    onBlur={() => handleSavePrompt(prompt.id!)}
-                                    placeholder="Escribe aquí tu respuesta o conclusiones..."
-                                    rows={3}
-                                    style={{
-                                      width: '100%',
-                                      backgroundColor: 'rgba(0, 0, 0, 0.35)',
-                                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                                      borderRadius: '12px',
-                                      padding: '0.85rem 1rem',
-                                      color: 'white',
-                                      fontSize: '0.95rem',
-                                      lineHeight: '1.5',
-                                      resize: 'vertical',
-                                      outline: 'none',
-                                      boxSizing: 'border-box',
-                                      fontFamily: 'inherit',
-                                    }}
-                                  />
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      justifyContent: 'flex-end',
-                                      alignItems: 'center',
-                                      gap: '10px',
-                                    }}
-                                  >
-                                    {savedMap[prompt.id] && (
-                                      <span
-                                        style={{
-                                          fontSize: '0.82rem',
-                                          color: '#4ade80',
-                                          fontWeight: 600,
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          gap: '4px',
-                                        }}
-                                      >
-                                        <CheckCircle2 size={14} /> Respuesta guardada
-                                      </span>
-                                    )}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSavePrompt(prompt.id!)}
-                                      disabled={savingMap[prompt.id]}
-                                      style={{
-                                        background: savingMap[prompt.id]
-                                          ? 'rgba(52, 211, 153, 0.4)'
-                                          : 'linear-gradient(135deg, #34d399, #059669)',
-                                        color: '#042f2e',
-                                        border: 'none',
-                                        padding: '7px 16px',
-                                        borderRadius: '8px',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 700,
-                                        cursor: savingMap[prompt.id] ? 'not-allowed' : 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        transition: 'all 0.2s ease',
-                                      }}
-                                    >
-                                      {savingMap[prompt.id] ? (
-                                        'Guardando...'
-                                      ) : (
-                                        <>
-                                          Enviar respuesta <Send size={14} />
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </motion.article>
-              )
-            })
+            blocks.map((block, index) => (
+              <BlockCardItem
+                key={block.id || index}
+                block={block}
+                index={index}
+                revealProps={revealProps}
+                answers={answers}
+                setAnswers={setAnswers}
+                savingMap={savingMap}
+                savedMap={savedMap}
+                handleSavePrompt={handleSavePrompt}
+              />
+            ))
           )}
         </main>
       </div>

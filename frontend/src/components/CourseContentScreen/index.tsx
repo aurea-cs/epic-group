@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
+import { useTranslation } from 'react-i18next'
 import ConfirmModal from '../general/ConfirmModal'
 import '../HierarchyConfig.css'
 
@@ -36,6 +37,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
         courseId: string
     }>()
     const navigate = useNavigate()
+    const { i18n } = useTranslation()
 
     // ── Data & state ──────────────────────────────────────────────────────────
     const content = useCourseContent(courseId)
@@ -98,22 +100,22 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                 className="btn-back"
                                 onClick={() => navigate(`/admin/school/${centerId}`)}
                             >
-                                ← Volver
+                                ← {i18n.language.startsWith('en') ? 'Back' : 'Volver'}
                             </button>
                         </div>
                         <div style={{ flex: 1, textAlign: 'center' }}>
                             <h1 style={{ margin: 0, fontSize: '2rem', color: 'white' }}>
-                                {content.subject?.name}
+                                {i18n.language.startsWith('en') && content.subject?.name_en ? content.subject?.name_en : content.subject?.name}
                             </h1>
                             <p style={{ color: 'white', marginTop: '0.5rem', opacity: 0.8 }}>
-                                Contenido de la Materia
+                                {i18n.language.startsWith('en') ? 'Course Content' : 'Contenido de la Materia'}
                             </p>
                         </div>
                         <div className="header-action-right" style={{ width: '150px', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                             <button
                                 className="btn-icon"
                                 onClick={() => navigate(`/admin/school/${centerId}/grade/${gradeId}/course/${courseId}/edit`)}
-                                title="Configuración del Curso"
+                                title={i18n.language.startsWith('en') ? 'Course Settings' : 'Configuración del Curso'}
                                 style={{ background: 'rgba(31, 41, 90, 0.1)', padding: '0.8rem' }}
                             >
                                 ⚙️
@@ -135,7 +137,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                         onClick={() => moduleCRUD.openCreate(content.modules.length)}
                         style={{ marginBottom: '1rem', marginLeft: 'auto', display: 'block' }}
                     >
-                        Nuevo Módulo
+                        {i18n.language.startsWith('en') ? 'New Module' : 'Nuevo Módulo'}
                     </button>
 
                     {/* Modules */}
@@ -145,7 +147,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                 textAlign: 'center', padding: '4rem', color: '#fff',
                                 border: '2px dashed rgba(31, 41, 90, 0.3)', borderRadius: '1rem',
                             }}>
-                                <p>No hay módulos creados. Comienza agregando uno.</p>
+                                <p>{i18n.language.startsWith('en') ? 'No modules created. Start by adding one.' : 'No hay módulos creados. Comienza agregando uno.'}</p>
                             </div>
                         ) : (
                             content.modules.map(module => (

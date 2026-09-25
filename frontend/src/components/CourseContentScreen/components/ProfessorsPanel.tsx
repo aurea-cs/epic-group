@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface ProfessorsPanelProps {
     professors: any[]
@@ -12,7 +13,9 @@ const ProfessorsPanel: React.FC<ProfessorsPanelProps> = ({
     loading,
     onOpenModal,
     onUnassign,
-}) => (
+}) => {
+    const { i18n } = useTranslation()
+    return (
     <div style={{
         background: 'rgba(108, 92, 231, 0.1)',
         border: '1px solid rgba(108, 92, 231, 0.3)',
@@ -25,13 +28,13 @@ const ProfessorsPanel: React.FC<ProfessorsPanelProps> = ({
         flexWrap: 'wrap',
     }}>
         <span style={{ color: '#c084fc', fontWeight: '600', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>
-            👨‍🏫 Profesores:
+            👨‍🏫 {i18n.language.startsWith('en') ? 'Professors:' : 'Profesores:'}
         </span>
 
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', flex: 1, alignItems: 'center' }}>
             {professors.length === 0 ? (
                 <span style={{ color: 'white', fontSize: '0.9rem', fontStyle: 'italic' }}>
-                    Sin profesores asignados
+                    {i18n.language.startsWith('en') ? 'No professors assigned' : 'Sin profesores asignados'}
                 </span>
             ) : (
                 professors.map(prof => (
@@ -62,7 +65,7 @@ const ProfessorsPanel: React.FC<ProfessorsPanelProps> = ({
                                 cursor: 'pointer', fontSize: '0.8rem', padding: '0', lineHeight: 1,
                                 display: 'flex', alignItems: 'center',
                             }}
-                            title="Desasignar"
+                            title={i18n.language.startsWith('en') ? 'Unassign' : 'Desasignar'}
                         >
                             ✕
                         </button>
@@ -80,9 +83,10 @@ const ProfessorsPanel: React.FC<ProfessorsPanelProps> = ({
                 cursor: 'pointer', fontSize: '0.875rem', whiteSpace: 'nowrap', transition: 'all 0.2s',
             }}
         >
-            + Asignar Profesor
+            + {i18n.language.startsWith('en') ? 'Assign Professor' : 'Asignar Profesor'}
         </button>
     </div>
-)
+    )
+}
 
 export default ProfessorsPanel

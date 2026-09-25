@@ -877,7 +877,6 @@ const ExitTicketTakeScreen: React.FC<ExitTicketTakeScreenProps> = ({
                     }}
                   />
                 )}
-
                 {/* 2. RATING (1 to 5) */}
                 {q.type === 'rating' && (
                   <div>
@@ -918,6 +917,52 @@ const ExitTicketTakeScreen: React.FC<ExitTicketTakeScreenProps> = ({
                     {currentAnswer && RATING_LABELS[currentAnswer] && (
                       <p style={{ fontSize: '0.85rem', color: '#c084fc', margin: '6px 0 0 0', fontWeight: 600 }}>
                         Seleccionado: {RATING_LABELS[currentAnswer]}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* EMOJI REACTION */}
+                {q.type === 'emoji' && (
+                  <div>
+                    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                      {(q.config?.options && q.config.options.length > 0
+                        ? q.config.options.map((o: any) => (typeof o === 'string' ? o : o.label))
+                        : ['😡', '😟', '🫩', '😐', '😊', '😄']
+                      ).map((emojiStr: string, eIdx: number) => {
+                        const selected = currentAnswer === emojiStr
+                        return (
+                          <button
+                            key={eIdx}
+                            type="button"
+                            disabled={!!existingResponse}
+                            onClick={() => handleOptionSelect(q.id, emojiStr)}
+                            style={{
+                              flex: 1,
+                              minWidth: '56px',
+                              height: '64px',
+                              borderRadius: '14px',
+                              background: selected
+                                ? 'linear-gradient(135deg, #a855f7, #6c5ce7)'
+                                : 'rgba(255, 255, 255, 0.05)',
+                              border: selected ? '2px solid #c084fc' : '1px solid rgba(255, 255, 255, 0.1)',
+                              fontSize: '2rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: existingResponse ? 'default' : 'pointer',
+                              boxShadow: selected ? '0 4px 15px rgba(168, 85, 247, 0.4)' : 'none',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            {emojiStr}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {currentAnswer && (
+                      <p style={{ fontSize: '0.85rem', color: '#c084fc', margin: '6px 0 0 0', fontWeight: 600 }}>
+                        Seleccionado: {currentAnswer}
                       </p>
                     )}
                   </div>

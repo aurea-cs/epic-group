@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
+import { useTranslation } from 'react-i18next'
+import { useDynamicTranslation } from '../hooks/useDynamicTranslation'
 import {
   getCourseModules,
   getModuleVrCode,
@@ -15,7 +17,7 @@ import {
   ThinkBlock
 } from '../lib/adminApi'
 import { getUserRole } from '../utils/getUserRole'
-import { Book, Gamepad2, FileText, ArrowRight, Folder, Play, Ticket } from 'lucide-react'
+import { Book, Gamepad2, FileText, ArrowRight, Folder, Play, Ticket, Globe } from 'lucide-react'
 import { markItemAsRead } from '../lib/api'
 import ExitTicketTakeScreen from './ExitTicketTakeScreen'
 import QuizTakeScreen from './QuizTakeScreen'
@@ -32,42 +34,46 @@ interface ModuleDraftScreenProps {
 }
 
 const ContentCard = ({ item, index, onViewPdf, userId }: { item: ModuleItem, index: number, onViewPdf: (url: string, itemId: string, isEditable: boolean) => void, userId: string }) => {
+  const { t } = useTranslation()
+  const { text: translatedTitle } = useDynamicTranslation(item.title)
+  const { text: translatedDescription } = useDynamicTranslation(item.description || t('moduleDraft.defaultContentDescription'))
+
   return (
     <div 
       className="hoverable-card"
       onClick={() => {
-            if (!item.content_url) {
-              alert('Este contenido no tiene una URL configurada aún.');
-              return;
-            }
-            const readItems = JSON.parse(localStorage.getItem('readItems') || '{}');
-            readItems[item.id] = true;
-            localStorage.setItem('readItems', JSON.stringify(readItems));
-            
-            markItemAsRead(userId, item.id).catch(console.error);
-            
-            if (item.type === 'pdf') {
-              onViewPdf(item.content_url, item.id, !!item.is_editable);
-            } else {
-              window.open(item.content_url, '_blank', 'noopener,noreferrer');
-            }
-          }}
+        if (!item.content_url) {
+          alert(t('moduleDraft.noUrlAlert'))
+          return
+        }
+        const readItems = JSON.parse(localStorage.getItem('readItems') || '{}')
+        readItems[item.id] = true
+        localStorage.setItem('readItems', JSON.stringify(readItems))
+        
+        markItemAsRead(userId, item.id).catch(console.error)
+        
+        if (item.type === 'pdf') {
+          onViewPdf(item.content_url, item.id, !!item.is_editable)
+        } else {
+          window.open(item.content_url, '_blank', 'noopener,noreferrer')
+        }
+      }}
       style={{
-      backgroundColor: '#25164E',
-      borderRadius: '16px',
-      padding: '24px',
-      width: '320px',
-      flexShrink: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '16px',
-      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-      border: '1px solid rgba(255,255,255,0.05)'
-    }}>
+        backgroundColor: '#25164E',
+        borderRadius: '16px',
+        padding: '24px',
+        width: '320px',
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        border: '1px solid rgba(255,255,255,0.05)'
+      }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <img
           src={item.image_url || ciberImg}
-          alt={item.title}
+          alt={translatedTitle}
           style={{
             width: '180px',
             height: '180px',
@@ -79,10 +85,10 @@ const ContentCard = ({ item, index, onViewPdf, userId }: { item: ModuleItem, ind
       </div>
       <div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
-          {item.title}
+          {translatedTitle}
         </h3>
         <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
-          {item.description || "En este módulo, explorarás temas como la interacción inmersiva, la creación de entornos virtuales y el impacto de la tecnología en la creatividad."}
+          {translatedDescription}
         </p>
       </div>
       <div style={{ marginTop: 'auto' }}>
@@ -105,15 +111,17 @@ const ContentCard = ({ item, index, onViewPdf, userId }: { item: ModuleItem, ind
           onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
           onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
         >
-          Cuaderno - Tema {index + 1} <FileText size={16} />
+          {t('moduleDraft.notebookTopic', { index: index + 1 })} <FileText size={16} />
         </button>
       </div>
     </div>
   )
 }
 
-
 const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
+  const { t } = useTranslation()
+  const { text: translatedTitle } = useDynamicTranslation(vrEntry.title || "Sala VR")
+  const { text: translatedDescription } = useDynamicTranslation(vrEntry.description || t('moduleDraft.defaultVrDescription'))
   const vrUrl = vrEntry.code
 
   return (
@@ -121,17 +129,17 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
       className="hoverable-card"
       onClick={() => window.open(vrUrl, '_blank', 'noopener,noreferrer')}
       style={{
-      backgroundColor: '#25164E',
-      borderRadius: '16px',
-      padding: '0',
-      width: '320px',
-      flexShrink: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-      border: '1px solid rgba(255,255,255,0.05)'
-    }}>
+        backgroundColor: '#25164E',
+        borderRadius: '16px',
+        padding: '0',
+        width: '320px',
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        border: '1px solid rgba(255,255,255,0.05)'
+      }}>
       <img
         src={vrEntry.image_url || dentrodespaceshipImg}
         alt="VR Room"
@@ -140,10 +148,10 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
         <div>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
-            {vrEntry.title || "Sala VR"}
+            {translatedTitle}
           </h3>
           <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
-            {vrEntry.description || "Explora un mundo inmersivo donde la realidad virtual te transporta a nuevas dimensiones."}
+            {translatedDescription}
           </p>
           <div style={{
             marginTop: '10px',
@@ -154,28 +162,28 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
             alignItems: 'center',
             gap: '8px'
           }}>
-            Plataforma VR
+            {t('moduleDraft.vrPlatform')}
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
           <button
             style={{
-            flex: 1,
-            backgroundColor: 'transparent',
-            color: 'white',
-            border: '1px solid white',
-            padding: '10px',
-            borderRadius: '8px',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '6px',
-            fontWeight: 'bold',
-            fontSize: '0.875rem',
-            cursor: 'pointer',
-            transition: 'background 0.2s, color 0.2s'
-          }}
+              flex: 1,
+              backgroundColor: 'transparent',
+              color: 'white',
+              border: '1px solid white',
+              padding: '10px',
+              borderRadius: '8px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: 'bold',
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              transition: 'background 0.2s, color 0.2s'
+            }}
             onMouseOver={(e) => {
               e.currentTarget.style.backgroundColor = 'white';
               e.currentTarget.style.color = '#25164E';
@@ -185,7 +193,7 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
               e.currentTarget.style.color = 'white';
             }}
           >
-            Ingresar <ArrowRight size={16} />
+            {t('moduleDraft.enter')} <ArrowRight size={16} />
           </button>
         </div>
       </div>
@@ -194,6 +202,10 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
 }
 
 const ResourceCard = ({ item, onViewPdf }: { item: ModuleItem, index: number, onViewPdf: (url: string, itemId: string, isEditable: boolean) => void }) => {
+  const { t } = useTranslation()
+  const { text: translatedTitle } = useDynamicTranslation(item.title)
+  const { text: translatedDescription } = useDynamicTranslation(item.description || t('moduleDraft.defaultResourceDescription'))
+
   const handleClick = () => {
     if (item.content_url) {
       if (item.type === 'video') { window.open(item.content_url, '_blank') }
@@ -208,21 +220,21 @@ const ResourceCard = ({ item, onViewPdf }: { item: ModuleItem, index: number, on
       className="hoverable-card"
       onClick={handleClick}
       style={{
-      backgroundColor: '#25164E',
-      borderRadius: '16px',
-      padding: '24px',
-      width: '320px',
-      flexShrink: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '16px',
-      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-      border: '1px solid rgba(255,255,255,0.05)'
-    }}>
+        backgroundColor: '#25164E',
+        borderRadius: '16px',
+        padding: '24px',
+        width: '320px',
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        border: '1px solid rgba(255,255,255,0.05)'
+      }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <img
           src={item.image_url || ciberImg}
-          alt={item.title}
+          alt={translatedTitle}
           style={{
             width: '180px',
             height: '180px',
@@ -234,10 +246,10 @@ const ResourceCard = ({ item, onViewPdf }: { item: ModuleItem, index: number, on
       </div>
       <div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
-          {item.title}
+          {translatedTitle}
         </h3>
         <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
-          {item.description || "Aquí puedes acceder y descargar información adicional como PDFs, presentaciones y otros materiales que complementan tu aprendizaje."}
+          {translatedDescription}
         </p>
       </div>
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -262,9 +274,9 @@ const ResourceCard = ({ item, onViewPdf }: { item: ModuleItem, index: number, on
             onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
           >
             {item.type === 'video' ? (
-              <>Ver Video <Play size={16} fill="currentColor" /></>
+              <>{t('moduleDraft.viewVideo')} <Play size={16} fill="currentColor" /></>
             ) : (
-              <>Ver Recurso </>
+              <>{t('moduleDraft.viewResource')} </>
             )}
           </button>
         )}
@@ -286,7 +298,7 @@ const ResourceCard = ({ item, onViewPdf }: { item: ModuleItem, index: number, on
               cursor: 'not-allowed',
             }}
           >
-            Sin URL configurada
+            {t('moduleDraft.noUrlConfigured')}
           </button>
         )}
       </div>
@@ -295,6 +307,10 @@ const ResourceCard = ({ item, onViewPdf }: { item: ModuleItem, index: number, on
 }
 
 const ExitTicketCard = ({ ticket, onView }: { ticket: ExitTicketTemplate, onView: (id: string) => void }) => {
+  const { t } = useTranslation()
+  const { text: translatedTitle } = useDynamicTranslation(ticket.title)
+  const { text: translatedDescription } = useDynamicTranslation(ticket.description || t('moduleDraft.defaultExitTicketDescription'))
+
   const questionCount =
     ticket.questions?.length ??
     ticket.exit_ticket_questions?.[0]?.count ??
@@ -336,10 +352,10 @@ const ExitTicketCard = ({ ticket, onView }: { ticket: ExitTicketTemplate, onView
       </div>
       <div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
-          {ticket.title}
+          {translatedTitle}
         </h3>
         <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
-          {ticket.description || "Cuestionario de evaluación rápida para comprobar tus aprendizajes al finalizar este módulo."}
+          {translatedDescription}
         </p>
         <div style={{
           marginTop: '10px',
@@ -353,7 +369,7 @@ const ExitTicketCard = ({ ticket, onView }: { ticket: ExitTicketTemplate, onView
           alignItems: 'center',
           gap: '6px'
         }}>
-          ● {questionCount > 0 ? `${questionCount} ${questionCount === 1 ? 'pregunta' : 'preguntas'}` : 'Ticket de salida'}
+          ● {questionCount > 0 ? `${questionCount} ${questionCount === 1 ? t('moduleDraft.questionSingle') : t('moduleDraft.questionPlural')}` : t('moduleDraft.exitTicket')}
         </div>
       </div>
       <div style={{ marginTop: 'auto' }}>
@@ -376,7 +392,7 @@ const ExitTicketCard = ({ ticket, onView }: { ticket: ExitTicketTemplate, onView
           onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#d8b4fe'}
           onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#c084fc'}
         >
-          Ver Ticket de Salida <FileText size={16} />
+          {t('moduleDraft.viewExitTicket')} <FileText size={16} />
         </button>
       </div>
     </div>
@@ -384,7 +400,11 @@ const ExitTicketCard = ({ ticket, onView }: { ticket: ExitTicketTemplate, onView
 }
 
 const QuizCard = ({ attachment, onOpen }: { attachment: ModuleQuizAttachment; onOpen: (attachment: ModuleQuizAttachment) => void }) => {
+  const { t } = useTranslation()
   const quiz = attachment.quizzes
+  const { text: translatedTitle } = useDynamicTranslation(quiz?.title || t('moduleDraft.quiz'))
+  const { text: translatedDescription } = useDynamicTranslation(quiz?.description || t('moduleDraft.defaultQuizDescription'))
+
   if (!quiz) return null
 
   const questionCount =
@@ -432,10 +452,10 @@ const QuizCard = ({ attachment, onOpen }: { attachment: ModuleQuizAttachment; on
       </div>
       <div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
-          {quiz.title || 'Cuestionario'}
+          {translatedTitle}
         </h3>
         <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
-          {quiz.description || "Cuestionario de evaluación para poner a prueba tus conocimientos sobre este módulo."}
+          {translatedDescription}
         </p>
         <div style={{
           marginTop: '10px',
@@ -449,7 +469,7 @@ const QuizCard = ({ attachment, onOpen }: { attachment: ModuleQuizAttachment; on
           alignItems: 'center',
           gap: '6px'
         }}>
-          ● {questionCount > 0 ? `${questionCount} ${questionCount === 1 ? 'pregunta' : 'preguntas'}` : 'Cuestionario'}
+          ● {questionCount > 0 ? `${questionCount} ${questionCount === 1 ? t('moduleDraft.questionSingle') : t('moduleDraft.questionPlural')}` : t('moduleDraft.quiz')}
         </div>
       </div>
       <div style={{ marginTop: 'auto' }}>
@@ -473,7 +493,7 @@ const QuizCard = ({ attachment, onOpen }: { attachment: ModuleQuizAttachment; on
           onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#7dd3fc'}
           onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#38bdf8'}
         >
-          Ver Cuestionario <FileText size={16} />
+          {t('moduleDraft.viewQuiz')} <FileText size={16} />
         </button>
       </div>
     </div>
@@ -481,7 +501,15 @@ const QuizCard = ({ attachment, onOpen }: { attachment: ModuleQuizAttachment; on
 }
 
 const ThinkBlockCard = ({ blocks, onOpen }: { blocks: ThinkBlock[]; onOpen: () => void }) => {
+  const { t } = useTranslation()
   const firstBlock = blocks[0]
+
+  const cleanDescription = firstBlock?.fun_fact_md 
+    ? firstBlock.fun_fact_md.replace(/[#*`_]/g, '').trim()
+    : t('moduleDraft.thinkObserveExperimentDesc')
+
+  const { text: translatedDescription } = useDynamicTranslation(cleanDescription)
+
   if (!firstBlock) return null
 
   const totalPrompts = blocks.reduce((acc, block) => {
@@ -499,10 +527,6 @@ const ThinkBlockCard = ({ blocks, onOpen }: { blocks: ThinkBlock[]; onOpen: () =
     e.stopPropagation()
     onOpen()
   }
-
-  const cleanDescription = firstBlock.fun_fact_md 
-    ? firstBlock.fun_fact_md.replace(/[#*`_]/g, '').trim()
-    : "Bloque de curiosidad y actividades de pensamiento crítico para explorar y analizar este tema."
 
   return (
     <div 
@@ -526,7 +550,7 @@ const ThinkBlockCard = ({ blocks, onOpen }: { blocks: ThinkBlock[]; onOpen: () =
         {firstBlock.image_url ? (
           <img
             src={firstBlock.image_url}
-            alt="Piensa, observa y experimenta"
+            alt={t('moduleDraft.thinkObserveExperimentTitle')}
             style={{
               width: '180px',
               height: '180px',
@@ -555,7 +579,7 @@ const ThinkBlockCard = ({ blocks, onOpen }: { blocks: ThinkBlock[]; onOpen: () =
       </div>
       <div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
-          Piensa, Observa y Experimenta
+          {t('moduleDraft.thinkObserveExperimentTitle')}
         </h3>
         <p style={{
           fontSize: '0.875rem',
@@ -566,7 +590,7 @@ const ThinkBlockCard = ({ blocks, onOpen }: { blocks: ThinkBlock[]; onOpen: () =
           overflow: 'hidden',
           textOverflow: 'ellipsis'
         }}>
-          {cleanDescription}
+          {translatedDescription || cleanDescription}
         </p>
         <div style={{
           marginTop: '10px',
@@ -580,7 +604,7 @@ const ThinkBlockCard = ({ blocks, onOpen }: { blocks: ThinkBlock[]; onOpen: () =
           alignItems: 'center',
           gap: '6px'
         }}>
-          ● {blocks.length} {blocks.length === 1 ? 'experimento' : 'experimentos'}{totalPrompts > 0 ? ` (${totalPrompts} actividades)` : ''}
+          ● {blocks.length} {blocks.length === 1 ? t('moduleDraft.experimentSingle') : t('moduleDraft.experimentPlural')}{totalPrompts > 0 ? ` (${totalPrompts} ${t('moduleDraft.activities')})` : ''}
         </div>
       </div>
       <div style={{ marginTop: 'auto' }}>
@@ -604,7 +628,7 @@ const ThinkBlockCard = ({ blocks, onOpen }: { blocks: ThinkBlock[]; onOpen: () =
           onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#6ee7b7'}
           onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#34d399'}
         >
-          Ver Experimentos <FileText size={16} />
+          {t('moduleDraft.viewExperiments')} <FileText size={16} />
         </button>
       </div>
     </div>
@@ -612,6 +636,7 @@ const ThinkBlockCard = ({ blocks, onOpen }: { blocks: ThinkBlock[]; onOpen: () =
 }
 
 const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
+  const { t, i18n } = useTranslation()
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
   const navigate = useNavigate()
   const [moduleData, setModuleData] = useState<CourseModule | null>(null)
@@ -625,7 +650,21 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   const [loading, setLoading] = useState(true)
   const [, setError] = useState<string | null>(null)
 
+  const { text: translatedModuleTitle } = useDynamicTranslation(moduleData?.title)
+
   const userRole = getUserRole(user)
+
+  const toggleLanguage = () => {
+    const current = i18n.language || 'es'
+    const next = current.startsWith('es') ? 'en' : 'es'
+    i18n.changeLanguage(next)
+
+    const select = document.querySelector('.goog-te-combo') as HTMLSelectElement
+    if (select) {
+      select.value = next
+      select.dispatchEvent(new Event('change'))
+    }
+  }
 
   const handleViewPdf = (url: string, itemId: string, isEditable: boolean) => {
     navigate(
@@ -685,7 +724,7 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#7334EF' }}>
-        <p style={{ color: 'white', fontSize: '1.2rem' }}>Cargando contenido...</p>
+        <p style={{ color: 'white', fontSize: '1.2rem' }}>{t('moduleDraft.loading')}</p>
       </div>
     )
   }
@@ -701,57 +740,36 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
 
         {/* Lado Derecho */}
         <div className="module-draft-right-panel">
-        <button
-          onClick={() => navigate(-1)}
-          className="module-draft-back-button"
-        >
-          ← Regresar
-        </button>
+          <div className="module-draft-header-actions">
+            <button
+              onClick={toggleLanguage}
+              className="module-draft-translate-btn"
+              title={i18n.language.startsWith('es') ? t('moduleDraft.translateToEnglish') : t('moduleDraft.translateToSpanish')}
+            >
+              <Globe size={18} />
+              <span>{i18n.language.startsWith('es') ? 'EN' : 'ES'}</span>
+            </button>
 
-        <h1 className="module-draft-title">
-          {moduleData?.title ? `Módulo - ${moduleData.title}` : 'Módulo 1 - Nombre del Módulo'}
-        </h1>
-
-        <p style={{ color: 'white', fontSize: '1rem', lineHeight: '1.6', opacity: 0.9, marginBottom: '3rem', maxWidth: '1000px' }}>
-          Este módulo de aprendizaje está diseñado para sumergirte en un entorno interactivo, donde
-          podrás explorar conceptos clave a través de actividades prácticas y recursos multimedia. A
-          medida que avances, experimentarás un enfoque dinámico que fomenta la colaboración y el
-          pensamiento crítico, asegurando que cada lección sea memorable y efectiva.
-        </p>
-
-        {/* Contenidos Section */}
-        <div style={{ marginBottom: '4rem' }}>
-          <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
-            <Book size={24} color="#FCEE50" /> CONTENIDOS
-          </h2>
-          <div style={{
-            display: 'flex',
-            gap: '24px',
-            overflowX: 'auto',
-            paddingTop: '12px',
-            paddingBottom: '2rem',
-            paddingLeft: '8px',
-            paddingRight: '8px',
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'rgba(255,255,255,0.3) transparent'
-          }}>
-            {contenidos.length > 0 ? (
-              contenidos.map((item, idx) => (
-                <ContentCard key={item.id} item={item} index={idx} onViewPdf={handleViewPdf} userId={user.id} />
-              ))
-            ) : (
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
-                No hay contenidos disponibles en este módulo.
-              </p>
-            )}
+            <button
+              onClick={() => navigate(-1)}
+              className="module-draft-back-button"
+            >
+              {t('moduleDraft.back')}
+            </button>
           </div>
-        </div>
 
-        {/* Recursos Section */}
-        {userRole !== 'student' && (
+          <h1 className="module-draft-title">
+            {moduleData?.title ? `${t('moduleDraft.modulePrefix')} - ${translatedModuleTitle || moduleData.title}` : t('moduleDraft.defaultTitle')}
+          </h1>
+
+          <p style={{ color: 'white', fontSize: '1rem', lineHeight: '1.6', opacity: 0.9, marginBottom: '3rem', maxWidth: '1000px' }}>
+            {t('moduleDraft.introDescription')}
+          </p>
+
+          {/* Contenidos Section */}
           <div style={{ marginBottom: '4rem' }}>
             <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
-              <Folder size={24} color="#FCEE50" /> RECURSOS
+              <Book size={24} color="#FCEE50" /> {t('moduleDraft.contents')}
             </h2>
             <div style={{
               display: 'flex',
@@ -764,24 +782,82 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
               scrollbarWidth: 'thin',
               scrollbarColor: 'rgba(255,255,255,0.3) transparent'
             }}>
-              {recursos.length > 0 ? (
-                recursos.map((item, idx) => (
-                  <ResourceCard key={item.id} item={item} index={idx} onViewPdf={handleViewPdf} />
+              {contenidos.length > 0 ? (
+                contenidos.map((item, idx) => (
+                  <ContentCard key={item.id} item={item} index={idx} onViewPdf={handleViewPdf} userId={user.id} />
                 ))
               ) : (
                 <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
-                  No hay recursos disponibles para este módulo.
+                  {t('moduleDraft.noContents')}
                 </p>
               )}
             </div>
           </div>
-        )}
 
-        {/* Ticket de Salida, Quizzes & Think Blocks Section */}
-        {(exitTickets.length > 0 || moduleQuizzes.length > 0 || thinkBlocks.length > 0) && (
-          <div style={{ marginBottom: '4rem' }}>
+          {/* Recursos Section */}
+          {userRole !== 'student' && (
+            <div style={{ marginBottom: '4rem' }}>
+              <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                <Folder size={24} color="#FCEE50" /> {t('moduleDraft.resources')}
+              </h2>
+              <div style={{
+                display: 'flex',
+                gap: '24px',
+                overflowX: 'auto',
+                paddingTop: '12px',
+                paddingBottom: '2rem',
+                paddingLeft: '8px',
+                paddingRight: '8px',
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(255,255,255,0.3) transparent'
+              }}>
+                {recursos.length > 0 ? (
+                  recursos.map((item, idx) => (
+                    <ResourceCard key={item.id} item={item} index={idx} onViewPdf={handleViewPdf} />
+                  ))
+                ) : (
+                  <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
+                    {t('moduleDraft.noResources')}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Ticket de Salida, Quizzes & Think Blocks Section */}
+          {(exitTickets.length > 0 || moduleQuizzes.length > 0 || thinkBlocks.length > 0) && (
+            <div style={{ marginBottom: '4rem' }}>
+              <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                <Ticket size={24} color="#FCEE50" /> {t('moduleDraft.evaluations')}
+              </h2>
+              <div style={{
+                display: 'flex',
+                gap: '24px',
+                overflowX: 'auto',
+                paddingTop: '12px',
+                paddingBottom: '2rem',
+                paddingLeft: '8px',
+                paddingRight: '8px',
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(255,255,255,0.3) transparent'
+              }}>
+                {exitTickets.map((ticket) => (
+                  <ExitTicketCard key={ticket.id} ticket={ticket} onView={setSelectedTicketId} />
+                ))}
+                {moduleQuizzes.map((attachment) => (
+                  <QuizCard key={attachment.id} attachment={attachment} onOpen={setSelectedQuizAttachment} />
+                ))}
+                {thinkBlocks.length > 0 && (
+                  <ThinkBlockCard blocks={thinkBlocks} onOpen={() => setShowThinkBlocks(true)} />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Salas VR Section */}
+          <div>
             <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
-              <Ticket size={24} color="#FCEE50" /> EVALUACIÓN Y ACTIVIDADES
+              <Gamepad2 size={24} color="#FCEE50" /> {t('moduleDraft.vrRooms')}
             </h2>
             <div style={{
               display: 'flex',
@@ -794,41 +870,12 @@ const ModuleDraftScreen: React.FC<ModuleDraftScreenProps> = ({ user }) => {
               scrollbarWidth: 'thin',
               scrollbarColor: 'rgba(255,255,255,0.3) transparent'
             }}>
-              {exitTickets.map((ticket) => (
-                <ExitTicketCard key={ticket.id} ticket={ticket} onView={setSelectedTicketId} />
+              {sortedVrEntries.map((entry) => (
+                <VrCard key={entry.id} vrEntry={entry} />
               ))}
-              {moduleQuizzes.map((attachment) => (
-                <QuizCard key={attachment.id} attachment={attachment} onOpen={setSelectedQuizAttachment} />
-              ))}
-              {thinkBlocks.length > 0 && (
-                <ThinkBlockCard blocks={thinkBlocks} onOpen={() => setShowThinkBlocks(true)} />
-              )}
             </div>
           </div>
-        )}
-
-        {/* Salas VR Section */}
-        <div>
-          <h2 style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
-            <Gamepad2 size={24} color="#FCEE50" /> SALAS VR
-          </h2>
-          <div style={{
-            display: 'flex',
-            gap: '24px',
-            overflowX: 'auto',
-            paddingTop: '12px',
-            paddingBottom: '2rem',
-            paddingLeft: '8px',
-            paddingRight: '8px',
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'rgba(255,255,255,0.3) transparent'
-          }}>
-            {sortedVrEntries.map((entry) => (
-              <VrCard key={entry.id} vrEntry={entry} />
-            ))}
-          </div>
         </div>
-      </div>
       </div>
 
       {selectedTicketId && (

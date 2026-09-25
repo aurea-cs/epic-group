@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabase } from '../config/supabase';
 import { upload } from '../middleware/upload';
+import { translateToEnglish } from '../utils/translator';
 
 const router = Router();
 
@@ -26,12 +27,18 @@ router.post('/api/subjects', async (req, res) => {
             return res.status(400).json({ error: 'Name and grade ID are required' });
         }
 
+        // Auto-translate fields using AI
+        const name_en = await translateToEnglish(name);
+        const description_en = description ? await translateToEnglish(description) : null;
+
         const { data, error } = await supabase
             .from('subjects')
             .insert({
                 name,
+                name_en,
                 short_name,
                 description,
+                description_en,
                 start_date: start_date || null,
                 end_date: end_date || null,
                 visibility,
@@ -561,9 +568,11 @@ router.post('/api/subjects/:subjectId/modules', async (req, res) => {
         const { subjectId } = req.params;
         const { title, order_index, curriculum_module_id } = req.body;
 
+        const title_en = await translateToEnglish(title);
+
         const { data, error } = await supabase
             .from('modules')
-            .insert({ subject_id: subjectId, title, order_index, curriculum_module_id: curriculum_module_id || null })
+            .insert({ subject_id: subjectId, title, title_en, order_index, curriculum_module_id: curriculum_module_id || null })
             .select()
             .single();
 
