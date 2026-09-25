@@ -34,7 +34,7 @@ interface SchoolDetailScreenProps {
 }
 
 const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
     const { centerId } = useParams<{ centerId: string }>()
     const navigate = useNavigate()
 
@@ -467,7 +467,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                 className="btn-back"
                                 onClick={() => navigate('/admin')}
                             >
-                                ← Volver
+                                ← {i18n.language.startsWith('en') ? 'Back' : 'Volver'}
                             </button>
                         )}
                     </div>
@@ -480,7 +480,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                             onClick={() => setShowAddTypeModal(true)}
                             disabled={!center}
                         >
-                            + Agregar
+                            + {i18n.language.startsWith('en') ? 'Add' : 'Agregar'}
                         </button>
                     </div>
                 </div>
@@ -498,30 +498,30 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                     {/* FILTER BAR */}
                     <div className="filter-bar-modern">
                         <div className="filter-group">
-                            <label>Grado</label>
+                            <label>{i18n.language.startsWith('en') ? 'Grade' : 'Grado'}</label>
                             
                             <div className={`cascading-dropdown-container ${isDropdownOpen ? 'open' : ''}`} ref={dropdownRef}>
                                 <div 
                                     className="cascading-dropdown-button"
                                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                 >
-                                    <span>{selectedGrade ? `${selectedGrade.name} - Nivel ${selectedGrade.level}` : 'Seleccionar grado...'}</span>
+                                    <span>{selectedGrade ? `${i18n.language.startsWith('en') ? t(`dynamicSubjects.${selectedGrade.name}`, selectedGrade.name) : selectedGrade.name} - ${i18n.language.startsWith('en') ? 'Level' : 'Nivel'} ${selectedGrade.level}` : (i18n.language.startsWith('en') ? 'Select grade...' : 'Seleccionar grado...')}</span>
                                     <span style={{ fontSize: '0.8rem' }}>▼</span>
                                 </div>
                                 
                                 <div className="cascading-dropdown-menu">
-                                    {uniqueLevels.length === 0 && <div className="cascading-dropdown-item" style={{ cursor: 'default' }}>Sin niveles registrados</div>}
+                                    {uniqueLevels.length === 0 && <div className="cascading-dropdown-item" style={{ cursor: 'default' }}>{i18n.language.startsWith('en') ? 'No levels registered' : 'Sin niveles registrados'}</div>}
                                     
                                     {uniqueLevels.map(levelName => {
                                         const gradesInThisLevel = grades.filter(g => g.name === levelName).sort((a, b) => (a.level || 0) - (b.level || 0));
                                         
                                         return (
                                             <div key={levelName} className="cascading-dropdown-item">
-                                                <span>{levelName}</span>
+                                                <span>{i18n.language.startsWith('en') ? t(`dynamicSubjects.${levelName}`, levelName) : levelName}</span>
                                                 <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>▶</span>
                                                 
                                                 <div className="cascading-dropdown-submenu">
-                                                    {gradesInThisLevel.length === 0 && <div className="cascading-dropdown-subitem" style={{ cursor: 'default' }}>Vacío</div>}
+                                                    {gradesInThisLevel.length === 0 && <div className="cascading-dropdown-subitem" style={{ cursor: 'default' }}>{i18n.language.startsWith('en') ? 'Empty' : 'Vacío'}</div>}
                                                     {gradesInThisLevel.map(grade => (
                                                         <div 
                                                             key={grade.id} 
@@ -533,7 +533,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                                                 setIsDropdownOpen(false);
                                                             }}
                                                         >
-                                                            Nivel {grade.level}
+                                                            {i18n.language.startsWith('en') ? 'Level' : 'Nivel'} {grade.level}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -543,7 +543,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                 </div>
                             </div>
                             
-                            <button style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => { if (selectedGrade) setConfirmDeleteGrade(selectedGrade) }} title="Eliminar Grado"> 🗑️ </button>
+                            <button style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => { if (selectedGrade) setConfirmDeleteGrade(selectedGrade) }} title={i18n.language.startsWith('en') ? "Delete Grade" : "Eliminar Grado"}> 🗑️ </button>
                         </div>
                         <div className="filter-actions">
 
@@ -554,17 +554,17 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                     {/* COURSES LIST VIEW */}
                     <div className="courses-list-container">
                         <div className="courses-list-header">
-                            <div className="col-course">Materia</div>
-                            <div className="col-students">Capacidad</div>
-                            <div className="col-curriculum">Materia Canónica</div>
-                            <div className="col-actions">Acciones</div>
+                            <div className="col-course">{i18n.language.startsWith('en') ? 'Subject' : 'Materia'}</div>
+                            <div className="col-students">{i18n.language.startsWith('en') ? 'Capacity' : 'Capacidad'}</div>
+                            <div className="col-curriculum">{i18n.language.startsWith('en') ? 'Canonical Subject' : 'Materia Canónica'}</div>
+                            <div className="col-actions">{i18n.language.startsWith('en') ? 'Actions' : 'Acciones'}</div>
                         </div>
 
                         <div className="courses-list-body">
                             {loading && subjects.length === 0 ? (
-                                <p className="empty-text" style={{ color: 'white' }}>Cargando materias...</p>
+                                <p className="empty-text" style={{ color: 'white' }}>{i18n.language.startsWith('en') ? 'Loading subjects...' : 'Cargando materias...'}</p>
                             ) : subjects.length === 0 ? (
-                                <p className="empty-text" style={{ color: 'white' }}>No hay materias registradas en este grado.</p>
+                                <p className="empty-text" style={{ color: 'white' }}>{i18n.language.startsWith('en') ? 'No subjects registered in this grade.' : 'No hay materias registradas en este grado.'}</p>
                             ) : (
                                 subjects.map((subject) => (
                                     <div key={subject.id} className="course-list-row" onClick={() => openSubjectDetail(subject)}>
@@ -573,10 +573,10 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                                 {subject.campo_formativo && (
                                                     <span style={{ fontSize: '0.75rem', color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: 600 }}>
-                                                        {subject.campo_formativo}
+                                                        {i18n.language.startsWith('en') ? t(`dynamicSubjects.${subject.campo_formativo}`, subject.campo_formativo) : subject.campo_formativo}
                                                     </span>
                                                 )}
-                                                <span className="course-name">{t(`dynamicSubjects.${subject.name}`, { defaultValue: subject.name })}</span>
+                                                <span className="course-name">{i18n.language.startsWith('en') ? (subject.name_en || t(`dynamicSubjects.${subject.name}`, { defaultValue: subject.name })) : subject.name}</span>
                                             </div>
                                         </div>
                                         <div className="col-students">
@@ -598,10 +598,10 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                                     cursor: 'pointer',
                                                 }}
                                             >
-                                                <option value="">-- Sin asignar --</option>
+                                                <option value="">-- {i18n.language.startsWith('en') ? 'Unassigned' : 'Sin asignar'} --</option>
                                                 {curriculumSubjects.map((cs) => (
                                                     <option key={cs.id} value={cs.id}>
-                                                        {cs.short_name ? `${cs.name} (${cs.short_name})` : cs.name}
+                                                        {cs.short_name ? `${i18n.language.startsWith('en') ? t(`dynamicSubjects.${cs.name}`, (cs as any).name_en || cs.name) as string : cs.name} (${cs.short_name})` : (i18n.language.startsWith('en') ? t(`dynamicSubjects.${cs.name}`, (cs as any).name_en || cs.name) as string : cs.name)}
                                                     </option>
                                                 ))}
                                             </select>

@@ -15,7 +15,7 @@ import ModuleExperimentManagerScreen from './moduleExperimentManagerScreen'
 import type { CategoryItem } from '../hooks/extraContentTypes'
 
 const CategoriesTab: React.FC = () => {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
 
     const [grades, setGrades] = useState<CurriculumGrade[]>([])
     const [selectedGrade, setSelectedGrade] = useState<CurriculumGrade | null>(null)
@@ -289,7 +289,7 @@ const CategoriesTab: React.FC = () => {
                                     </option>
                                     {modules.map((mod) => (
                                         <option key={mod.id} value={mod.id}>
-                                            {mod.title}
+                                            {i18n.language.startsWith('en') ? t(`dynamicSubjects.${mod.title}`, mod.title) : mod.title}
                                         </option>
                                     ))}
                                 </select>

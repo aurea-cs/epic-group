@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { User } from '@supabase/supabase-js'
 import { getUserRole } from '../utils/getUserRole'
 import { getSubjectById, Subject, getCourseModules, CourseModule } from '../lib/adminApi'
+import { useTranslation } from 'react-i18next'
 import './DashboardScreen.css' // Reusing dashboard styles for consistency
 
 interface CourseDetailScreenProps {
@@ -13,6 +14,7 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
     const { courseId } = useParams<{ courseId: string }>()
     const navigate = useNavigate()
     const userRole = getUserRole(user)
+    const { i18n } = useTranslation()
 
     const [subject, setSubject] = useState<Subject | null>(null)
     const [grade, setGrade] = useState<{ center_id: string } | null>(null)
@@ -242,7 +244,9 @@ const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({ user }) => {
                                         onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
                                         onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
                                     >
-                                        <h4 style={{ color: 'white', marginTop: 0, marginBottom: '0.5rem', fontSize: '1.1rem' }}>{mod.title}</h4>
+                                        <h4 style={{ color: 'white', marginTop: 0, marginBottom: '0.5rem', fontSize: '1.1rem' }}>
+                                            {i18n.language.startsWith('en') && mod.title_en ? mod.title_en : mod.title}
+                                        </h4>
                                         <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', margin: 0 }}>
                                             {'Explora el contenido de este módulo.'}
                                         </p>

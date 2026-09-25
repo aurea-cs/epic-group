@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { type ModuleItem } from '../../../lib/adminApi'
 
 interface ItemRowProps {
@@ -21,15 +22,19 @@ const ItemRow: React.FC<ItemRowProps> = ({
     kebabRef,
     onEdit,
     onKebabClick,
-}) => (
+}) => {
+    const { i18n } = useTranslation()
+    return (
     <div className="module-item-row standard">
         <div style={{ fontSize: '1.5rem' }}>{typeIcon(item.type)}</div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 'bold' }}>{item.title}</div>
-            {item.description && (
+            <div style={{ fontWeight: 'bold' }}>
+                {i18n.language.startsWith('en') && item.title_en ? item.title_en : item.title}
+            </div>
+            {(item.description || item.description_en) && (
                 <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>
-                    {item.description}
+                    {i18n.language.startsWith('en') && item.description_en ? item.description_en : item.description}
                 </div>
             )}
 
@@ -44,7 +49,7 @@ const ItemRow: React.FC<ItemRowProps> = ({
                         background: item.show_student ? '#6ee7a8' : 'rgba(255,255,255,0.3)',
                         display: 'inline-block',
                     }} />
-                    Estudiantes
+                    {i18n.language.startsWith('en') ? 'Students' : 'Estudiantes'}
                 </span>
                 <span style={{
                     fontSize: '0.72rem',
@@ -56,7 +61,7 @@ const ItemRow: React.FC<ItemRowProps> = ({
                         background: item.show_teacher ? '#c4b5fd' : 'rgba(255,255,255,0.3)',
                         display: 'inline-block',
                     }} />
-                    Profesores
+                    {i18n.language.startsWith('en') ? 'Teachers' : 'Profesores'}
                 </span>
             </div>
         </div>
@@ -64,7 +69,7 @@ const ItemRow: React.FC<ItemRowProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <button
                 onClick={() => onEdit(item)}
-                title="Editar"
+                title={i18n.language.startsWith('en') ? 'Edit' : 'Editar'}
                 style={{
                     width: '28px', height: '28px', borderRadius: '6px', border: 'none',
                     background: 'rgba(255,255,255,0.12)', color: '#fff',
@@ -91,6 +96,7 @@ const ItemRow: React.FC<ItemRowProps> = ({
             </button>
         </div>
     </div>
-)
+    )
+}
 
 export default ItemRow
