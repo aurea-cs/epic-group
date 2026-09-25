@@ -13,8 +13,8 @@ export interface CategoryItem {
 export interface ExitTicketQuestionFormState {
     id?: string
     title: string
-    type: 'multiple_choice' | 'text' | 'rating'
+    type: 'multiple_choice' | 'text' | 'rating' | 'emoji'
     required: boolean
     question_order?: number
-    config?: { options?: string[] }
+    config?: { options?: Array<{ label: string; value?: string } | string> }
 }

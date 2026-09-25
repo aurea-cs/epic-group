@@ -10,11 +10,11 @@ import {
 export interface ExitTicketQuestionFormState {
     id?: string
     title: string
-    type: 'multiple_choice' | 'text' | 'rating'
+    type: 'multiple_choice' | 'text' | 'rating' | 'emoji'
     required: boolean
     question_order?: number
     config?: {
-        options?: { label: string }[]
+        options?: { label: string; value?: string }[]
     }
 }
 
@@ -23,6 +23,8 @@ interface ExitTicketEditorScreenProps {
     onBack: () => void
     onSaved: () => void
 }
+
+const DEFAULT_EMOJI_OPTIONS = ['😡', '😟', '🫩', '😐', '😊', '😄']
 
 const DEFAULT_NEW_QUESTIONS: ExitTicketQuestionFormState[] = [
     { title: '¿Qué concepto principal aprendiste hoy en clase?', type: 'text', required: true, question_order: 0 },
@@ -48,7 +50,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
     const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false)
     const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null)
     const [newTitle, setNewTitle] = useState('')
-    const [newType, setNewType] = useState<'multiple_choice' | 'text' | 'rating'>('multiple_choice')
+    const [newType, setNewType] = useState<'multiple_choice' | 'text' | 'rating' | 'emoji'>('multiple_choice')
     const [newRequired, setNewRequired] = useState(true)
     const [newOptions, setNewOptions] = useState<string[]>(['Opción 1', 'Opción 2'])
     const [newOptionInput, setNewOptionInput] = useState('')
@@ -122,8 +124,10 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
         setNewTitle(q.title)
         setNewType(q.type)
         setNewRequired(q.required)
-        if (q.type === 'multiple_choice' && q.config?.options && q.config.options.length > 0) {
-            setNewOptions(q.config.options.map((o) => o.label))
+        if ((q.type === 'multiple_choice' || q.type === 'emoji') && q.config?.options && q.config.options.length > 0) {
+            setNewOptions(q.config.options.map((o) => typeof o === 'string' ? o : o.label))
+        } else if (q.type === 'emoji') {
+            setNewOptions(DEFAULT_EMOJI_OPTIONS)
         } else {
             setNewOptions(['Opción 1', 'Opción 2'])
         }
@@ -145,8 +149,8 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
         if (!newTitle.trim()) return
 
         const formattedOptions =
-            newType === 'multiple_choice' && newOptions.length > 0
-                ? newOptions.map((opt) => ({ label: opt }))
+            (newType === 'multiple_choice' || newType === 'emoji') && newOptions.length > 0
+                ? newOptions.map((opt) => ({ label: opt, value: opt }))
                 : undefined
 
         if (editingQuestionIndex !== null) {
@@ -358,12 +362,14 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                                                         Tipo:{' '}
                                                         {q.type === 'rating'
                                                             ? '⭐ Calificación 1-5'
-                                                            : q.type === 'text'
-                                                                ? '✍️ Respuesta Abierta'
-                                                                : '🔘 Opción Múltiple'}{' '}
+                                                            : q.type === 'emoji'
+                                                                ? '🎭 Reacción con Emojis 😡😟🫩😐😊😄'
+                                                                : q.type === 'text'
+                                                                    ? '✍️ Respuesta Abierta'
+                                                                    : '🔘 Opción Múltiple'}{' '}
                                                         {q.config?.options && (
                                                             <span style={{ display: 'block', color: 'rgba(255,255,255,0.6)', marginTop: '0.2rem' }}>
-                                                                Opciones: {q.config.options.map((o) => o.label).join(', ')}
+                                                                Opciones: {q.config.options.map((o) => typeof o === 'string' ? o : o.label).join(', ')}
                                                             </span>
                                                         )}
                                                     </div>
@@ -449,11 +455,41 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                                                     </div>
                                                 )}
 
+                                                {q.type === 'emoji' && (
+                                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', margin: '8px 0' }}>
+                                                        {(q.config?.options && q.config.options.length > 0
+                                                            ? q.config.options.map((o: any) => (typeof o === 'string' ? o : o.label))
+                                                            : DEFAULT_EMOJI_OPTIONS
+                                                        ).map((emojiStr: string, eIdx: number) => {
+                                                            const isSelected = currentVal === emojiStr
+                                                            return (
+                                                                <span
+                                                                    key={eIdx}
+                                                                    onClick={() => setPreviewAnswers((prev) => ({ ...prev, [idx]: emojiStr }))}
+                                                                    style={{
+                                                                        fontSize: '1.6rem',
+                                                                        padding: '6px 12px',
+                                                                        borderRadius: '12px',
+                                                                        background: isSelected ? 'rgba(168, 85, 247, 0.3)' : 'rgba(255,255,255,0.06)',
+                                                                        border: isSelected ? '2px solid #c084fc' : '1px solid rgba(255,255,255,0.12)',
+                                                                        cursor: 'pointer',
+                                                                        transition: 'all 0.2s ease',
+                                                                        boxShadow: isSelected ? '0 0 10px rgba(168, 85, 247, 0.5)' : 'none'
+                                                                    }}
+                                                                >
+                                                                    {emojiStr}
+                                                                </span>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                )}
+
                                                 {q.type === 'multiple_choice' && (
                                                     <div>
                                                         {(q.config?.options || [{ label: 'Opción 1' }, { label: 'Opción 2' }]).map(
                                                             (opt, oIdx) => {
-                                                                const isSelected = currentVal === opt.label
+                                                                const labelText = typeof opt === 'string' ? opt : opt.label
+                                                                const isSelected = currentVal === labelText
                                                                 return (
                                                                     <div
                                                                         key={oIdx}
@@ -463,7 +499,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                                                                             background: isSelected ? 'rgba(108, 92, 231, 0.25)' : undefined,
                                                                         }}
                                                                         onClick={() =>
-                                                                            setPreviewAnswers((prev) => ({ ...prev, [idx]: opt.label }))
+                                                                            setPreviewAnswers((prev) => ({ ...prev, [idx]: labelText }))
                                                                         }
                                                                     >
                                                                         <input
@@ -473,7 +509,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                                                                             onChange={() => {}}
                                                                             style={{ cursor: 'pointer' }}
                                                                         />
-                                                                        <span>{opt.label}</span>
+                                                                        <span>{labelText}</span>
                                                                     </div>
                                                                 )
                                                             }
@@ -518,11 +554,20 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                                     <select
                                         className="modern-input"
                                         value={newType}
-                                        onChange={(e) => setNewType(e.target.value as any)}
+                                        onChange={(e) => {
+                                            const selected = e.target.value as any
+                                            setNewType(selected)
+                                            if (selected === 'emoji') {
+                                                setNewOptions(DEFAULT_EMOJI_OPTIONS)
+                                            } else if (selected === 'multiple_choice' && (newOptions.length === 0 || newOptions[0] === '😡')) {
+                                                setNewOptions(['Opción 1', 'Opción 2'])
+                                            }
+                                        }}
                                     >
                                         <option value="multiple_choice">Opción Múltiple</option>
                                         <option value="text">Respuesta Abierta (Texto)</option>
                                         <option value="rating">Calificación 1-5 ⭐</option>
+                                        <option value="emoji">Reacción con Emojis 😡😟🫩😐😊😄</option>
                                     </select>
                                 </div>
 
@@ -540,11 +585,11 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                                 </div>
                             </div>
 
-                            {/* Multiple Choice Options Builder */}
-                            {newType === 'multiple_choice' && (
+                            {/* Multiple Choice & Emoji Options Builder */}
+                            {(newType === 'multiple_choice' || newType === 'emoji') && (
                                 <div style={{ marginBottom: '1.25rem', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px' }}>
                                     <label style={{ color: '#c084fc', fontSize: '0.88rem', fontWeight: '600', display: 'block', marginBottom: '0.5rem' }}>
-                                        Opciones de Respuesta:
+                                        {newType === 'emoji' ? 'Opciones de Emojis:' : 'Opciones de Respuesta:'}
                                     </label>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
                                         {newOptions.map((opt, i) => (
@@ -579,7 +624,7 @@ const ExitTicketEditorScreen: React.FC<ExitTicketEditorScreenProps> = ({ templat
                                             type="text"
                                             className="modern-input"
                                             style={{ flex: 1, padding: '0.4rem 0.75rem', fontSize: '0.88rem' }}
-                                            placeholder="Nueva opción..."
+                                            placeholder={newType === 'emoji' ? 'Nuevo emoji...' : 'Nueva opción...'}
                                             value={newOptionInput}
                                             onChange={(e) => setNewOptionInput(e.target.value)}
                                             onKeyDown={(e) => {

@@ -332,6 +332,7 @@ const ExitTicketFormModal: React.FC<ExitTicketFormModalProps> = ({ templateId, o
                                     <option value="multiple_choice">{t('extraContent.typeMultiple', 'Opción Múltiple')}</option>
                                     <option value="text">{t('extraContent.typeOpen', 'Respuesta Abierta')}</option>
                                     <option value="rating">{t('extraContent.typeRating', 'Calificación 1-5 ⭐')}</option>
+                                    <option value="emoji">Reacción con Emojis 😡😟🫩😐😊😄</option>
                                 </select>
                                 {newQuestionForm.type !== 'multiple_choice' && (
                                     <button

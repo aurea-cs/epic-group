@@ -172,7 +172,7 @@ export interface ExitTicketQuestion {
     id: string
     exit_ticket_id: string
     question_order: number
-    type: 'multiple_choice' | 'text' | 'rating' | string
+    type: 'multiple_choice' | 'text' | 'rating' | 'emoji' | string
     title: string
     description?: string
     config?: Record<string, any>
