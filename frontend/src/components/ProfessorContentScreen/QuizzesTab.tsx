@@ -1,16 +1,15 @@
 import React, { useState, useMemo } from 'react'
 import { tdStyle, thStyle, inputStyleAlt } from '../general/SharedUI'
 import CustomSelect from '../general/CustomSelect'
-import { StudentQuizSubjectResponse, StudentQuizSubjectResponseAnswer } from './types'
+import { StudentQuizSubjectResponse, StudentQuizSubjectResponseAnswer, SubjectQuiz } from './types'
 
 interface QuizzesTabProps {
     loading: boolean
+    quizzes?: SubjectQuiz[]
     quizResponses: StudentQuizSubjectResponse[]
 }
 
 const renderAnswerDetail = (ans: StudentQuizSubjectResponseAnswer) => {
-    // Prefer question_snapshot (written at submit time) over the live join fields,
-    // which may be stale or missing if the question was later edited or deleted.
     const snap = ans.question_snapshot
     const question_type = snap?.type ?? ans.question_type
     const config = snap?.config ?? ans.config
@@ -72,20 +71,33 @@ const renderAnswerDetail = (ans: StudentQuizSubjectResponseAnswer) => {
     return <span style={{ color: '#ffffff', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{String(answer)}</span>
 }
 
-const QuizzesTab: React.FC<QuizzesTabProps> = ({ loading, quizResponses }) => {
+const QuizzesTab: React.FC<QuizzesTabProps> = ({ loading, quizzes = [], quizResponses }) => {
     const [searchQuery, setSearchQuery] = useState('')
     const [moduleFilter, setModuleFilter] = useState<string>('default')
+    const [quizFilter, setQuizFilter] = useState<string>('default')
     const [selectedResponse, setSelectedResponse] = useState<StudentQuizSubjectResponse | null>(null)
+    const [viewingQuizQuestions, setViewingQuizQuestions] = useState<SubjectQuiz | null>(null)
 
     const moduleOptions = useMemo(() => {
-        const modules = Array.from(new Set(quizResponses.map(r => r.module_title).filter(Boolean))).sort()
+        const fromQuizzes = quizzes.map(q => q.module_title)
+        const fromResponses = quizResponses.map(r => r.module_title)
+        const modules = Array.from(new Set([...fromQuizzes, ...fromResponses].filter(Boolean))).sort()
         return [
             { value: 'default', label: 'Todos los módulos' },
             ...modules.map(m => ({ value: m!, label: m! })),
         ]
-    }, [quizResponses])
+    }, [quizzes, quizResponses])
 
-    const filtered = useMemo(() => {
+    const quizOptions = useMemo(() => {
+        const quizItems = quizzes.map(q => ({ id: q.id, title: q.title }))
+        const uniqueQuizzes = Array.from(new Map(quizItems.map(q => [q.id, q])).values())
+        return [
+            { value: 'default', label: 'Todos los cuestionarios' },
+            ...uniqueQuizzes.map(q => ({ value: q.id, label: q.title })),
+        ]
+    }, [quizzes])
+
+    const filteredResponses = useMemo(() => {
         return quizResponses.filter(r => {
             const studentName = r.student_name || r.student_id
             const quizTitle = r.quiz_title || ''
@@ -101,154 +113,294 @@ const QuizzesTab: React.FC<QuizzesTabProps> = ({ loading, quizResponses }) => {
                 moduleFilter === 'default' ||
                 r.module_title === moduleFilter
 
-            return matchesSearch && matchesModule
+            const matchesQuiz =
+                !quizFilter ||
+                quizFilter === 'default' ||
+                r.quiz_id === quizFilter ||
+                r.quiz_title === quizzes.find(q => q.id === quizFilter)?.title
+
+            return matchesSearch && matchesModule && matchesQuiz
         })
-    }, [quizResponses, searchQuery, moduleFilter])
+    }, [quizResponses, searchQuery, moduleFilter, quizFilter, quizzes])
+
+    if (loading) {
+        return (
+            <div style={{ padding: '4rem 2rem', textAlign: 'center', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📋</div>
+                <p style={{ color: 'rgba(255,255,255,0.4)', margin: 0 }}>Cargando cuestionarios de la materia...</p>
+            </div>
+        )
+    }
 
     return (
-        <>
-            {/* Filters */}
-            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ position: 'relative', flex: '1 1 260px' }}>
-                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '1rem', pointerEvents: 'none' }}>🔍</span>
-                    <input
-                        type="text"
-                        placeholder="Buscar por alumno o cuestionario..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        style={{ ...inputStyleAlt, paddingLeft: '36px', width: '100%', background: 'rgba(255,255,255,0.06)' }}
-                    />
-                </div>
-                <div style={{ flex: '1 1 220px' }}>
-                    <CustomSelect
-                        value={moduleFilter}
-                        onChange={setModuleFilter}
-                        options={moduleOptions}
-                    />
-                </div>
-                {(searchQuery || (moduleFilter && moduleFilter !== 'default')) && (
-                    <button
-                        onClick={() => { setSearchQuery(''); setModuleFilter('default') }}
-                        style={{ padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
-                    >
-                        ✕ Limpiar
-                    </button>
-                )}
-                <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-                    {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
-                </span>
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', overflow: 'hidden' }}>
-                {loading ? (
-                    <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-                        <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📋</div>
-                        <p style={{ color: 'rgba(255,255,255,0.4)', margin: 0 }}>Cargando entregas de quizes...</p>
+            {/* Quizzes Grid Section */}
+            {quizzes.length > 0 && (
+                <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#f3e8ff' }}>
+                            📋 Cuestionarios de la materia ({quizzes.length})
+                        </h2>
                     </div>
-                ) : filtered.length === 0 ? (
-                    <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{searchQuery || moduleFilter !== 'default' ? '🔍' : '📋'}</div>
-                        <h3 style={{ margin: '0 0 0.5rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
-                            {searchQuery || moduleFilter !== 'default' ? 'Sin resultados' : 'No hay quizes entregados'}
-                        </h3>
-                        <p style={{ margin: 0, color: 'rgba(255,255,255,0.35)', fontSize: '0.88rem' }}>
-                            {searchQuery || moduleFilter !== 'default' ? 'Prueba con otros filtros.' : 'Aún ningún alumno ha respondido cuestionarios en esta materia.'}
-                        </p>
-                    </div>
-                ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                                <tr style={{ background: 'rgba(192,132,252,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                                    <th style={thStyle}>Alumno</th>
-                                    <th style={thStyle}>Cuestionario</th>
-                                    <th style={thStyle}>Módulo</th>
-                                    <th style={thStyle}>Calificación</th>
-                                    <th style={thStyle}>Fecha de entrega</th>
-                                    <th style={{ ...thStyle, textAlign: 'right' }}>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filtered.map((resp, idx) => {
-                                    const scoreText = resp.score !== null && resp.score !== undefined
-                                        ? `${resp.score} / ${resp.max_score ?? 100}`
-                                        : '—'
-                                    const percent = (resp.score !== null && resp.score !== undefined && resp.max_score)
-                                        ? Math.round((resp.score / resp.max_score) * 100)
-                                        : null
 
-                                    return (
-                                        <tr
-                                            key={resp.id}
-                                            style={{ borderBottom: idx < filtered.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'background 0.15s' }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(192,132,252,0.05)')}
-                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                        {quizzes.map((quiz) => {
+                            const responsesCount = quizResponses.filter(r => r.module_quiz_id === quiz.module_quiz_id || r.quiz_id === quiz.id).length
+                            const isSelectedFilter = quizFilter === quiz.id
+
+                            return (
+                                <div
+                                    key={quiz.module_quiz_id || quiz.id}
+                                    style={{
+                                        background: isSelectedFilter ? 'rgba(192,132,252,0.12)' : 'rgba(255,255,255,0.04)',
+                                        border: `1px solid ${isSelectedFilter ? 'rgba(192,132,252,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                                        borderRadius: '16px',
+                                        padding: '1.25rem',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justify: 'space-between',
+                                        gap: '1rem',
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                >
+                                    <div>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: '#ffffff' }}>
+                                                {quiz.title}
+                                            </h3>
+                                            <span style={{
+                                                fontSize: '0.72rem',
+                                                padding: '2px 8px',
+                                                borderRadius: '10px',
+                                                background: quiz.is_active ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.08)',
+                                                color: quiz.is_active ? '#86efac' : 'rgba(255,255,255,0.4)',
+                                                border: `1px solid ${quiz.is_active ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                                                whiteSpace: 'nowrap',
+                                            }}>
+                                                {quiz.is_active ? 'Activo' : 'Inactivo'}
+                                            </span>
+                                        </div>
+
+                                        {quiz.description && (
+                                            <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                {quiz.description}
+                                            </p>
+                                        )}
+
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                            <span style={{ fontSize: '0.78rem', background: 'rgba(108, 92, 231, 0.15)', color: '#c084fc', padding: '0.2rem 0.55rem', borderRadius: '8px', border: '1px solid rgba(192,132,252,0.2)' }}>
+                                                📌 {quiz.module_title}
+                                            </span>
+                                            <span style={{ fontSize: '0.78rem', background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8', padding: '0.2rem 0.55rem', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
+                                                ❓ {quiz.questions_count} pregunta{quiz.questions_count !== 1 ? 's' : ''}
+                                            </span>
+                                            <span style={{ fontSize: '0.78rem', background: 'rgba(251, 146, 60, 0.12)', color: '#fb923c', padding: '0.2rem 0.55rem', borderRadius: '8px', border: '1px solid rgba(251, 146, 60, 0.2)' }}>
+                                                📥 {responsesCount} entrega{responsesCount !== 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
+                                        <button
+                                            onClick={() => setQuizFilter(isSelectedFilter ? 'default' : quiz.id)}
+                                            style={{
+                                                flex: 1,
+                                                padding: '0.45rem 0.75rem',
+                                                borderRadius: '8px',
+                                                border: isSelectedFilter ? '1px solid #c084fc' : '1px solid rgba(255,255,255,0.15)',
+                                                background: isSelectedFilter ? 'rgba(192,132,252,0.25)' : 'rgba(255,255,255,0.06)',
+                                                color: '#ffffff',
+                                                fontSize: '0.82rem',
+                                                fontWeight: 500,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s',
+                                            }}
                                         >
-                                            <td style={{ ...tdStyle, fontWeight: 600 }}>
-                                                <div>{resp.student_name || resp.student_id}</div>
-                                                {resp.student_email && (
-                                                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>
-                                                        {resp.student_email}
-                                                    </div>
-                                                )}
-                                            </td>
-
-                                            <td style={{ ...tdStyle, fontWeight: 500, color: '#f3e8ff' }}>
-                                                {resp.quiz_title || 'Cuestionario'}
-                                            </td>
-
-                                            <td style={tdStyle}>
-                                                {resp.module_title ? (
-                                                    <span style={{ fontSize: '0.78rem', background: 'rgba(108, 92, 231, 0.15)', color: '#c084fc', padding: '0.2rem 0.55rem', borderRadius: '8px', border: '1px solid rgba(192,132,252,0.2)' }}>
-                                                        {resp.module_title}
-                                                    </span>
-                                                ) : '—'}
-                                            </td>
-
-                                            <td style={tdStyle}>
-                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: percent !== null && percent >= 70 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)', padding: '2px 8px', borderRadius: '12px', border: `1px solid ${percent !== null && percent >= 70 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, color: percent !== null && percent >= 70 ? '#86efac' : '#fca5a5', fontSize: '0.82rem', fontWeight: 600 }}>
-                                                    <span>{scoreText}</span>
-                                                    {percent !== null && <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>({percent}%)</span>}
-                                                </div>
-                                            </td>
-
-                                            <td style={tdStyle}>
-                                                {resp.submitted_at
-                                                    ? new Date(resp.submitted_at).toLocaleString('es-MX', {
-                                                        day: '2-digit', month: 'short', year: 'numeric',
-                                                        hour: '2-digit', minute: '2-digit'
-                                                    })
-                                                    : '—'}
-                                            </td>
-
-                                            <td style={{ ...tdStyle, textAlign: 'right' }}>
-                                                <button
-                                                    onClick={() => setSelectedResponse(resp)}
-                                                    style={{
-                                                        padding: '0.35rem 0.75rem',
-                                                        borderRadius: '8px',
-                                                        border: '1px solid rgba(192,132,252,0.3)',
-                                                        background: 'rgba(108,92,231,0.2)',
-                                                        color: '#e2e8f0',
-                                                        fontSize: '0.82rem',
-                                                        fontWeight: 500,
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.15s',
-                                                    }}
-                                                >
-                                                    👁️ Ver detalle ({resp.answers?.length ?? 0})
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
+                                            {isSelectedFilter ? '✓ Filtrando' : '👁️ Ver entregas'}
+                                        </button>
+                                        {quiz.questions && quiz.questions.length > 0 && (
+                                            <button
+                                                onClick={() => setViewingQuizQuestions(quiz)}
+                                                style={{
+                                                    padding: '0.45rem 0.75rem',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                                                    background: 'rgba(56, 189, 248, 0.12)',
+                                                    color: '#38bdf8',
+                                                    fontSize: '0.82rem',
+                                                    fontWeight: 500,
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s',
+                                                }}
+                                                title="Ver preguntas del cuestionario"
+                                            >
+                                                📋 Preguntas
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )
+                        })}
                     </div>
-                )}
+                </div>
+            )}
+
+            {/* Submissions Section */}
+            <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#f3e8ff' }}>
+                        📥 Entregas de alumnos ({filteredResponses.length})
+                    </h2>
+                </div>
+
+                {/* Filters */}
+                <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ position: 'relative', flex: '1 1 240px' }}>
+                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '1rem', pointerEvents: 'none' }}>🔍</span>
+                        <input
+                            type="text"
+                            placeholder="Buscar por alumno o cuestionario..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            style={{ ...inputStyleAlt, paddingLeft: '36px', width: '100%', background: 'rgba(255,255,255,0.06)' }}
+                        />
+                    </div>
+                    {quizOptions.length > 1 && (
+                        <div style={{ flex: '1 1 200px' }}>
+                            <CustomSelect
+                                value={quizFilter}
+                                onChange={setQuizFilter}
+                                options={quizOptions}
+                            />
+                        </div>
+                    )}
+                    <div style={{ flex: '1 1 200px' }}>
+                        <CustomSelect
+                            value={moduleFilter}
+                            onChange={setModuleFilter}
+                            options={moduleOptions}
+                        />
+                    </div>
+                    {(searchQuery || (moduleFilter && moduleFilter !== 'default') || (quizFilter && quizFilter !== 'default')) && (
+                        <button
+                            onClick={() => { setSearchQuery(''); setModuleFilter('default'); setQuizFilter('default') }}
+                            style={{ padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                        >
+                            ✕ Limpiar
+                        </button>
+                    )}
+                    <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                        {filteredResponses.length} resultado{filteredResponses.length !== 1 ? 's' : ''}
+                    </span>
+                </div>
+
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', overflow: 'hidden' }}>
+                    {filteredResponses.length === 0 ? (
+                        <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+                            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{searchQuery || moduleFilter !== 'default' || quizFilter !== 'default' ? '🔍' : '📋'}</div>
+                            <h3 style={{ margin: '0 0 0.5rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
+                                {searchQuery || moduleFilter !== 'default' || quizFilter !== 'default' ? 'Sin resultados' : 'No hay quizes entregados'}
+                            </h3>
+                            <p style={{ margin: 0, color: 'rgba(255,255,255,0.35)', fontSize: '0.88rem' }}>
+                                {searchQuery || moduleFilter !== 'default' || quizFilter !== 'default' ? 'Prueba con otros filtros.' : 'Aún ningún alumno ha respondido cuestionarios en esta materia.'}
+                            </p>
+                        </div>
+                    ) : (
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ background: 'rgba(192,132,252,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                                        <th style={thStyle}>Alumno</th>
+                                        <th style={thStyle}>Cuestionario</th>
+                                        <th style={thStyle}>Módulo</th>
+                                        <th style={thStyle}>Calificación</th>
+                                        <th style={thStyle}>Fecha de entrega</th>
+                                        <th style={{ ...thStyle, textAlign: 'right' }}>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredResponses.map((resp, idx) => {
+                                        const scoreText = resp.score !== null && resp.score !== undefined
+                                            ? `${resp.score} / ${resp.max_score ?? 100}`
+                                            : '—'
+                                        const percent = (resp.score !== null && resp.score !== undefined && resp.max_score)
+                                            ? Math.round((resp.score / resp.max_score) * 100)
+                                            : null
+
+                                        return (
+                                            <tr
+                                                key={resp.id}
+                                                style={{ borderBottom: idx < filteredResponses.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'background 0.15s' }}
+                                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(192,132,252,0.05)')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                            >
+                                                <td style={{ ...tdStyle, fontWeight: 600 }}>
+                                                    <div>{resp.student_name || resp.student_id}</div>
+                                                    {resp.student_email && (
+                                                        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>
+                                                            {resp.student_email}
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                <td style={{ ...tdStyle, fontWeight: 500, color: '#f3e8ff' }}>
+                                                    {resp.quiz_title || 'Cuestionario'}
+                                                </td>
+
+                                                <td style={tdStyle}>
+                                                    {resp.module_title ? (
+                                                        <span style={{ fontSize: '0.78rem', background: 'rgba(108, 92, 231, 0.15)', color: '#c084fc', padding: '0.2rem 0.55rem', borderRadius: '8px', border: '1px solid rgba(192,132,252,0.2)' }}>
+                                                            {resp.module_title}
+                                                        </span>
+                                                    ) : '—'}
+                                                </td>
+
+                                                <td style={tdStyle}>
+                                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: percent !== null && percent >= 70 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)', padding: '2px 8px', borderRadius: '12px', border: `1px solid ${percent !== null && percent >= 70 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, color: percent !== null && percent >= 70 ? '#86efac' : '#fca5a5', fontSize: '0.82rem', fontWeight: 600 }}>
+                                                        <span>{scoreText}</span>
+                                                        {percent !== null && <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>({percent}%)</span>}
+                                                    </div>
+                                                </td>
+
+                                                <td style={tdStyle}>
+                                                    {resp.submitted_at
+                                                        ? new Date(resp.submitted_at).toLocaleString('es-MX', {
+                                                            day: '2-digit', month: 'short', year: 'numeric',
+                                                            hour: '2-digit', minute: '2-digit'
+                                                        })
+                                                        : '—'}
+                                                </td>
+
+                                                <td style={{ ...tdStyle, textAlign: 'right' }}>
+                                                    <button
+                                                        onClick={() => setSelectedResponse(resp)}
+                                                        style={{
+                                                            padding: '0.35rem 0.75rem',
+                                                            borderRadius: '8px',
+                                                            border: '1px solid rgba(192,132,252,0.3)',
+                                                            background: 'rgba(108,92,231,0.2)',
+                                                            color: '#e2e8f0',
+                                                            fontSize: '0.82rem',
+                                                            fontWeight: 500,
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.15s',
+                                                        }}
+                                                    >
+                                                        👁️ Ver detalle ({resp.answers?.length ?? 0})
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Modal Detail */}
+            {/* Modal Detail Response */}
             {selectedResponse && (
                 <div
                     onClick={() => setSelectedResponse(null)}
@@ -366,7 +518,88 @@ const QuizzesTab: React.FC<QuizzesTabProps> = ({ loading, quizResponses }) => {
                     </div>
                 </div>
             )}
-        </>
+
+            {/* Modal Questions Details */}
+            {viewingQuizQuestions && (
+                <div
+                    onClick={() => setViewingQuizQuestions(null)}
+                    style={{
+                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 2000, padding: '1.5rem',
+                    }}
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            background: '#1a1625', border: '1px solid rgba(255,255,255,0.15)',
+                            borderRadius: '20px', padding: '1.75rem', maxWidth: '680px', width: '100%',
+                            maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 25px 50px rgba(0,0,0,0.6)',
+                        }}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#ffffff' }}>
+                                    📋 {viewingQuizQuestions.title}
+                                </h3>
+                                <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.85rem', color: '#c084fc' }}>
+                                    Módulo: {viewingQuizQuestions.module_title}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setViewingQuizQuestions(null)}
+                                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontSize: '1.2rem', cursor: 'pointer' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {(!viewingQuizQuestions.questions || viewingQuizQuestions.questions.length === 0) ? (
+                                <p style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.5)' }}>
+                                    No hay preguntas registradas en este cuestionario.
+                                </p>
+                            ) : (
+                                viewingQuizQuestions.questions.map((q: any, idx: number) => (
+                                    <div
+                                        key={q.id || idx}
+                                        style={{
+                                            background: 'rgba(255,255,255,0.04)',
+                                            border: '1px solid rgba(255,255,255,0.08)',
+                                            borderRadius: '12px',
+                                            padding: '1rem',
+                                        }}
+                                    >
+                                        <div style={{ fontWeight: 600, color: '#f3e8ff', marginBottom: '0.4rem', fontSize: '0.92rem' }}>
+                                            {idx + 1}. {q.title || `Pregunta ${idx + 1}`}
+                                        </div>
+                                        <span style={{ fontSize: '0.75rem', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>
+                                            Tipo: {q.type || 'multiple_choice'}
+                                        </span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                            <button
+                                onClick={() => setViewingQuizQuestions(null)}
+                                style={{
+                                    padding: '0.5rem 1.25rem',
+                                    borderRadius: '10px',
+                                    border: '1px solid rgba(255,255,255,0.15)',
+                                    background: 'rgba(255,255,255,0.08)',
+                                    color: '#ffffff',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     )
 }
 

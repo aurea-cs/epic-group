@@ -11,7 +11,7 @@ import { getUserRole } from '../utils/getUserRole'
 import { useTranslation } from 'react-i18next'
 import './HierarchyConfig.css'
 
-import type { Assignment, CalendarEvent, Student, ModuleWithItems, Center, Submission, TabKey, StudentExitTicketResponse, StudentQuizSubjectResponse } from './ProfessorContentScreen/types'
+import type { Assignment, CalendarEvent, Student, ModuleWithItems, Center, Submission, TabKey, StudentExitTicketResponse, StudentQuizSubjectResponse, SubjectQuiz } from './ProfessorContentScreen/types'
 
 import { ActionButton, TabButton } from './general/SharedUI'
 import ContentTab from './ProfessorContentScreen/ContentTab'
@@ -204,10 +204,14 @@ async function fetchTickets(subjectId: string): Promise<StudentExitTicketRespons
     return res.json()
 }
 
-async function fetchQuizResponses(subjectId: string): Promise<StudentQuizSubjectResponse[]> {
-    const res = await fetch(`${API_URL}/api/subjects/${subjectId}/quizzes/responses`)
-    if (!res.ok) throw new Error(`Error al cargar entregas de quizes: ${res.status}`)
-    return res.json()
+async function fetchSubjectQuizzes(subjectId: string): Promise<{ quizzes: SubjectQuiz[]; responses: StudentQuizSubjectResponse[] }> {
+    const res = await fetch(`${API_URL}/api/subjects/${subjectId}/quizzes`)
+    if (!res.ok) throw new Error(`Error al cargar quizes del curso: ${res.status}`)
+    const data = await res.json()
+    if (Array.isArray(data)) {
+        return { quizzes: [], responses: data }
+    }
+    return { quizzes: data.quizzes || [], responses: data.responses || [] }
 }
 
 
@@ -247,23 +251,30 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
     const [tickets, setTickets] = useState<StudentExitTicketResponse[]>([])
     const [ticketsLoading, setTicketsLoading] = useState(false)
 
+    const [subjectQuizzes, setSubjectQuizzes] = useState<SubjectQuiz[]>([])
     const [quizResponses, setQuizResponses] = useState<StudentQuizSubjectResponse[]>([])
-    const [quizResponsesLoading, setQuizResponsesLoading] = useState(false)
+    const [quizzesLoading, setQuizzesLoading] = useState(false)
 
     const [error, setError] = useState<string | null>(null)
     const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState<string | null>(null)
     const [confirmDeleteEventId, setConfirmDeleteEventId] = useState<string | null>(null)
     const [confirmDeleteStudentId, setConfirmDeleteStudentId] = useState<string | null>(null)
 
-    // ---- initial load: subject + modules ----
+    // ---- initial load: subject + modules + quizzes check ----
     useEffect(() => {
         if (!courseId) return
         setLoading(true)
         setError(null)
-        Promise.all([getSubjectById(courseId), getCourseModules(courseId)])
-            .then(([subj, mods]) => {
+        Promise.all([
+            getSubjectById(courseId),
+            getCourseModules(courseId),
+            fetchSubjectQuizzes(courseId).catch(() => ({ quizzes: [], responses: [] }))
+        ])
+            .then(([subj, mods, quizData]) => {
                 setSubject(subj)
                 setModules(mods as ModuleWithItems[])
+                setSubjectQuizzes(quizData.quizzes)
+                setQuizResponses(quizData.responses)
 
                 const visibilityMap: Record<string, boolean> = {}
                     ; (mods as ModuleWithItems[]).forEach(m => {
@@ -343,19 +354,23 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
             .finally(() => setTicketsLoading(false))
     }, [courseId])
 
-    const loadQuizResponses = useCallback(() => {
+    const loadQuizzes = useCallback(() => {
         if (!courseId) return
-        setQuizResponsesLoading(true)
+        setQuizzesLoading(true)
         setError(null)
-        fetchQuizResponses(courseId)
-            .then(setQuizResponses)
+        fetchSubjectQuizzes(courseId)
+            .then(data => {
+                setSubjectQuizzes(data.quizzes)
+                setQuizResponses(data.responses)
+            })
             .catch(e => setError(e.message))
-            .finally(() => setQuizResponsesLoading(false))
+            .finally(() => setQuizzesLoading(false))
     }, [courseId])
 
     // Reload all tab data whenever the subject (courseId) changes
     useEffect(() => {
         setTickets([])
+        setSubjectQuizzes([])
         setQuizResponses([])
         setAssignments([])
         setSubmissions([])
@@ -369,7 +384,7 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
         if (activeTab === 'students') loadStudents()
         if (activeTab === 'submissions') { loadAssignments(); loadSubmissions() }
         if (activeTab === 'tickets') loadTickets()
-        if (activeTab === 'quizzes') loadQuizResponses()
+        if (activeTab === 'quizzes') loadQuizzes()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, courseId])
 
@@ -522,7 +537,9 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
                 <TabButton label="📒 Contenido" active={activeTab === 'content'} onClick={() => setActiveTab('content')} />
                 <TabButton label="📂 Tareas" active={activeTab === 'assignments'} onClick={() => setActiveTab('assignments')} />
                 <TabButton label="📝 Entregas" active={activeTab === 'submissions'} onClick={() => setActiveTab('submissions')} />
-                <TabButton label="📋 Quizes" active={activeTab === 'quizzes'} onClick={() => setActiveTab('quizzes')} />
+                {subjectQuizzes.length > 0 && (
+                    <TabButton label="📋 Quizes" active={activeTab === 'quizzes'} onClick={() => setActiveTab('quizzes')} />
+                )}
                 <TabButton label="🎟️ Tickets" active={activeTab === 'tickets'} onClick={() => setActiveTab('tickets')} />
                 <TabButton label="📅 Eventos" active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} />
                 <TabButton label="👥 Alumnos" active={activeTab === 'students'} onClick={() => setActiveTab('students')} />
@@ -583,9 +600,10 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
                 />
             )}
 
-            {activeTab === 'quizzes' && (
+            {activeTab === 'quizzes' && subjectQuizzes.length > 0 && (
                 <QuizzesTab
-                    loading={quizResponsesLoading}
+                    loading={quizzesLoading}
+                    quizzes={subjectQuizzes}
                     quizResponses={quizResponses}
                 />
             )}
