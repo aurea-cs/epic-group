@@ -44,6 +44,93 @@ router.get('/grades/:gradeId/subjects', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/curriculum/subjects
+ * Create a new canonical curriculum subject.
+ * Body: { curriculum_grade_id, name, short_name? }
+ */
+router.post('/subjects', async (req: Request, res: Response) => {
+  try {
+    const { curriculum_grade_id, name, short_name } = req.body;
+    if (!curriculum_grade_id) {
+      return res.status(400).json({ error: 'curriculum_grade_id is required' });
+    }
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'name is required' });
+    }
+
+    const { data, error } = await supabase
+      .from('curriculum_subjects')
+      .insert({
+        curriculum_grade_id,
+        name: name.trim(),
+        short_name: short_name?.trim() || null,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (error: any) {
+    console.error('Error creating curriculum subject:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * PUT /api/curriculum/subjects/:subjectId
+ * Update name / short_name of a canonical curriculum subject.
+ * Body: { name?, short_name? }
+ */
+router.put('/subjects/:subjectId', async (req: Request, res: Response) => {
+  try {
+    const { subjectId } = req.params;
+    const { name, short_name } = req.body;
+
+    const updates: Record<string, any> = {};
+    if (name !== undefined) updates.name = name.trim();
+    if (short_name !== undefined) updates.short_name = short_name?.trim() || null;
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    const { data, error } = await supabase
+      .from('curriculum_subjects')
+      .update(updates)
+      .eq('id', subjectId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error updating curriculum subject:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/curriculum/subjects/:subjectId
+ * Delete a canonical curriculum subject (cascades to modules, linked subjects, etc).
+ */
+router.delete('/subjects/:subjectId', async (req: Request, res: Response) => {
+  try {
+    const { subjectId } = req.params;
+
+    const { error } = await supabase
+      .from('curriculum_subjects')
+      .delete()
+      .eq('id', subjectId);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting curriculum subject:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * GET /api/curriculum/subjects/:subjectId/modules
  * Fetch all canonical curriculum modules for a given curriculum subject.
  */
@@ -109,4 +196,3 @@ router.get('/tree', async (_req: Request, res: Response) => {
 });
 
 export default router;
-

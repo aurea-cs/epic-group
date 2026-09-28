@@ -845,6 +845,19 @@ export const deleteCourseModule = async (id: string): Promise<void> => {
     }
 }
 
+export const duplicateCourseModule = async (moduleId: string): Promise<CourseModule> => {
+    const response = await fetch(`${API_URL}/api/modules/${moduleId}/duplicate`, {
+        method: 'POST',
+    })
+    if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}))
+        const msg = errBody?.error || errBody?.message || `HTTP error! status: ${response.status}`
+        console.error('Error duplicating module:', msg)
+        throw new Error(msg)
+    }
+    return await response.json()
+}
+
 // ITEMS
 
 export const createModuleItem = async (
@@ -1400,6 +1413,62 @@ export const getCurriculumTree = async (): Promise<CurriculumGradeTree[]> => {
         return await response.json()
     } catch (error) {
         console.error('Error fetching curriculum tree:', error)
+        throw error
+    }
+}
+
+export const createCurriculumSubject = async (
+    data: { curriculum_grade_id: string; name: string; short_name?: string }
+): Promise<CurriculumSubject> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/subjects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error creating curriculum subject:', error)
+        throw error
+    }
+}
+
+export const updateCurriculumSubject = async (
+    id: string,
+    data: { name?: string; short_name?: string }
+): Promise<CurriculumSubject> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/subjects/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error updating curriculum subject:', error)
+        throw error
+    }
+}
+
+export const deleteCurriculumSubject = async (id: string): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/subjects/${id}`, {
+            method: 'DELETE',
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Error deleting curriculum subject:', error)
         throw error
     }
 }

@@ -48,6 +48,7 @@ interface ModuleCardProps {
     kebabRefs: React.MutableRefObject<Record<string, HTMLButtonElement | null>>
     onEditModule: (module: CourseModule) => void
     onDeleteModule: (module: CourseModule) => void
+    onDuplicateModule: (moduleId: string) => Promise<void>
     onAddItem: (moduleId: string) => void
     onEditItem: (item: ModuleItem) => void
     onKebabClick: (e: React.MouseEvent, itemId: string) => void
@@ -99,6 +100,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
     kebabRefs,
     onEditModule,
     onDeleteModule,
+    onDuplicateModule,
     onAddItem,
     onEditItem,
     onKebabClick,
@@ -109,6 +111,17 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
     onReorderVr,
 }) => {
     const { i18n } = useTranslation()
+    const [isDuplicating, setIsDuplicating] = useState(false)
+
+    const handleDuplicate = async () => {
+        if (isDuplicating) return
+        setIsDuplicating(true)
+        try {
+            await onDuplicateModule(module.id)
+        } finally {
+            setIsDuplicating(false)
+        }
+    }
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -321,13 +334,30 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
                         onClick={() => onEditModule(module)}
                         className="btn-icon-admin"
                         style={{ background: 'rgba(31, 41, 90, 0.1)', color: '#1f295a' }}
+                        title={i18n.language.startsWith('en') ? 'Edit module' : 'Editar módulo'}
                     >
                         ✏️
+                    </button>
+                    <button
+                        onClick={handleDuplicate}
+                        disabled={isDuplicating}
+                        className="btn-icon-admin"
+                        style={{
+                            background: isDuplicating ? 'rgba(0,184,148,0.06)' : 'rgba(0,184,148,0.12)',
+                            color: '#00b894',
+                            opacity: isDuplicating ? 0.6 : 1,
+                            cursor: isDuplicating ? 'not-allowed' : 'pointer',
+                            transition: 'opacity 0.2s',
+                        }}
+                        title={i18n.language.startsWith('en') ? 'Duplicate module' : 'Duplicar módulo'}
+                    >
+                        {isDuplicating ? '⏳' : '📋'}
                     </button>
                     <button
                         onClick={() => onDeleteModule(module)}
                         className="btn-icon-admin"
                         style={{ background: 'rgba(255, 0, 81, 0.2)', color: '#1f295a' }}
+                        title={i18n.language.startsWith('en') ? 'Delete module' : 'Eliminar módulo'}
                     >
                         🗑️
                     </button>

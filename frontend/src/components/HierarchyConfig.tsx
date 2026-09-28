@@ -247,8 +247,6 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
                     </div>
 
                 </div>
-
-                ```tsx
 {showCenterModal && (
     <div
         className="modal-overlay"
@@ -444,9 +442,6 @@ const HierarchyConfig: React.FC<HierarchyConfigProps> = () => {
         </div>
     </div>
 )}
-```
-
-
                 {confirmDeleteCenter !== null && (
                     <ConfirmModal
                         message={t('adminCenters.deleteConfirmMsg')}
