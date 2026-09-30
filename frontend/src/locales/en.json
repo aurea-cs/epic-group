@@ -448,6 +448,7 @@
     "noQuestionsAdded": "You have not added questions to this quiz yet.",
     "addQuestionTitle": "+ Add new question",
     "questionTitlePlaceholder": "Question title...",
+    "addSubject": "Add Subject",
     "typeMultiple": "Multiple Choice",
     "typeOpen": "Open Response",
     "typeRating": "Rating 1-5 ⭐",

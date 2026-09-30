@@ -353,6 +353,7 @@
   "extraContent": {
     "title": "[Bajo Construcción] Gestión de Contenido Global",
     "doNotTouch": "No tocar",
+    "addSubject": "Agregar materia",
     "baseCenter": "Centro Base:",
     "tabCategories": "Contenido extra",
     "tabExitTickets": "Plantillas de tickets de salida",
