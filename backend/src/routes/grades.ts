@@ -584,6 +584,27 @@ router.post('/api/grades/:gradeId/clone', async (req, res) => {
 
                             if (vrInsertErr) throw vrInsertErr;
                         }
+
+                        // 3f. Fetch & clone exit ticket attachments
+                        const { data: sourceExitTickets, error: etFetchErr } = await supabase
+                            .from('module_exit_ticket_attachments')
+                            .select('*')
+                            .eq('module_id', sourceMod.id);
+
+                        if (etFetchErr) throw etFetchErr;
+
+                        if (sourceExitTickets && sourceExitTickets.length > 0) {
+                            const etToInsert = sourceExitTickets.map(et => ({
+                                module_id: newMod.id,
+                                exit_ticket_id: et.exit_ticket_id
+                            }));
+
+                            const { error: etInsertErr } = await supabase
+                                .from('module_exit_ticket_attachments')
+                                .insert(etToInsert);
+
+                            if (etInsertErr) throw etInsertErr;
+                        }
                     }
                 }
             }

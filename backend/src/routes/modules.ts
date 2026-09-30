@@ -207,6 +207,27 @@ router.post('/api/modules/:moduleId/duplicate', async (req, res) => {
             if (insertVrErr) throw insertVrErr;
         }
 
+        // 7b. Fetch & clone exit ticket attachments
+        const { data: srcExitTickets, error: exitTicketErr } = await supabase
+            .from('module_exit_ticket_attachments')
+            .select('*')
+            .eq('module_id', moduleId);
+
+        if (exitTicketErr) throw exitTicketErr;
+
+        if (srcExitTickets && srcExitTickets.length > 0) {
+            const duplicateExitTickets = srcExitTickets.map((et: any) => ({
+                module_id: newModule.id,
+                exit_ticket_id: et.exit_ticket_id
+            }));
+
+            const { error: insertExitTicketErr } = await supabase
+                .from('module_exit_ticket_attachments')
+                .insert(duplicateExitTickets);
+
+            if (insertExitTicketErr) throw insertExitTicketErr;
+        }
+
         // 8. Return the new module (with items fetched)
         const { data: finalModule, error: finalErr } = await supabase
             .from('modules')
