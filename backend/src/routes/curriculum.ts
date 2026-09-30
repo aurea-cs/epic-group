@@ -152,6 +152,103 @@ router.get('/subjects/:subjectId/modules', async (req: Request, res: Response) =
 });
 
 /**
+ * POST /api/curriculum/modules
+ * Create a new canonical curriculum module.
+ * Body: { curriculum_subject_id, title, order_index? }
+ */
+router.post('/modules', async (req: Request, res: Response) => {
+  try {
+    const { curriculum_subject_id, title, order_index } = req.body;
+    if (!curriculum_subject_id) {
+      return res.status(400).json({ error: 'curriculum_subject_id is required' });
+    }
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'title is required' });
+    }
+
+    // If no order_index provided, use count of existing modules
+    let finalOrderIndex = order_index;
+    if (finalOrderIndex === undefined || finalOrderIndex === null) {
+      const { count } = await supabase
+        .from('curriculum_modules')
+        .select('*', { count: 'exact', head: true })
+        .eq('curriculum_subject_id', curriculum_subject_id);
+      finalOrderIndex = count ?? 0;
+    }
+
+    const { data, error } = await supabase
+      .from('curriculum_modules')
+      .insert({
+        curriculum_subject_id,
+        title: title.trim(),
+        order_index: finalOrderIndex,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (error: any) {
+    console.error('Error creating curriculum module:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * PUT /api/curriculum/modules/:moduleId
+ * Update title / order_index of a canonical curriculum module.
+ * Body: { title?, order_index? }
+ */
+router.put('/modules/:moduleId', async (req: Request, res: Response) => {
+  try {
+    const { moduleId } = req.params;
+    const { title, order_index } = req.body;
+
+    const updates: Record<string, any> = {};
+    if (title !== undefined) updates.title = title.trim();
+    if (order_index !== undefined) updates.order_index = order_index;
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    const { data, error } = await supabase
+      .from('curriculum_modules')
+      .update(updates)
+      .eq('id', moduleId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error updating curriculum module:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/curriculum/modules/:moduleId
+ * Delete a canonical curriculum module.
+ */
+router.delete('/modules/:moduleId', async (req: Request, res: Response) => {
+  try {
+    const { moduleId } = req.params;
+
+    const { error } = await supabase
+      .from('curriculum_modules')
+      .delete()
+      .eq('id', moduleId);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting curriculum module:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * GET /api/curriculum/tree
  * Fetch complete hierarchy of canonical grades, subjects, and modules.
  */

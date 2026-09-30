@@ -1473,6 +1473,63 @@ export const deleteCurriculumSubject = async (id: string): Promise<void> => {
     }
 }
 
+export const createCurriculumModule = async (
+    data: { curriculum_subject_id: string; title: string; order_index?: number }
+): Promise<CurriculumModule> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/modules`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error creating curriculum module:', error)
+        throw error
+    }
+}
+
+export const updateCurriculumModule = async (
+    id: string,
+    data: { title?: string; order_index?: number }
+): Promise<CurriculumModule> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/modules/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error updating curriculum module:', error)
+        throw error
+    }
+}
+
+export const deleteCurriculumModule = async (id: string): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/modules/${id}`, {
+            method: 'DELETE',
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Error deleting curriculum module:', error)
+        throw error
+    }
+}
+
+
 // ============================================
 // THINK BLOCKS (PIENSA, OBSERVA Y EXPERIMENTA)
 // ============================================
