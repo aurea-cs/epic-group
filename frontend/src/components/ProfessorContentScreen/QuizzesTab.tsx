@@ -3,6 +3,8 @@ import { tdStyle, thStyle, inputStyleAlt } from '../general/SharedUI'
 import CustomSelect from '../general/CustomSelect'
 import { StudentQuizSubjectResponse, StudentQuizSubjectResponseAnswer, SubjectQuiz } from './types'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
 interface QuizzesTabProps {
     loading: boolean
     quizzes?: SubjectQuiz[]
@@ -15,29 +17,52 @@ const renderAnswerDetail = (ans: StudentQuizSubjectResponseAnswer) => {
     const config = snap?.config ?? ans.config
     const answer = ans.answer
 
-    if (answer === undefined || answer === null) {
+    if (answer === undefined || answer === null || answer === '') {
         return <span style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.4)' }}>Sin respuesta</span>
     }
 
     if (question_type === 'matching') {
-        const pairs: { [key: string]: string } = typeof answer === 'object' ? answer : {}
-        const itemsLeft: any[] = config?.matchingPairs || config?.pairs || []
+        let pairs: Record<string, string> = {}
+        if (typeof answer === 'string') {
+            const trimmed = answer.trim()
+            if (trimmed.startsWith('{')) {
+                try { pairs = JSON.parse(trimmed) } catch { }
+            } else if (trimmed.includes('➔') || trimmed.includes('->') || trimmed.includes(':')) {
+                const parts = trimmed.split(/[\n|]/)
+                parts.forEach(part => {
+                    const separator = part.includes('➔') ? '➔' : part.includes('->') ? '->' : ':'
+                    const [k, v] = part.split(separator).map(s => s.trim())
+                    if (k && v) pairs[k] = v
+                })
+            }
+        } else if (typeof answer === 'object' && answer !== null && !Array.isArray(answer)) {
+            pairs = answer
+        }
 
+        const itemsLeft: any[] = config?.matchingPairs || config?.pairs || []
         const pairEntries = Object.entries(pairs)
+
         if (pairEntries.length === 0) {
+            if (typeof answer === 'string' && answer.trim()) {
+                return <span style={{ color: '#ffffff', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{answer}</span>
+            }
             return <span style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.4)' }}>Sin relacionar</span>
         }
 
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.85rem' }}>
                 {pairEntries.map(([leftId, rightVal], i) => {
-                    const matchObj = itemsLeft.find((p: any) => p.id === leftId || p.left === leftId)
+                    const matchObj = itemsLeft.find((p: any) => String(p.id) === String(leftId) || String(p.left) === String(leftId))
                     const leftLabel = matchObj ? (matchObj.left || matchObj.title || leftId) : leftId
+
+                    const rightMatch = itemsLeft.find((p: any) => String(p.id) === String(rightVal) || String(p.right) === String(rightVal))
+                    const rightLabel = rightMatch ? (rightMatch.right || rightVal) : rightVal
+
                     return (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.04)', padding: '0.3rem 0.6rem', borderRadius: '6px' }}>
                             <span style={{ fontWeight: 500, color: '#e2e8f0' }}>{leftLabel}</span>
                             <span style={{ color: '#c084fc' }}>➔</span>
-                            <span style={{ color: '#93c5fd' }}>{String(rightVal)}</span>
+                            <span style={{ color: '#93c5fd' }}>{String(rightLabel)}</span>
                         </div>
                     )
                 })}
@@ -46,20 +71,47 @@ const renderAnswerDetail = (ans: StudentQuizSubjectResponseAnswer) => {
     }
 
     if (question_type === 'ordering') {
-        const items: string[] = Array.isArray(answer) ? answer : []
+        let items: string[] = []
+        if (Array.isArray(answer)) {
+            items = answer.map(String)
+        } else if (typeof answer === 'string') {
+            const trimmed = answer.trim()
+            if (trimmed.startsWith('[')) {
+                try { items = JSON.parse(trimmed).map(String) } catch { }
+            } else if (trimmed.includes('→')) {
+                items = trimmed.split('→').map(s => s.trim())
+            } else if (trimmed.includes('➔')) {
+                items = trimmed.split('➔').map(s => s.trim())
+            } else if (trimmed.includes(',')) {
+                items = trimmed.split(',').map(s => s.trim())
+            } else if (trimmed.includes('\n')) {
+                items = trimmed.split('\n').map(s => s.trim())
+            } else if (trimmed) {
+                items = [trimmed]
+            }
+        }
+
+        const configItems: any[] = config?.items || config?.orderingItems || []
+
         if (items.length === 0) {
             return <span style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.4)' }}>Sin ordenar</span>
         }
+
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.85rem' }}>
-                {items.map((item, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.04)', padding: '0.3rem 0.6rem', borderRadius: '6px' }}>
-                        <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(192,132,252,0.2)', color: '#c084fc', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600 }}>
-                            {i + 1}
-                        </span>
-                        <span style={{ color: '#e2e8f0' }}>{item}</span>
-                    </div>
-                ))}
+                {items.map((itemVal, i) => {
+                    const matchedConfigItem = configItems.find((it: any) => String(it.id) === String(itemVal) || String(it.text) === String(itemVal))
+                    const displayLabel = matchedConfigItem ? (matchedConfigItem.text || matchedConfigItem.label || itemVal) : itemVal
+
+                    return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.04)', padding: '0.3rem 0.6rem', borderRadius: '6px' }}>
+                            <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(192,132,252,0.2)', color: '#c084fc', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600 }}>
+                                {i + 1}
+                            </span>
+                            <span style={{ color: '#e2e8f0' }}>{String(displayLabel)}</span>
+                        </div>
+                    )
+                })}
             </div>
         )
     }
@@ -71,22 +123,29 @@ const renderAnswerDetail = (ans: StudentQuizSubjectResponseAnswer) => {
     return <span style={{ color: '#ffffff', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{String(answer)}</span>
 }
 
-const QuizzesTab: React.FC<QuizzesTabProps> = ({ loading, quizzes = [], quizResponses }) => {
+const QuizzesTab: React.FC<QuizzesTabProps> = ({ loading, quizzes = [], quizResponses: initialResponses }) => {
+    const [responsesList, setResponsesList] = useState<StudentQuizSubjectResponse[]>(initialResponses)
     const [searchQuery, setSearchQuery] = useState('')
     const [moduleFilter, setModuleFilter] = useState<string>('default')
     const [quizFilter, setQuizFilter] = useState<string>('default')
     const [selectedResponse, setSelectedResponse] = useState<StudentQuizSubjectResponse | null>(null)
     const [viewingQuizQuestions, setViewingQuizQuestions] = useState<SubjectQuiz | null>(null)
+    const [gradingQuestionId, setGradingQuestionId] = useState<string | null>(null)
+
+    // Keep responsesList in sync if initialResponses prop changes
+    React.useEffect(() => {
+        setResponsesList(initialResponses)
+    }, [initialResponses])
 
     const moduleOptions = useMemo(() => {
         const fromQuizzes = quizzes.map(q => q.module_title)
-        const fromResponses = quizResponses.map(r => r.module_title)
+        const fromResponses = responsesList.map(r => r.module_title)
         const modules = Array.from(new Set([...fromQuizzes, ...fromResponses].filter(Boolean))).sort()
         return [
             { value: 'default', label: 'Todos los módulos' },
             ...modules.map(m => ({ value: m!, label: m! })),
         ]
-    }, [quizzes, quizResponses])
+    }, [quizzes, responsesList])
 
     const quizOptions = useMemo(() => {
         const quizItems = quizzes.map(q => ({ id: q.id, title: q.title }))
@@ -98,7 +157,7 @@ const QuizzesTab: React.FC<QuizzesTabProps> = ({ loading, quizzes = [], quizResp
     }, [quizzes])
 
     const filteredResponses = useMemo(() => {
-        return quizResponses.filter(r => {
+        return responsesList.filter(r => {
             const studentName = r.student_name || r.student_id
             const quizTitle = r.quiz_title || ''
             const matchesSearch =
@@ -121,7 +180,63 @@ const QuizzesTab: React.FC<QuizzesTabProps> = ({ loading, quizzes = [], quizResp
 
             return matchesSearch && matchesModule && matchesQuiz
         })
-    }, [quizResponses, searchQuery, moduleFilter, quizFilter, quizzes])
+    }, [responsesList, searchQuery, moduleFilter, quizFilter, quizzes])
+
+    const handleGradeQuestion = async (
+        answerId: string,
+        _questionId: string,
+        isCorrect: boolean
+    ) => {
+        if (!selectedResponse) return
+        setGradingQuestionId(answerId)
+
+        try {
+            const res = await fetch(`${API_URL}/api/quizzes/responses/${selectedResponse.id}/questions/${answerId}/grade`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_correct: isCorrect }),
+            })
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.error || `HTTP ${res.status}`)
+            }
+
+            const data = await res.json()
+            const newTotalScore = data.new_total_score ?? selectedResponse.score
+            const newMaxScore = data.new_max_score ?? selectedResponse.max_score
+
+            // Update selectedResponse locally — match strictly by answer PK (id), not question_id
+            // to avoid all answers matching when question_id is null/shared.
+            const updatedAnswers = (selectedResponse.answers || []).map(ans => {
+                const ansId = ans.id || ans.question_id
+                const isMatch = answerId && ansId && ansId === answerId
+                if (!isMatch) return ans
+                const defaultPts = ans.question_snapshot?.config?.points ?? ans.config?.points ?? 1
+                const points = isCorrect ? defaultPts : 0
+                return { ...ans, is_correct: isCorrect, points_awarded: points }
+            })
+
+            const updatedResponse: StudentQuizSubjectResponse = {
+                ...selectedResponse,
+                score: newTotalScore,
+                max_score: newMaxScore,
+                answers: updatedAnswers,
+            }
+
+            setSelectedResponse(updatedResponse)
+
+            // Update responsesList
+            setResponsesList(prev =>
+                prev.map(r => (r.id === selectedResponse.id ? updatedResponse : r))
+            )
+        } catch (err: any) {
+            console.error('Error grading question:', err)
+            alert(err.message || 'Error al calificar la pregunta')
+        } finally {
+            setGradingQuestionId(null)
+        }
+    }
 
     if (loading) {
         return (
@@ -146,7 +261,7 @@ const QuizzesTab: React.FC<QuizzesTabProps> = ({ loading, quizzes = [], quizResp
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
                         {quizzes.map((quiz) => {
-                            const responsesCount = quizResponses.filter(r => r.module_quiz_id === quiz.module_quiz_id || r.quiz_id === quiz.id).length
+                            const responsesCount = responsesList.filter(r => r.module_quiz_id === quiz.module_quiz_id || r.quiz_id === quiz.id).length
                             const isSelectedFilter = quizFilter === quiz.id
 
                             return (
@@ -413,7 +528,7 @@ const QuizzesTab: React.FC<QuizzesTabProps> = ({ loading, quizzes = [], quizResp
                         onClick={e => e.stopPropagation()}
                         style={{
                             background: '#1a1625', border: '1px solid rgba(255,255,255,0.15)',
-                            borderRadius: '20px', padding: '1.75rem', maxWidth: '680px', width: '100%',
+                            borderRadius: '20px', padding: '1.75rem', maxWidth: '720px', width: '100%',
                             maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 25px 50px rgba(0,0,0,0.6)',
                         }}
                     >
@@ -460,42 +575,99 @@ const QuizzesTab: React.FC<QuizzesTabProps> = ({ loading, quizzes = [], quizResp
                                     No se encontraron respuestas registradas para este cuestionario.
                                 </p>
                             ) : (
-                                selectedResponse.answers.map((ans, idx) => (
-                                    <div
-                                        key={ans.question_id || idx}
-                                        style={{
-                                            background: 'rgba(255,255,255,0.04)',
-                                            border: '1px solid rgba(255,255,255,0.08)',
-                                            borderRadius: '12px',
-                                            padding: '1rem',
-                                        }}
-                                    >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem', gap: '0.5rem' }}>
-                                            <div style={{ fontWeight: 600, color: '#f3e8ff', fontSize: '0.92rem' }}>
-                                                {idx + 1}. {ans.question_snapshot?.title ?? ans.question_title ?? `Pregunta ${idx + 1}`}
-                                            </div>
-                                            {ans.is_correct !== undefined && ans.is_correct !== null && (
+                                selectedResponse.answers.map((ans, idx) => {
+                                    const ansId = ans.id || ans.question_id
+                                    const isGrading = gradingQuestionId === ansId
+
+                                    return (
+                                        <div
+                                            key={ans.question_id || idx}
+                                            style={{
+                                                background: 'rgba(255,255,255,0.04)',
+                                                border: '1px solid rgba(255,255,255,0.08)',
+                                                borderRadius: '12px',
+                                                padding: '1rem',
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem', gap: '0.5rem' }}>
+                                                <div style={{ fontWeight: 600, color: '#f3e8ff', fontSize: '0.92rem' }}>
+                                                    {idx + 1}. {ans.question_snapshot?.title ?? ans.question_title ?? `Pregunta ${idx + 1}`}
+                                                </div>
                                                 <span style={{
                                                     fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: '10px', whiteSpace: 'nowrap',
-                                                    background: ans.is_correct ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                                                    color: ans.is_correct ? '#86efac' : '#fca5a5',
-                                                    border: `1px solid ${ans.is_correct ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`
+                                                    background: ans.is_correct === true ? 'rgba(34,197,94,0.15)' : ans.is_correct === false ? 'rgba(239,68,68,0.15)' : 'rgba(251,146,60,0.15)',
+                                                    color: ans.is_correct === true ? '#86efac' : ans.is_correct === false ? '#fca5a5' : '#fb923c',
+                                                    border: `1px solid ${ans.is_correct === true ? 'rgba(34,197,94,0.3)' : ans.is_correct === false ? 'rgba(239,68,68,0.3)' : 'rgba(251,146,60,0.3)'}`
                                                 }}>
-                                                    {ans.is_correct ? '✓ Correcta' : '✗ Incorrecta'} {ans.points_awarded !== null && ans.points_awarded !== undefined ? `(${ans.points_awarded} pts)` : ''}
+                                                    {ans.is_correct === true ? '✓ Correcta' : ans.is_correct === false ? '✗ Incorrecta' : '⏳ Sin calificar'} {ans.points_awarded !== null && ans.points_awarded !== undefined ? `(${ans.points_awarded} pts)` : ''}
                                                 </span>
-                                            )}
+                                            </div>
+
+                                            <div style={{
+                                                background: 'rgba(108, 92, 231, 0.15)',
+                                                border: '1px solid rgba(192, 132, 252, 0.2)',
+                                                borderRadius: '8px',
+                                                padding: '0.65rem 0.85rem',
+                                                marginTop: '0.4rem',
+                                                marginBottom: '0.75rem',
+                                            }}>
+                                                {renderAnswerDetail(ans)}
+                                            </div>
+
+                                            {/* Teacher Grading Controls */}
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                flexWrap: 'wrap',
+                                                padding: '0.5rem 0.75rem',
+                                                background: 'rgba(255,255,255,0.03)',
+                                                borderRadius: '8px',
+                                                border: '1px dashed rgba(255,255,255,0.12)',
+                                            }}>
+                                                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>
+                                                    Calificar pregunta:
+                                                </span>
+
+                                                <button
+                                                    disabled={isGrading}
+                                                    onClick={() => handleGradeQuestion(ansId, ans.question_id, true)}
+                                                    style={{
+                                                        padding: '0.3rem 0.75rem',
+                                                        borderRadius: '6px',
+                                                        border: ans.is_correct === true ? '1px solid rgba(34,197,94,0.8)' : '1px solid rgba(34,197,94,0.3)',
+                                                        background: ans.is_correct === true ? 'rgba(34,197,94,0.3)' : 'rgba(34,197,94,0.1)',
+                                                        color: ans.is_correct === true ? '#ffffff' : '#86efac',
+                                                        fontSize: '0.8rem',
+                                                        fontWeight: 600,
+                                                        cursor: isGrading ? 'not-allowed' : 'pointer',
+                                                        transition: 'all 0.15s ease',
+                                                    }}
+                                                >
+                                                    ✓ Correcta
+                                                </button>
+
+                                                <button
+                                                    disabled={isGrading}
+                                                    onClick={() => handleGradeQuestion(ansId, ans.question_id, false)}
+                                                    style={{
+                                                        padding: '0.3rem 0.75rem',
+                                                        borderRadius: '6px',
+                                                        border: ans.is_correct === false ? '1px solid rgba(239,68,68,0.8)' : '1px solid rgba(239,68,68,0.3)',
+                                                        background: ans.is_correct === false ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.1)',
+                                                        color: ans.is_correct === false ? '#ffffff' : '#fca5a5',
+                                                        fontSize: '0.8rem',
+                                                        fontWeight: 600,
+                                                        cursor: isGrading ? 'not-allowed' : 'pointer',
+                                                        transition: 'all 0.15s ease',
+                                                    }}
+                                                >
+                                                    ✗ Incorrecta
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div style={{
-                                            background: 'rgba(108, 92, 231, 0.15)',
-                                            border: '1px solid rgba(192, 132, 252, 0.2)',
-                                            borderRadius: '8px',
-                                            padding: '0.65rem 0.85rem',
-                                            marginTop: '0.4rem',
-                                        }}>
-                                            {renderAnswerDetail(ans)}
-                                        </div>
-                                    </div>
-                                ))
+                                    )
+                                })
                             )}
                         </div>
 

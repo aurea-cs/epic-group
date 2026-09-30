@@ -57,6 +57,7 @@ export interface StudentExitTicketResponseAnswer {
 }
 
 export interface StudentQuizSubjectResponseAnswer {
+    id?: string
     question_id: string
     question_title?: string
     question_type?: string

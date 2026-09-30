@@ -833,4 +833,96 @@ router.get('/responses/:responseId', async (req: Request, res: Response) => {
   res.json(response);
 });
 
+/**
+ * PATCH /api/quizzes/responses/:responseId/questions/:questionId/grade
+ * Grades an individual answer in a student quiz response (e.g. open questions)
+ * and updates the total score of the quiz response.
+ */
+router.patch('/responses/:responseId/questions/:questionId/grade', async (req: Request, res: Response) => {
+  try {
+    const { responseId, questionId } = req.params;
+    const { is_correct } = req.body;
+    let { points_awarded } = req.body;
+
+    // Fetch all answers for this response to find matching row
+    const { data: allRespAnswers, error: fetchErr } = await supabase
+      .from('student_quiz_answers')
+      .select('id, question_id, question_snapshot, quiz_questions(config)')
+      .eq('response_id', responseId);
+
+    if (fetchErr) throw fetchErr;
+
+    if (!allRespAnswers || allRespAnswers.length === 0) {
+      return res.status(404).json({ error: 'No se encontraron respuestas para esta entrega' });
+    }
+
+    const targetAns = allRespAnswers.find((a: any) =>
+      a.question_id === questionId ||
+      a.id === questionId ||
+      a.question_snapshot?.id === questionId
+    );
+
+    if (!targetAns) {
+      return res.status(404).json({ error: 'No se encontró la pregunta a calificar' });
+    }
+
+    // If points_awarded is not explicitly provided, calculate it based on is_correct and question config
+    if (points_awarded === undefined || points_awarded === null) {
+      if (is_correct === true) {
+        const snapConfig = (targetAns as any)?.question_snapshot?.config;
+        const liveConfig = (targetAns as any)?.quiz_questions?.config;
+        const config = snapConfig || liveConfig || {};
+        points_awarded = typeof config.points === 'number' ? config.points : 1;
+      } else {
+        points_awarded = 0;
+      }
+    }
+
+    const updatePayload: any = {
+      is_correct,
+      points_awarded: Number(points_awarded) || 0
+    };
+
+    // Update answer row by primary key
+    const { data: updatedAns, error: updateErr } = await supabase
+      .from('student_quiz_answers')
+      .update(updatePayload)
+      .eq('id', targetAns.id)
+      .select()
+      .maybeSingle();
+
+    if (updateErr) throw updateErr;
+
+    // Recalculate total score and max_score for the response
+    const { data: allAnswers } = await supabase
+      .from('student_quiz_answers')
+      .select('points_awarded, question_snapshot, quiz_questions(config)')
+      .eq('response_id', responseId);
+
+    let newTotalScore = 0;
+    let newMaxScore = 0;
+    if (allAnswers && allAnswers.length > 0) {
+      allAnswers.forEach((a: any) => {
+        newTotalScore += Number(a.points_awarded) || 0;
+        const snapConfig = a.question_snapshot?.config;
+        const liveConfig = a.quiz_questions?.config;
+        const pts = (snapConfig && typeof snapConfig.points === 'number') ? snapConfig.points
+                  : (liveConfig && typeof liveConfig.points === 'number') ? liveConfig.points
+                  : 1;
+        newMaxScore += pts;
+      });
+
+      await supabase
+        .from('student_quiz_responses')
+        .update({ score: newTotalScore, max_score: newMaxScore })
+        .eq('id', responseId);
+    }
+
+    res.json({ success: true, answer: updatedAns, new_total_score: newTotalScore, new_max_score: newMaxScore });
+  } catch (error: any) {
+    console.error('Error grading quiz answer:', error);
+    res.status(500).json({ error: error.message || 'Failed to grade answer' });
+  }
+});
+
 export default router;

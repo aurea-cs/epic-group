@@ -762,6 +762,7 @@ router.get('/api/subjects/:subjectId/quizzes/responses', async (req, res) => {
                     const snap = a.question_snapshot;
                     const live = a.quiz_questions;
                     return {
+                        id: a.id,
                         question_id: a.question_id,
                         question_title: snap?.title ?? live?.title ?? 'Pregunta sin título',
                         question_type: snap?.type ?? live?.type ?? 'multiple_choice',
@@ -880,6 +881,7 @@ router.get('/api/subjects/:subjectId/quizzes', async (req, res) => {
                         const snap = a.question_snapshot;
                         const live = a.quiz_questions;
                         return {
+                            id: a.id,
                             question_id: a.question_id,
                             question_title: snap?.title ?? live?.title ?? 'Pregunta sin título',
                             question_type: snap?.type ?? live?.type ?? 'multiple_choice',
