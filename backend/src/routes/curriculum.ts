@@ -76,14 +76,14 @@ router.post('/subjects', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * PUT /api/curriculum/subjects/:subjectId
- * Update name / short_name of a canonical curriculum subject.
- * Body: { name?, short_name? }
- */
-router.put('/subjects/:subjectId', async (req: Request, res: Response) => {
+ /**
+  * PUT / PATCH /api/curriculum/subjects/:subjectId
+  * Update name / short_name of a canonical curriculum subject.
+  * Body: { name?, short_name? }
+  */
+const updateSubjectHandler = async (req: Request, res: Response) => {
   try {
-    const { subjectId } = req.params;
+    const subjectId = req.params.subjectId || req.params.id;
     const { name, short_name } = req.body;
 
     const updates: Record<string, any> = {};
@@ -107,7 +107,12 @@ router.put('/subjects/:subjectId', async (req: Request, res: Response) => {
     console.error('Error updating curriculum subject:', error);
     res.status(500).json({ error: error.message });
   }
-});
+};
+
+router.put('/subjects/:subjectId', updateSubjectHandler);
+router.patch('/subjects/:subjectId', updateSubjectHandler);
+router.put('/subjects/:id', updateSubjectHandler);
+router.patch('/subjects/:id', updateSubjectHandler);
 
 /**
  * DELETE /api/curriculum/subjects/:subjectId
@@ -115,7 +120,23 @@ router.put('/subjects/:subjectId', async (req: Request, res: Response) => {
  */
 router.delete('/subjects/:subjectId', async (req: Request, res: Response) => {
   try {
-    const { subjectId } = req.params;
+    const subjectId = req.params.subjectId || req.params.id;
+
+    const { error } = await supabase
+      .from('curriculum_subjects')
+      .delete()
+      .eq('id', subjectId);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting curriculum subject:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+router.delete('/subjects/:id', async (req: Request, res: Response) => {
+  try {
+    const subjectId = req.params.subjectId || req.params.id;
 
     const { error } = await supabase
       .from('curriculum_subjects')
@@ -136,7 +157,7 @@ router.delete('/subjects/:subjectId', async (req: Request, res: Response) => {
  */
 router.get('/subjects/:subjectId/modules', async (req: Request, res: Response) => {
   try {
-    const { subjectId } = req.params;
+    const subjectId = req.params.subjectId || req.params.id;
     const { data, error } = await supabase
       .from('curriculum_modules')
       .select('*')
@@ -195,13 +216,13 @@ router.post('/modules', async (req: Request, res: Response) => {
 });
 
 /**
- * PUT /api/curriculum/modules/:moduleId
+ * PUT / PATCH /api/curriculum/modules/:moduleId
  * Update title / order_index of a canonical curriculum module.
  * Body: { title?, order_index? }
  */
-router.put('/modules/:moduleId', async (req: Request, res: Response) => {
+const updateModuleHandler = async (req: Request, res: Response) => {
   try {
-    const { moduleId } = req.params;
+    const moduleId = req.params.moduleId || req.params.id;
     const { title, order_index } = req.body;
 
     const updates: Record<string, any> = {};
@@ -225,7 +246,13 @@ router.put('/modules/:moduleId', async (req: Request, res: Response) => {
     console.error('Error updating curriculum module:', error);
     res.status(500).json({ error: error.message });
   }
-});
+};
+
+router.put('/modules/:moduleId', updateModuleHandler);
+router.patch('/modules/:moduleId', updateModuleHandler);
+router.put('/modules/:id', updateModuleHandler);
+router.patch('/modules/:id', updateModuleHandler);
+
 
 /**
  * DELETE /api/curriculum/modules/:moduleId

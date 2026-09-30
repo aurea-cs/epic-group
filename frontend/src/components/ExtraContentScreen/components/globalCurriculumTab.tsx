@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
     getCurriculumTree,
@@ -18,18 +18,24 @@ const CATEGORY_ORDER = ['primaria', 'secundaria', 'preparatoria', 'otros'] as co
 type GradeCategory = (typeof CATEGORY_ORDER)[number]
 type CategoryFilter = 'ALL' | GradeCategory
 
-const CATEGORY_LABELS: Record<GradeCategory, string> = {
-    primaria: 'Primaria',
-    secundaria: 'Secundaria',
-    preparatoria: 'Preparatoria',
-    otros: 'Otros',
-}
-
 const CATEGORY_ICONS: Record<GradeCategory, string> = {
     primaria: '🎒',
     secundaria: '📘',
     preparatoria: '🎓',
     otros: '🏫',
+}
+
+/** Translation key + English fallback for each category filter tab label. */
+const CATEGORY_LABEL_KEYS: Record<GradeCategory, { key: string; fallback: string }> = {
+    primaria: { key: 'extraContent.categoryPrimaria', fallback: 'Elementary' },
+    secundaria: { key: 'extraContent.categorySecundaria', fallback: 'Middle School' },
+    preparatoria: { key: 'extraContent.categoryPreparatoria', fallback: 'High School' },
+    otros: { key: 'extraContent.categoryOtros', fallback: 'Other' },
+}
+
+function getCategoryLabel(t: any, cat: GradeCategory): string {
+    const { key, fallback } = CATEGORY_LABEL_KEYS[cat]
+    return t(key, fallback)
 }
 
 /** Buckets a canonical grade name into one of the three school levels. */
@@ -39,6 +45,18 @@ function categorizeGrade(name: string): GradeCategory {
     if (n.includes('secundaria')) return 'secundaria'
     if (n.includes('primaria')) return 'primaria'
     return 'otros'
+}
+
+/**
+ * Extracts the ordinal grade number (1, 2, 3...) from a grade name so grades
+ * sort in their natural default order — Primaria 1-6, Secundaria 1-3,
+ * Preparatoria 1-6 — regardless of what `level` happens to hold in the DB.
+ * Falls back to `level` (then a high number) if the name has no digit.
+ */
+function getGradeOrdinal(grade: CurriculumGradeTree): number {
+    const match = grade.name.match(/(\d+)/)
+    if (match) return parseInt(match[1], 10)
+    return grade.level ?? 999
 }
 
 /** Formats grade display name for compact chips. */
@@ -110,16 +128,6 @@ const AddSubjectModal: React.FC<AddSubjectModalProps> = ({ gradeName, gradeId, o
                 </div>
 
                 <form onSubmit={handleSubmit} className="gc-modal-body">
-                    <div className="gc-translation-note">
-                        <span className="gc-translation-note-label">
-                            {t('extraContent.translationNoteLabel', 'Translation note:')}
-                        </span>{' '}
-                        {t(
-                            'extraContent.translationNoteText',
-                            'The name will be used as a dynamic translation key (dynamicSubjects.<name>).'
-                        )}
-                    </div>
-
                     <div className="gc-form-group">
                         <label className="gc-form-label">
                             {t('extraContent.subjectNameLabel', 'Subject name *')}
@@ -186,7 +194,7 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ gradeName, subject,
     const [shortName, setShortName] = useState(subject.short_name ?? '')
     const [subjectBusy, setSubjectBusy] = useState(false)
     const [subjectError, setSubjectError] = useState<string | null>(null)
-    const [subjectSaved, setSubjectSaved] = useState(false)
+    const [, setSubjectSaved] = useState(false)
 
     // ── Modules list (local mutable copy) ───────────────
     const [modules, setModules] = useState<CurriculumModule[]>(
@@ -307,26 +315,12 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ gradeName, subject,
                 {/* Header */}
                 <div className="gc-modal-header">
                     <h3 className="gc-modal-title">
-                        ✏️ {t('extraContent.editSubject', 'Edit Subject')}
+                        ✏️ {t('extraContent.editSubject', 'Edit')} {gradeName}
                     </h3>
-                    <span className="gc-modal-grade-badge">{gradeName}</span>
                 </div>
-
                 <div className="gc-modal-body gc-edit-modal-body">
                     {/* ── Left panel: subject fields ── */}
                     <div className="gc-edit-panel gc-edit-panel-subject">
-                        <h4 className="gc-edit-panel-title">📖 {t('extraContent.subjectDetails', 'Subject Details')}</h4>
-
-                        <div className="gc-translation-note">
-                            <span className="gc-translation-note-label">
-                                {t('extraContent.translationNoteLabel', 'Translation note:')}
-                            </span>{' '}
-                            {t(
-                                'extraContent.translationNoteText',
-                                'The name will be used as a dynamic translation key (dynamicSubjects.<name>).'
-                            )}
-                        </div>
-
                         <form onSubmit={handleSaveSubject} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <div className="gc-form-group">
                                 <label className="gc-form-label">
@@ -357,11 +351,6 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ gradeName, subject,
                             </div>
 
                             {subjectError && <div className="gc-form-error">{subjectError}</div>}
-                            {subjectSaved && (
-                                <div className="gc-form-success">
-                                    ✅ {t('extraContent.updateSuccess', 'Subject updated successfully.')}
-                                </div>
-                            )}
 
                             <button type="submit" className="btn-manage-category" disabled={subjectBusy} style={{ alignSelf: 'flex-start' }}>
                                 {subjectBusy
@@ -370,9 +359,6 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ gradeName, subject,
                             </button>
                         </form>
                     </div>
-
-                    {/* ── Divider ── */}
-                    <div className="gc-edit-divider" />
 
                     {/* ── Right panel: modules ── */}
                     <div className="gc-edit-panel gc-edit-panel-modules">
@@ -416,7 +402,7 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ gradeName, subject,
                                 modules.map((mod, idx) => (
                                     <div key={mod.id} className="gc-module-manage-item">
                                         {editingModuleId === mod.id ? (
-                                            /* Inline edit row */
+                                            /* Inline edit row — keeps the raw title, not the translated one */
                                             <div className="gc-module-edit-row">
                                                 <span className="gc-module-order">#{mod.order_index ?? idx + 1}</span>
                                                 <input
@@ -457,7 +443,9 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ gradeName, subject,
                                             /* Delete confirmation row */
                                             <div className="gc-module-delete-confirm-row">
                                                 <span className="gc-module-delete-warning">
-                                                    🗑️ {t('extraContent.deleteModuleConfirm', 'Delete')} &ldquo;{mod.title}&rdquo;?
+                                                    🗑️ {t('extraContent.deleteModuleConfirm', 'Delete')} &ldquo;
+                                                    {t(`dynamicSubjects.${mod.title}`, { defaultValue: mod.title })}
+                                                    &rdquo;?
                                                 </span>
                                                 <div className="gc-module-edit-actions">
                                                     <button
@@ -479,10 +467,12 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ gradeName, subject,
                                                 </div>
                                             </div>
                                         ) : (
-                                            /* Normal display row */
+                                            /* Normal display row — shows the translated title */
                                             <div className="gc-module-display-row">
                                                 <span className="gc-module-order">#{mod.order_index ?? idx + 1}</span>
-                                                <span className="gc-module-title gc-module-title-manage">{mod.title}</span>
+                                                <span className="gc-module-title gc-module-title-manage">
+                                                    {t(`dynamicSubjects.${mod.title}`, { defaultValue: mod.title })}
+                                                </span>
                                                 <div className="gc-module-row-actions">
                                                     <button
                                                         type="button"
@@ -640,15 +630,10 @@ const GlobalCurriculumTab: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState<string>('')
     const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('ALL')
     const [selectedGradeId, setSelectedGradeId] = useState<string>('ALL')
-    const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+    const [toast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
 
     // Modal state
     const [modal, setModal] = useState<ModalState>(INITIAL_MODAL)
-
-    const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
-        setToast({ msg, type })
-        setTimeout(() => setToast(null), 3500)
-    }, [])
 
     const loadData = async () => {
         try {
@@ -684,7 +669,9 @@ const GlobalCurriculumTab: React.FC = () => {
         return { totalGrades, totalSubjects, totalModules }
     }, [tree])
 
-    // Grades bucketed by school level, sorted by level within each bucket.
+    // Grades bucketed by school level, sorted 1-6 / 1-3 / 1-6 by their ordinal
+    // within each bucket (see getGradeOrdinal) — not by the raw `level` field,
+    // which may not be contiguous per category.
     const groupedGrades = useMemo(() => {
         const map: Record<GradeCategory, CurriculumGradeTree[]> = {
             primaria: [],
@@ -695,7 +682,7 @@ const GlobalCurriculumTab: React.FC = () => {
         tree.forEach((grade) => {
             map[categorizeGrade(grade.name)].push(grade)
         })
-        Object.values(map).forEach((arr) => arr.sort((a, b) => (a.level ?? 0) - (b.level ?? 0)))
+        Object.values(map).forEach((arr) => arr.sort((a, b) => getGradeOrdinal(a) - getGradeOrdinal(b)))
         return map
     }, [tree])
 
@@ -709,9 +696,15 @@ const GlobalCurriculumTab: React.FC = () => {
         setSelectedGradeId('ALL')
     }
 
-    // Filtered data based on category, grade, and search term
+    // Filtered data based on category, grade, and search term.
+    // When "ALL" is selected we flatten groupedGrades in CATEGORY_ORDER
+    // (primaria → secundaria → preparatoria → otros) instead of using the
+    // raw API order, so the default order holds across the whole list too.
     const filteredTree = useMemo(() => {
-        let result = selectedCategory === 'ALL' ? tree : groupedGrades[selectedCategory]
+        let result: CurriculumGradeTree[] =
+            selectedCategory === 'ALL'
+                ? CATEGORY_ORDER.flatMap((cat) => groupedGrades[cat])
+                : groupedGrades[selectedCategory]
 
         if (selectedGradeId !== 'ALL') {
             result = result.filter((g) => g.id === selectedGradeId)
@@ -760,7 +753,7 @@ const GlobalCurriculumTab: React.FC = () => {
                 return null
             })
             .filter(Boolean) as CurriculumGradeTree[]
-    }, [tree, groupedGrades, selectedCategory, selectedGradeId, searchTerm, t])
+    }, [groupedGrades, selectedCategory, selectedGradeId, searchTerm, t])
 
     // ── Modal handlers ──────────────────────────────────────
     const openAddModal = (grade: CurriculumGradeTree) => {
@@ -795,19 +788,16 @@ const GlobalCurriculumTab: React.FC = () => {
     const handleSaved = async () => {
         closeModal()
         await loadData()
-        showToast(t('extraContent.updateSuccess', 'Subject updated successfully.'))
     }
 
     const handleAddSaved = async () => {
         closeModal()
         await loadData()
-        showToast(t('extraContent.createSuccess', 'Subject created successfully.'))
     }
 
     const handleDeleted = async () => {
         closeModal()
         await loadData()
-        showToast(t('extraContent.deleteSuccess', 'Subject deleted successfully.'))
     }
 
     return (
@@ -848,18 +838,6 @@ const GlobalCurriculumTab: React.FC = () => {
                     onDeleted={handleDeleted}
                 />
             )}
-
-            {/* Header & Controls */}
-            <div className="gc-header">
-                <div className="gc-header-info">
-                    <h2>{t('extraContent.globalCurriculumTitle', 'Global Curriculum Structure')}</h2>
-                    <p>{t('extraContent.globalCurriculumSubtitle', 'Visualization and administration of canonical grades, subjects, and modules')}</p>
-                </div>
-                <button className="gc-refresh-btn" onClick={loadData} disabled={loading} title={t('extraContent.reloadTitle', 'Reload Curriculum')}>
-                    🔄 {loading ? t('extraContent.loading', 'Loading...') : t('extraContent.refresh', 'Refresh')}
-                </button>
-            </div>
-
             {error && (
                 <div className="error-banner">
                     <p>⚠️ {error}</p>
@@ -920,7 +898,7 @@ const GlobalCurriculumTab: React.FC = () => {
                         className={`gc-category-chip ${selectedCategory === 'ALL' ? 'active' : ''}`}
                         onClick={() => handleSelectCategory('ALL')}
                     >
-                        {t('extraContent.allGrades', 'Todas')}
+                        {t('extraContent.allGrades', 'All')}
                     </button>
                     {availableCategories.map((cat) => (
                         <button
@@ -928,7 +906,7 @@ const GlobalCurriculumTab: React.FC = () => {
                             className={`gc-category-chip gc-category-${cat} ${selectedCategory === cat ? 'active' : ''}`}
                             onClick={() => handleSelectCategory(cat)}
                         >
-                            {CATEGORY_ICONS[cat]} {CATEGORY_LABELS[cat]}
+                            {CATEGORY_ICONS[cat]} {getCategoryLabel(t, cat)}
                             <span className="gc-category-count">({groupedGrades[cat].length})</span>
                         </button>
                     ))}
@@ -941,7 +919,7 @@ const GlobalCurriculumTab: React.FC = () => {
                             className={`gc-grade-chip ${selectedGradeId === 'ALL' ? 'active' : ''}`}
                             onClick={() => setSelectedGradeId('ALL')}
                         >
-                            {t('extraContent.allGradesInCategory', 'Todos')}
+                            {t('extraContent.allGradesInCategory', 'All Grades')}
                         </button>
                         {groupedGrades[selectedCategory].map((grade) => (
                             <button
@@ -977,17 +955,12 @@ const GlobalCurriculumTab: React.FC = () => {
                             <div key={grade.id} className="gc-grade-card">
                                 <div className="gc-grade-card-header">
                                     <div className="gc-grade-header-left">
-                                        <span className="gc-grade-icon">🏫</span>
                                         <h3>{grade.name}</h3>
                                         <span className={`level-badge ${badgeClass}`}>
-                                            {t(`dynamicSubjects.${CATEGORY_LABELS[badgeClass]}`, { defaultValue: CATEGORY_LABELS[badgeClass] })} • {t('professorCourses.level', { defaultValue: 'Nivel' })} {grade.level ?? '-'}
+                                            {t('professorCourses.level', { defaultValue: 'Nivel' })} {grade.level ?? '-'}
                                         </span>
                                     </div>
                                     <div className="gc-grade-meta">
-                                        <span className="gc-meta-badge">
-                                            {grade.subjects?.length || 0} {t('extraContent.totalSubjects', 'Subjects')}
-                                        </span>
-                                        {/* Add subject button */}
                                         <button
                                             className="gc-add-subject-btn"
                                             onClick={() => openAddModal(grade)}
@@ -1008,18 +981,11 @@ const GlobalCurriculumTab: React.FC = () => {
                                             <div key={subj.id} className="gc-subject-card">
                                                 <div className="gc-subject-header">
                                                     <div className="gc-subject-title-area">
-                                                        <span className="gc-subj-icon">📖</span>
                                                         <h4>
                                                             {t(`dynamicSubjects.${subj.name}`, { defaultValue: subj.name })}
                                                         </h4>
                                                     </div>
                                                     <div className="gc-subject-actions">
-                                                        {subj.short_name && (
-                                                            <span className="gc-shortname-badge">
-                                                                {t(`dynamicSubjects.${subj.short_name}`, { defaultValue: subj.short_name })}
-                                                            </span>
-                                                        )}
-                                                        {/* Edit button — opens subject+modules management modal */}
                                                         <button
                                                             className="btn-icon-action gc-subject-action-btn"
                                                             onClick={() => openEditModal(grade, subj)}
@@ -1039,9 +1005,6 @@ const GlobalCurriculumTab: React.FC = () => {
                                                 </div>
 
                                                 <div className="gc-modules-section">
-                                                    <div className="gc-modules-header">
-                                                        <span>{t('extraContent.modules', { defaultValue: 'Módulos' })} ({subj.modules?.length || 0})</span>
-                                                    </div>
 
                                                     {(!subj.modules || subj.modules.length === 0) ? (
                                                         <p className="gc-no-modules">{t('extraContent.noModulesCreated', 'No modules created yet.')}</p>
@@ -1052,7 +1015,9 @@ const GlobalCurriculumTab: React.FC = () => {
                                                                     <span className="gc-module-order">
                                                                         #{mod.order_index ?? idx + 1}
                                                                     </span>
-                                                                    <span className="gc-module-title">{mod.title}</span>
+                                                                    <span className="gc-module-title">
+                                                                        {t(`dynamicSubjects.${mod.title}`, { defaultValue: mod.title })}
+                                                                    </span>
                                                                 </div>
                                                             ))}
                                                         </div>
