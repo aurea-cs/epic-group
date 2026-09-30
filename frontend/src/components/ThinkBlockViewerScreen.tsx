@@ -9,6 +9,7 @@ import {
   type ThinkBlockPrompt,
   type ThinkBlockPromptType,
   saveStudentThinkBlockAnswer,
+  getStudentThinkBlockAnswers,
 } from '../lib/adminApi'
 
 interface ThinkBlockViewerScreenProps {
@@ -412,21 +413,55 @@ const ThinkBlockViewerScreen: React.FC<ThinkBlockViewerScreenProps> = ({
 
   // Initialize student answers from my_answer
   useEffect(() => {
-    const initial: Record<string, string> = {}
-    blocks.forEach((b) => {
-      const prompts = Array.isArray(b.prompts)
-        ? b.prompts
-        : Array.isArray(b.think_block_prompts)
-        ? (b.think_block_prompts as ThinkBlockPrompt[])
-        : []
-      prompts.forEach((p) => {
-        if (p.id) {
-          initial[p.id] = p.my_answer || ''
-        }
+    let isMounted = true
+
+    const loadAnswers = async () => {
+      const initial: Record<string, string> = {}
+      blocks.forEach((b) => {
+        const prompts = Array.isArray(b.prompts)
+          ? b.prompts
+          : Array.isArray(b.think_block_prompts)
+          ? (b.think_block_prompts as ThinkBlockPrompt[])
+          : []
+        prompts.forEach((p) => {
+          if (p.id) {
+            initial[p.id] = p.my_answer || ''
+          }
+        })
       })
-    })
-    setAnswers(initial)
-  }, [blocks])
+
+      if (isMounted) {
+        setAnswers(initial)
+      }
+
+      if (user?.id && blocks.length > 0) {
+        try {
+          const fetchPromises = blocks
+            .filter((b) => Boolean(b.id))
+            .map((b) => getStudentThinkBlockAnswers(b.id, user.id).catch(() => []))
+          const results = await Promise.all(fetchPromises)
+
+          if (!isMounted) return
+
+          const mergedMap: Record<string, string> = { ...initial }
+          results.flat().forEach((ans: any) => {
+            if (ans?.prompt_id && ans?.answer_md !== undefined && ans?.answer_md !== null) {
+              mergedMap[ans.prompt_id] = ans.answer_md
+            }
+          })
+          setAnswers(mergedMap)
+        } catch (err) {
+          console.error('Error fetching student think block answers:', err)
+        }
+      }
+    }
+
+    loadAnswers()
+
+    return () => {
+      isMounted = false
+    }
+  }, [blocks, user?.id])
 
   const handleSavePrompt = async (promptId: string) => {
     if (!promptId || !user?.id) return

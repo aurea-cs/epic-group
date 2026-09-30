@@ -159,6 +159,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                                     kebabRefs={menu.kebabRefs}
                                     onEditModule={moduleCRUD.openEdit}
                                     onDeleteModule={moduleCRUD.setConfirmDelete}
+                                    onDuplicateModule={moduleCRUD.duplicate}
                                     onAddItem={itemCRUD.openAdd}
                                     onEditItem={item => { menu.closeMenu(); itemCRUD.openEdit(item) }}
                                     onKebabClick={menu.handleKebabClick}

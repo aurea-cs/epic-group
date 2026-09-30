@@ -1,6 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getCurriculumTree, CurriculumGradeTree } from '../../../lib/adminApi'
+import {
+    getCurriculumTree,
+    createCurriculumSubject,
+    updateCurriculumSubject,
+    deleteCurriculumSubject,
+    CurriculumGradeTree,
+    CurriculumSubjectTree,
+} from '../../../lib/adminApi'
 import { formatGradeDisplayName } from '../hooks/gradeFormat'
 
 const CATEGORY_ORDER = ['primaria', 'secundaria', 'preparatoria', 'otros'] as const
@@ -30,11 +37,276 @@ function categorizeGrade(name: string): GradeCategory {
     return 'otros'
 }
 
-/** Strips the repeated category word from a grade name for compact chips, e.g. "1° Primaria" -> "Nivel 1". */
+/** Formats grade display name for compact chips. */
 function getShortGradeLabel(t: any, grade: CurriculumGradeTree, _category: GradeCategory): string {
     return formatGradeDisplayName(t, grade.name, grade.level)
 }
 
+// ─────────────────────────────────────────────────────────
+// Modal types
+// ─────────────────────────────────────────────────────────
+type ModalMode = 'add' | 'edit' | 'delete' | null
+
+interface ModalState {
+    mode: ModalMode
+    gradeId: string | null
+    gradeName: string | null
+    subject: CurriculumSubjectTree | null
+}
+
+const INITIAL_MODAL: ModalState = { mode: null, gradeId: null, gradeName: null, subject: null }
+
+// ─────────────────────────────────────────────────────────
+// Add / Edit Subject Modal
+// ─────────────────────────────────────────────────────────
+interface SubjectFormModalProps {
+    mode: 'add' | 'edit'
+    gradeName: string
+    subject: CurriculumSubjectTree | null
+    gradeId: string
+    onClose: () => void
+    onSaved: () => void
+}
+
+const SubjectFormModal: React.FC<SubjectFormModalProps> = ({
+    mode,
+    gradeName,
+    subject,
+    gradeId,
+    onClose,
+    onSaved,
+}) => {
+    const { t } = useTranslation()
+    const [name, setName] = useState(subject?.name ?? '')
+    const [shortName, setShortName] = useState(subject?.short_name ?? '')
+    const [busy, setBusy] = useState(false)
+    const [formError, setFormError] = useState<string | null>(null)
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!name.trim()) {
+            setFormError(t('extraContent.subjectNameRequired', 'Subject name is required.'))
+            return
+        }
+        setBusy(true)
+        setFormError(null)
+        try {
+            if (mode === 'add') {
+                await createCurriculumSubject({
+                    curriculum_grade_id: gradeId,
+                    name: name.trim(),
+                    short_name: shortName.trim() || undefined,
+                })
+            } else {
+                await updateCurriculumSubject(subject!.id, {
+                    name: name.trim(),
+                    short_name: shortName.trim() || undefined,
+                })
+            }
+            onSaved()
+        } catch (err: any) {
+            setFormError(err.message || t('extraContent.errorGeneric', 'An error occurred.'))
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    return (
+        <div className="gc-modal-overlay" onClick={onClose}>
+            <div className="gc-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="gc-modal-header">
+                    <h3 className="gc-modal-title">
+                        {mode === 'add'
+                            ? `📖 ${t('extraContent.addSubject', 'Add Subject')}`
+                            : `✏️ ${t('extraContent.editSubject', 'Edit Subject')}`}
+                    </h3>
+                    <span className="gc-modal-grade-badge">{gradeName}</span>
+                </div>
+
+                <form onSubmit={handleSubmit} className="gc-modal-body">
+                    {/* Translation note */}
+                    <div className="gc-translation-note">
+                        <span className="gc-translation-note-label">
+                            {t('extraContent.translationNoteLabel', 'Translation note:')}
+                        </span>{' '}
+                        {t(
+                            'extraContent.translationNoteText',
+                            'The name will be used as a dynamic translation key (dynamicSubjects.<name>).'
+                        )}
+                    </div>
+
+                    {/* Subject name */}
+                    <div className="gc-form-group">
+                        <label className="gc-form-label">
+                            {t('extraContent.subjectNameLabel', 'Subject name *')}
+                        </label>
+                        <input
+                            type="text"
+                            className="gc-form-input"
+                            placeholder={t('extraContent.subjectNamePlaceholder', 'e.g. Mathematics')}
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            autoFocus
+                            maxLength={120}
+                        />
+                    </div>
+
+                    {/* Short name */}
+                    <div className="gc-form-group">
+                        <label className="gc-form-label">
+                            {t('extraContent.subjectShortNameLabel', 'Abbreviation (optional)')}
+                        </label>
+                        <input
+                            type="text"
+                            className="gc-form-input"
+                            placeholder={t('extraContent.subjectShortNamePlaceholder', 'e.g. MATH')}
+                            value={shortName}
+                            onChange={(e) => setShortName(e.target.value)}
+                            maxLength={20}
+                        />
+                    </div>
+
+                    {formError && <div className="gc-form-error">{formError}</div>}
+
+                    <div className="gc-modal-actions">
+                        <button
+                            type="button"
+                            className="btn-preview-category"
+                            onClick={onClose}
+                            disabled={busy}
+                        >
+                            {t('extraContent.cancel', 'Cancel')}
+                        </button>
+                        <button
+                            type="submit"
+                            className="btn-manage-category"
+                            disabled={busy}
+                        >
+                            {busy
+                                ? mode === 'add'
+                                    ? t('extraContent.creating', 'Creating...')
+                                    : t('extraContent.saving', 'Saving...')
+                                : mode === 'add'
+                                    ? t('extraContent.create', 'Create subject')
+                                    : t('extraContent.saveChanges', 'Save changes')}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    )
+}
+
+// ─────────────────────────────────────────────────────────
+// Delete Confirmation Modal
+// ─────────────────────────────────────────────────────────
+interface DeleteModalProps {
+    subject: CurriculumSubjectTree
+    onClose: () => void
+    onDeleted: () => void
+}
+
+const DeleteSubjectModal: React.FC<DeleteModalProps> = ({ subject, onClose, onDeleted }) => {
+    const { t } = useTranslation()
+    const [confirmText, setConfirmText] = useState('')
+    const [busy, setBusy] = useState(false)
+    const [formError, setFormError] = useState<string | null>(null)
+
+    const isConfirmed = confirmText.trim() === subject.name.trim()
+
+    const handleDelete = async () => {
+        if (!isConfirmed) return
+        setBusy(true)
+        setFormError(null)
+        try {
+            await deleteCurriculumSubject(subject.id)
+            onDeleted()
+        } catch (err: any) {
+            setFormError(err.message || t('extraContent.errorGeneric', 'An error occurred.'))
+            setBusy(false)
+        }
+    }
+
+    return (
+        <div className="gc-modal-overlay" onClick={onClose}>
+            <div className="gc-modal gc-modal-danger" onClick={(e) => e.stopPropagation()}>
+                <div className="gc-modal-header">
+                    <h3 className="gc-modal-title">
+                        🗑️ {t('extraContent.deleteSubject', 'Delete Subject')}
+                    </h3>
+                    <span className="gc-modal-grade-badge gc-badge-danger">{subject.name}</span>
+                </div>
+
+                <div className="gc-modal-body">
+                    {/* Cascade warning */}
+                    <div className="gc-cascade-warning">
+                        <p className="gc-cascade-warning-title">
+                            {t('extraContent.deleteWarningTitle', '⚠️ Warning: Cascading impact')}
+                        </p>
+                        <p className="gc-cascade-warning-msg">
+                            {t('extraContent.deleteWarningMsg', 'Deleting this canonical subject will affect the entire platform:')}
+                        </p>
+                        <ul className="gc-cascade-warning-list">
+                            <li>{t('extraContent.deleteWarningBullet1', 'All curriculum modules under this subject will be deleted.')}</li>
+                            <li>{t('extraContent.deleteWarningBullet2', 'Center subjects linked to this canonical subject will lose their curriculum link.')}</li>
+                            <li>{t('extraContent.deleteWarningBullet3', "'Think, Observe and Experiment' blocks tied to those modules will become unavailable.")}</li>
+                        </ul>
+                        {subject.modules && subject.modules.length > 0 && (
+                            <p className="gc-cascade-module-count">
+                                📦 {subject.modules.length} {t('extraContent.modules', 'Modules')} — {t('extraContent.deleteWarningBullet1', 'will be deleted')}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Confirm by typing name */}
+                    <div className="gc-form-group">
+                        <label className="gc-form-label">
+                            {t('extraContent.deleteConfirmLabel', 'Type the subject name to confirm:')}
+                        </label>
+                        <input
+                            type="text"
+                            className="gc-form-input gc-input-danger"
+                            placeholder={t('extraContent.deleteConfirmPlaceholder', 'Exact subject name')}
+                            value={confirmText}
+                            onChange={(e) => setConfirmText(e.target.value)}
+                            autoFocus
+                        />
+                        <p className="gc-confirm-hint">
+                            <code className="gc-confirm-name">{subject.name}</code>
+                        </p>
+                    </div>
+
+                    {formError && <div className="gc-form-error">{formError}</div>}
+
+                    <div className="gc-modal-actions">
+                        <button
+                            type="button"
+                            className="btn-preview-category"
+                            onClick={onClose}
+                            disabled={busy}
+                        >
+                            {t('extraContent.cancel', 'Cancel')}
+                        </button>
+                        <button
+                            type="button"
+                            className="btn-danger-confirm"
+                            onClick={handleDelete}
+                            disabled={!isConfirmed || busy}
+                        >
+                            {busy
+                                ? t('extraContent.deleting', 'Deleting...')
+                                : t('extraContent.deleteConfirmBtn', 'Yes, permanently delete')}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// ─────────────────────────────────────────────────────────
+// Main Tab Component
+// ─────────────────────────────────────────────────────────
 const GlobalCurriculumTab: React.FC = () => {
     const { t } = useTranslation()
     const [tree, setTree] = useState<CurriculumGradeTree[]>([])
@@ -43,6 +315,15 @@ const GlobalCurriculumTab: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState<string>('')
     const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('ALL')
     const [selectedGradeId, setSelectedGradeId] = useState<string>('ALL')
+    const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+
+    // Modal state
+    const [modal, setModal] = useState<ModalState>(INITIAL_MODAL)
+
+    const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
+        setToast({ msg, type })
+        setTimeout(() => setToast(null), 3500)
+    }, [])
 
     const loadData = async () => {
         try {
@@ -100,7 +381,7 @@ const GlobalCurriculumTab: React.FC = () => {
 
     const handleSelectCategory = (cat: CategoryFilter) => {
         setSelectedCategory(cat)
-        setSelectedGradeId('ALL') // grade choice only makes sense within a chosen category
+        setSelectedGradeId('ALL')
     }
 
     // Filtered data based on category, grade, and search term
@@ -156,8 +437,83 @@ const GlobalCurriculumTab: React.FC = () => {
             .filter(Boolean) as CurriculumGradeTree[]
     }, [tree, groupedGrades, selectedCategory, selectedGradeId, searchTerm, t])
 
+    // ── Modal handlers ──────────────────────────────────────
+    const openAddModal = (grade: CurriculumGradeTree) => {
+        setModal({
+            mode: 'add',
+            gradeId: grade.id,
+            gradeName: formatGradeDisplayName(t, grade.name, grade.level),
+            subject: null,
+        })
+    }
+
+    const openEditModal = (grade: CurriculumGradeTree, subj: CurriculumSubjectTree) => {
+        setModal({
+            mode: 'edit',
+            gradeId: grade.id,
+            gradeName: formatGradeDisplayName(t, grade.name, grade.level),
+            subject: subj,
+        })
+    }
+
+    const openDeleteModal = (grade: CurriculumGradeTree, subj: CurriculumSubjectTree) => {
+        setModal({
+            mode: 'delete',
+            gradeId: grade.id,
+            gradeName: formatGradeDisplayName(t, grade.name, grade.level),
+            subject: subj,
+        })
+    }
+
+    const closeModal = () => setModal(INITIAL_MODAL)
+
+    const handleSaved = async () => {
+        const wasEdit = modal.mode === 'edit'
+        closeModal()
+        await loadData()
+        showToast(
+            wasEdit
+                ? t('extraContent.updateSuccess', 'Subject updated successfully.')
+                : t('extraContent.createSuccess', 'Subject created successfully.')
+        )
+    }
+
+    const handleDeleted = async () => {
+        closeModal()
+        await loadData()
+        showToast(t('extraContent.deleteSuccess', 'Subject deleted successfully.'))
+    }
+
     return (
         <div className="global-curriculum-tab">
+            {/* Toast notification */}
+            {toast && (
+                <div className={`gc-toast gc-toast-${toast.type}`}>
+                    {toast.type === 'success' ? '✅' : '❌'} {toast.msg}
+                </div>
+            )}
+
+            {/* Add / Edit Modal */}
+            {(modal.mode === 'add' || modal.mode === 'edit') && (
+                <SubjectFormModal
+                    mode={modal.mode}
+                    gradeName={modal.gradeName ?? ''}
+                    gradeId={modal.gradeId!}
+                    subject={modal.subject}
+                    onClose={closeModal}
+                    onSaved={handleSaved}
+                />
+            )}
+
+            {/* Delete Modal */}
+            {modal.mode === 'delete' && modal.subject && (
+                <DeleteSubjectModal
+                    subject={modal.subject}
+                    onClose={closeModal}
+                    onDeleted={handleDeleted}
+                />
+            )}
+
             {/* Header & Controls */}
             <div className="gc-header">
                 <div className="gc-header-info">
@@ -296,6 +652,14 @@ const GlobalCurriculumTab: React.FC = () => {
                                         <span className="gc-meta-badge">
                                             {grade.subjects?.length || 0} {t('extraContent.totalSubjects', 'Subjects')}
                                         </span>
+                                        {/* Add subject button */}
+                                        <button
+                                            className="gc-add-subject-btn"
+                                            onClick={() => openAddModal(grade)}
+                                            title={t('extraContent.addSubject', 'Add Subject')}
+                                        >
+                                            ＋ {t('extraContent.addSubject', 'Add Subject')}
+                                        </button>
                                     </div>
                                 </div>
 
@@ -310,13 +674,33 @@ const GlobalCurriculumTab: React.FC = () => {
                                                 <div className="gc-subject-header">
                                                     <div className="gc-subject-title-area">
                                                         <span className="gc-subj-icon">📖</span>
-                                                        <h4>{subj.name}</h4>
+                                                        <h4>
+                                                            {t(`dynamicSubjects.${subj.name}`, { defaultValue: subj.name })}
+                                                        </h4>
                                                     </div>
-                                                    {subj.short_name && (
-                                                        <span className="gc-shortname-badge">
-                                                            {t(`dynamicSubjects.${subj.short_name}`, { defaultValue: subj.short_name })}
-                                                        </span>
-                                                    )}
+                                                    <div className="gc-subject-actions">
+                                                        {subj.short_name && (
+                                                            <span className="gc-shortname-badge">
+                                                                {t(`dynamicSubjects.${subj.short_name}`, { defaultValue: subj.short_name })}
+                                                            </span>
+                                                        )}
+                                                        {/* Edit button */}
+                                                        <button
+                                                            className="btn-icon-action gc-subject-action-btn"
+                                                            onClick={() => openEditModal(grade, subj)}
+                                                            title={t('extraContent.editSubject', 'Edit Subject')}
+                                                        >
+                                                            ✏️
+                                                        </button>
+                                                        {/* Delete button */}
+                                                        <button
+                                                            className="btn-icon-action btn-icon-danger gc-subject-action-btn"
+                                                            onClick={() => openDeleteModal(grade, subj)}
+                                                            title={t('extraContent.deleteSubject', 'Delete Subject')}
+                                                        >
+                                                            🗑️
+                                                        </button>
+                                                    </div>
                                                 </div>
 
                                                 <div className="gc-modules-section">
