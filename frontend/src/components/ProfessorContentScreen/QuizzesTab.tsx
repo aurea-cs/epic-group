@@ -159,7 +159,6 @@ const QuizzesTab: React.FC<QuizzesTabProps> = ({ loading, quizzes = [], quizResp
                                         padding: '1.25rem',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        justify: 'space-between',
                                         gap: '1rem',
                                         transition: 'all 0.2s ease',
                                     }}
