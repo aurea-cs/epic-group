@@ -385,6 +385,138 @@ router.post('/api/modules/:moduleId/items/upload', upload.single('file'), async 
     }
 });
 
+// Copy a module from any subject into a target subject (preserves items, VR codes, exit tickets, curriculum_module_id)
+router.post('/api/modules/:moduleId/copy-to/:targetSubjectId', async (req, res) => {
+    try {
+        const { moduleId, targetSubjectId } = req.params;
+
+        // 1. Fetch the source module
+        const { data: srcModule, error: modErr } = await supabase
+            .from('modules')
+            .select('*')
+            .eq('id', moduleId)
+            .single();
+
+        if (modErr || !srcModule) {
+            return res.status(404).json({ error: 'Source module not found' });
+        }
+
+        // 2. Determine order_index for the new copy (append at end of target subject)
+        const { data: siblings } = await supabase
+            .from('modules')
+            .select('order_index')
+            .eq('subject_id', targetSubjectId)
+            .order('order_index', { ascending: false })
+            .limit(1);
+
+        const maxIndex = siblings && siblings.length > 0 ? (siblings[0].order_index ?? 0) : -1;
+        const newOrderIndex = maxIndex + 1;
+
+        // 3. Insert the copied module into target subject
+        const { data: newModule, error: newModErr } = await supabase
+            .from('modules')
+            .insert({
+                subject_id: targetSubjectId,
+                title: `${srcModule.title} (copia)`,
+                title_en: srcModule.title_en ? `${srcModule.title_en} (copy)` : null,
+                order_index: newOrderIndex,
+                is_active: srcModule.is_active,
+                curriculum_module_id: srcModule.curriculum_module_id ?? null,
+            })
+            .select()
+            .single();
+
+        if (newModErr || !newModule) throw newModErr ?? new Error('Failed to create copied module');
+
+        // 4. Fetch & clone source items
+        const { data: srcItems, error: itemsErr } = await supabase
+            .from('module_items')
+            .select('*')
+            .eq('module_id', moduleId)
+            .order('order_index', { ascending: true });
+
+        if (itemsErr) throw itemsErr;
+
+        if (srcItems && srcItems.length > 0) {
+            const copiedItems = srcItems.map((item: any) => ({
+                module_id: newModule.id,
+                type: item.type,
+                title: item.title,
+                title_en: item.title_en ?? null,
+                description: item.description ?? null,
+                description_en: item.description_en ?? null,
+                content_url: item.content_url ?? null,
+                image_url: item.image_url ?? null,
+                order_index: item.order_index,
+                is_visible: item.is_visible,
+                show_student: item.show_student ?? null,
+                show_teacher: item.show_teacher ?? null,
+                is_editable: item.is_editable ?? false,
+            }));
+
+            const { error: insertItemsErr } = await supabase.from('module_items').insert(copiedItems);
+            if (insertItemsErr) throw insertItemsErr;
+        }
+
+        // 5. Fetch & clone source VR codes
+        const { data: srcVrCodes, error: vrErr } = await supabase
+            .from('module_vr_code')
+            .select('*')
+            .eq('module_id', moduleId)
+            .order('order_index', { ascending: true });
+
+        if (vrErr) throw vrErr;
+
+        if (srcVrCodes && srcVrCodes.length > 0) {
+            const copiedVrCodes = srcVrCodes.map((vr: any) => ({
+                module_id: newModule.id,
+                code: vr.code,
+                title: vr.title ?? null,
+                description: vr.description ?? null,
+                image_url: vr.image_url ?? null,
+                order_index: vr.order_index ?? null,
+            }));
+
+            const { error: insertVrErr } = await supabase.from('module_vr_code').insert(copiedVrCodes);
+            if (insertVrErr) throw insertVrErr;
+        }
+
+        // 6. Fetch & clone exit ticket attachments
+        const { data: srcExitTickets, error: exitTicketErr } = await supabase
+            .from('module_exit_ticket_attachments')
+            .select('*')
+            .eq('module_id', moduleId);
+
+        if (exitTicketErr) throw exitTicketErr;
+
+        if (srcExitTickets && srcExitTickets.length > 0) {
+            const copiedExitTickets = srcExitTickets.map((et: any) => ({
+                module_id: newModule.id,
+                exit_ticket_id: et.exit_ticket_id,
+            }));
+
+            const { error: insertExitErr } = await supabase
+                .from('module_exit_ticket_attachments')
+                .insert(copiedExitTickets);
+            if (insertExitErr) throw insertExitErr;
+        }
+
+        // 7. Return the new module with items
+        const { data: finalModule, error: finalErr } = await supabase
+            .from('modules')
+            .select('*, module_items(*)')
+            .eq('id', newModule.id)
+            .single();
+
+        if (finalErr) throw finalErr;
+
+        res.status(201).json(finalModule);
+    } catch (error: any) {
+        console.error('Error copying module:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 export default router;
 
 // POST /api/admin/modules/:moduleId/items/reorder

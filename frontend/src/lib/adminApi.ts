@@ -858,6 +858,22 @@ export const duplicateCourseModule = async (moduleId: string): Promise<CourseMod
     return await response.json()
 }
 
+export const copyModuleToSubject = async (
+    sourceModuleId: string,
+    targetSubjectId: string
+): Promise<CourseModule> => {
+    const response = await fetch(`${API_URL}/api/modules/${sourceModuleId}/copy-to/${targetSubjectId}`, {
+        method: 'POST',
+    })
+    if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}))
+        const msg = errBody?.error || errBody?.message || `HTTP error! status: ${response.status}`
+        console.error('Error copying module:', msg)
+        throw new Error(msg)
+    }
+    return await response.json()
+}
+
 // ITEMS
 
 export const createModuleItem = async (

@@ -25,6 +25,7 @@ import EditItemModal from './components/EditItemModal'
 import VrModal from './components/VrModal'
 import ProfessorAssignModal from './components/ProfessorAssignModal'
 import ItemActionsMenu from './components/ItemActionsMenu'
+import CopyModuleModal from './components/CopyModuleModal'
 
 interface CourseContentScreenProps {
     user: User
@@ -58,6 +59,7 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
     const menu = useItemMenu()
 
     const [curriculumModules, setCurriculumModules] = useState<CurriculumModule[]>([])
+    const [showCopyModal, setShowCopyModal] = useState(false)
 
     useEffect(() => {
         const currSubjId = content.subject?.curriculum_subject_id
@@ -131,14 +133,23 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
                         onUnassign={professors.unassign}
                     />
 
-                    {/* New module button */}
-                    <button
-                        className="btn-add"
-                        onClick={() => moduleCRUD.openCreate(content.modules.length)}
-                        style={{ marginBottom: '1rem', marginLeft: 'auto', display: 'block' }}
-                    >
-                        {i18n.language.startsWith('en') ? 'New Module' : 'Nuevo Módulo'}
-                    </button>
+                    {/* Module action buttons */}
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                        <button
+                            className="btn-add"
+                            style={{ background: 'rgba(99, 102, 241, 0.18)', border: '1.5px solid rgba(99,102,241,0.45)', color: '#c7d2fe' }}
+                            onClick={() => setShowCopyModal(true)}
+                        >
+                            <span className="material-icons-outlined" style={{ fontSize: '1rem' }}>content_copy</span>
+                            {i18n.language.startsWith('en') ? 'Copy Module' : 'Copiar Módulo'}
+                        </button>
+                        <button
+                            className="btn-add"
+                            onClick={() => moduleCRUD.openCreate(content.modules.length)}
+                        >
+                            {i18n.language.startsWith('en') ? 'New Module' : 'Nuevo Módulo'}
+                        </button>
+                    </div>
 
                     {/* Modules */}
                     <div className="modules-container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -176,6 +187,15 @@ const CourseContentScreen: React.FC<CourseContentScreenProps> = () => {
             </div>
 
             {/* ── Modals ─────────────────────────────────────────────────────────── */}
+
+            {showCopyModal && courseId && (
+                <CopyModuleModal
+                    targetSubjectId={courseId}
+                    defaultGradeId={gradeId}
+                    onSuccess={content.load}
+                    onClose={() => setShowCopyModal(false)}
+                />
+            )}
 
             {moduleCRUD.showModal && (
                 <ModuleModal

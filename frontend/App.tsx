@@ -33,6 +33,7 @@ import { getUserRole } from './src/utils/getUserRole'
 import ProfessorsAdminScreen from './src/components/ProfessorsAdminScreen'
 // import LandingPage from './src/components/LandingPage'
 import './App.css'
+import 'material-icons/iconfont/outlined.css';
 
 function App() {
   const [user, setUser] = useState<User | null>(null)

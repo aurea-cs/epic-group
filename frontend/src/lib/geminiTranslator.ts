@@ -19,13 +19,8 @@ const CACHE_PREFIX = 'gemini_trans_cache_';
  */
 export async function translateDynamicText(text: string, targetLang: string): Promise<string> {
   if (!text || !text.trim()) return text;
-  if (!apiKey) {
-    console.warn('Gemini API key is missing. Returning original text.');
-    return text;
-  }
 
   // Define a cache key based on the text and target language
-  // We use a simple hash or just the string if it's short to avoid huge keys
   const cacheKey = `${CACHE_PREFIX}${targetLang}_${btoa(encodeURIComponent(text)).slice(0, 50)}`;
 
   // 1. Check local cache first
@@ -38,9 +33,10 @@ export async function translateDynamicText(text: string, targetLang: string): Pr
     console.warn('Could not access localStorage', e);
   }
 
-  // 2. If not cached, call Gemini API
-  try {
-    const prompt = `
+  // 2. Try Gemini API if key is available
+  if (apiKey) {
+    try {
+      const prompt = `
 You are an expert translator for an educational platform.
 Translate the following short text to the language code '${targetLang}' (e.g. 'en' for English).
 Keep the original tone and context. 
@@ -50,21 +46,44 @@ Text to translate:
 ${text}
 `;
 
-    const result = await model.generateContent(prompt);
-    let translated = result.response.text();
-    translated = translated.trim();
-
-    // 3. Save to cache
-    try {
-      localStorage.setItem(cacheKey, translated);
-    } catch (e) {
-      console.warn('Could not save to localStorage', e);
+      const result = await model.generateContent(prompt);
+      let translated = result.response.text().trim();
+      if (translated) {
+        try {
+          localStorage.setItem(cacheKey, translated);
+        } catch (e) {
+          console.warn('Could not save to localStorage', e);
+        }
+        return translated;
+      }
+    } catch (error) {
+      console.warn('Gemini API translation error, falling back:', error);
     }
-
-    return translated;
-  } catch (error) {
-    console.error('Error translating text dynamically:', error);
-    // Return original text as fallback if API fails
-    return text;
   }
+
+  // 3. Fallback: Free Google Translate web API (client=gtx)
+  try {
+    const res = await fetch(
+      `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.[0])) {
+        const translated = data[0].map((chunk: any) => chunk[0]).join('');
+        if (translated && translated.trim()) {
+          const finalTranslation = translated.trim();
+          try {
+            localStorage.setItem(cacheKey, finalTranslation);
+          } catch (e) {
+            console.warn('Could not save to localStorage', e);
+          }
+          return finalTranslation;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Fallback translation error:', error);
+  }
+
+  return text;
 }
