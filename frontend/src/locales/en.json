@@ -882,5 +882,33 @@
       "experimenta": "Experiment",
       "otro": "Reflection"
     }
+  },
+  "userActivityModal": {
+    "title": "Detailed Activity",
+    "last7Days": "(Last 7 days)",
+    "loading": "Loading activity...",
+    "dailyActivity": "Daily Activity",
+    "noDailyActivity": "No activity recorded in the last 7 days.",
+    "topSections": "Most visited sections",
+    "noSections": "No sections recorded.",
+    "paths": {
+      "dashboard": "Main Dashboard",
+      "vrRoom": "Visiting VR Room",
+      "readingPdf": "Reading PDF",
+      "roomsFlashcards": "Rooms / Flashcards",
+      "readingCourseContent": "Reading Course Content",
+      "exploringPlanet": "Exploring Planet (Module)",
+      "courseDetail": "Course Detail",
+      "studentProfile": "Student Profile",
+      "courseMap": "Course Map",
+      "progress": "Progress",
+      "organizingCalendar": "Organizing Calendar",
+      "assignments": "Assignments",
+      "previousActivity": "Previous Activity"
+    }
+  },
+  "filters": {
+    "allLevels": "All grades",
+    "allGrades": "All levels"
   }
 }

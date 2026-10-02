@@ -383,6 +383,25 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
         })
     }
 
+    const logAction = async (actionType: 'create' | 'delete' | 'update', itemType: 'assignment' | 'event', title: string, details?: string) => {
+        try {
+            const subjectName = subject ? (i18n.language.startsWith('en') && subject.name_en ? subject.name_en : subject.name) : 'Materia desconocida';
+            await fetch(`${API_URL}/api/users/${user.id}/professor-actions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    actionType,
+                    itemType,
+                    title,
+                    subjectName,
+                    details
+                })
+            });
+        } catch (err) {
+            console.error('Failed to log action', err);
+        }
+    }
+
     const handleCreateAssignment = async (payload: Omit<Assignment, 'id' | 'created_at' | 'updated_at' | 'subject_id' | 'professor_id'>) => {
         if (!courseId) return
         const created = await createAssignmentRequest({
@@ -392,37 +411,81 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
         })
         setAssignments(prev => [created, ...prev])
         setShowAssignmentModal(false)
+        logAction('create', 'assignment', created.title || 'Sin título')
     }
 
     const handleUpdateAssignment = async (payload: Omit<Assignment, 'id' | 'created_at' | 'updated_at' | 'subject_id' | 'professor_id'>) => {
         if (!editingAssignment) return
+        
+        const changes: string[] = [];
+        if (payload.title !== editingAssignment.title) changes.push(`Título: "${payload.title}"`);
+        if (payload.instructions_md !== editingAssignment.instructions_md) changes.push(`Descripción editada`);
+        if (payload.due_at !== editingAssignment.due_at) changes.push(`Entrega: ${payload.due_at ? payload.due_at.split('T')[0] : 'No'}`);
+        if (payload.available_from !== editingAssignment.available_from) changes.push(`Disp: ${payload.available_from ? payload.available_from.split('T')[0] : 'No'}`);
+        if (payload.max_score !== editingAssignment.max_score) changes.push(`Pts: ${payload.max_score}`);
+        if (payload.module_id !== editingAssignment.module_id) changes.push(`Módulo cambiado`);
+        if (payload.module_item_id !== editingAssignment.module_item_id) changes.push(`PDF cambiado`);
+        if (payload.assigned_pages !== editingAssignment.assigned_pages) changes.push(`Págs: ${payload.assigned_pages || 'Todas'}`);
+        if (JSON.stringify(payload.allowed_file_types) !== JSON.stringify(editingAssignment.allowed_file_types)) {
+            changes.push(`Formatos: ${(payload.allowed_file_types || []).join(',')}`);
+        }
+        if (payload.max_file_size_mb !== editingAssignment.max_file_size_mb) changes.push(`Peso: ${payload.max_file_size_mb}MB`);
+        if (payload.allow_resubmission !== editingAssignment.allow_resubmission) changes.push(`Reenvío: ${payload.allow_resubmission ? 'Sí' : 'No'}`);
+        if (payload.status !== editingAssignment.status) {
+             changes.push(`Estatus: ${payload.status}`);
+        }
+        
+        let details = changes.length > 0 ? changes.join('; ') : undefined;
+        if (details && details.length > 120) details = details.slice(0, 117) + '...';
+
         const updated = await updateAssignmentRequest(editingAssignment.id, payload)
         setAssignments(prev => prev.map(a => a.id === updated.id ? updated : a))
         setEditingAssignment(null)
         setShowAssignmentModal(false)
+        logAction('update', 'assignment', updated.title || 'Sin título', details)
     }
 
     const handleDeleteAssignment = async (id: string) => {
+        const assignmentToDel = assignments.find(a => a.id === id);
         await deleteAssignmentRequest(id)
         setAssignments(prev => prev.filter(a => a.id !== id))
+        if (assignmentToDel) {
+            logAction('delete', 'assignment', assignmentToDel.title || 'Sin título');
+        }
     }
 
     const handleSaveEvent = async (payload: Omit<CalendarEvent, 'id' | 'created_at' | 'subject_id' | 'professor_id'>) => {
         if (!courseId) return
         if (editingEvent) {
+            const changes: string[] = [];
+            if (payload.title !== editingEvent.title) changes.push(`Título: "${payload.title}"`);
+            if (payload.description_md !== editingEvent.description_md) changes.push(`Descripción editada`);
+            if (payload.event_date !== editingEvent.event_date) changes.push(`Fecha: ${payload.event_date ? payload.event_date.split('T')[0] : 'No'}`);
+            // Event type:
+            if (payload.type !== editingEvent.type) changes.push(`Tipo: ${payload.type}`);
+            
+            let details = changes.length > 0 ? changes.join('; ') : undefined;
+            if (details && details.length > 120) details = details.slice(0, 117) + '...';
+
             const updated = await updateCalendarEventRequest(editingEvent.id, payload)
             setEvents(prev => prev.map(e => (e.id === updated.id ? updated : e)))
+            logAction('update', 'event', updated.title || 'Sin título', details)
         } else {
             const created = await createCalendarEventRequest({ ...payload, subject_id: courseId, professor_id: user.id })
             setEvents(prev => [created, ...prev])
+            logAction('create', 'event', created.title || 'Sin título')
         }
         setShowEventModal(false)
         setEditingEvent(null)
     }
 
     const handleDeleteEvent = async (id: string) => {
+        const eventToDel = events.find(e => e.id === id);
         await deleteCalendarEventRequest(id)
         setEvents(prev => prev.filter(e => e.id !== id))
+        if (eventToDel) {
+            logAction('delete', 'event', eventToDel.title || 'Sin título');
+        }
     }
 
     const handleSaveStudent = async (payload: Omit<Student, 'id' | 'created_at'>) => {

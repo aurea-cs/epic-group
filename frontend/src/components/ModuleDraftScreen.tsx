@@ -124,10 +124,27 @@ const VrCard = ({ vrEntry }: { vrEntry: VrCodeEntry }) => {
   const { text: translatedDescription } = useDynamicTranslation(vrEntry.description || t('moduleDraft.defaultVrDescription'))
   const vrUrl = vrEntry.code
 
+  const handleClick = () => {
+    sessionStorage.setItem('external_tracking_path', '/vr-room')
+    window.open(vrUrl, '_blank', 'noopener,noreferrer')
+    
+    import('../lib/supabase').then(({ supabase }) => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          supabase.from('activity_logs').insert({
+            user_id: session.user.id,
+            duration_seconds: 5,
+            path: '/vr-room'
+          }).then(() => console.log('Logged initial VR click'));
+        }
+      })
+    })
+  }
+
   return (
     <div 
       className="hoverable-card"
-      onClick={() => window.open(vrUrl, '_blank', 'noopener,noreferrer')}
+      onClick={handleClick}
       style={{
         backgroundColor: '#25164E',
         borderRadius: '16px',

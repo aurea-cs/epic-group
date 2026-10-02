@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import type { User } from '@supabase/supabase-js'
 import { getStudentProgress, type StudentData } from '../lib/api'
-import UserActivityModal from './UserActivityModal'
 
 const defaultAvatar = 'https://ui-avatars.com/api/?name=User&background=random'
 
@@ -24,7 +23,6 @@ interface StudentProgressScreenProps {
 const StudentProgressScreen: React.FC<StudentProgressScreenProps> = ({ user }) => {
     const [dataLoading, setDataLoading] = useState(true)
     const [studentData, setStudentData] = useState<StudentData | null>(null)
-    const [showActivityModal, setShowActivityModal] = useState(false)
     const [profileDetails, setProfileDetails] = useState<{ centers: string, grades: string, subjects: string } | null>(null)
     const [error, setError] = useState<string | null>(null)
     const navigate = useNavigate()
@@ -156,7 +154,7 @@ const StudentProgressScreen: React.FC<StudentProgressScreenProps> = ({ user }) =
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <div style={{ fontWeight: 'bold', color: '#334155' }}>⏱️ {formatTime(studentData.total_time_seconds)}</div>
                                     <button 
-                                        onClick={() => setShowActivityModal(true)}
+                                        onClick={() => navigate(`/user-activity/${studentId}`, { state: { userName: studentData.name } })}
                                         style={{ background: '#e2e8f0', color: '#334155', border: 'none', padding: '0.25rem 0.75rem', borderRadius: '16px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', transition: 'background 0.2s' }}
                                         onMouseEnter={(e) => e.currentTarget.style.background = '#cbd5e1'}
                                         onMouseLeave={(e) => e.currentTarget.style.background = '#e2e8f0'}
@@ -196,13 +194,7 @@ const StudentProgressScreen: React.FC<StudentProgressScreenProps> = ({ user }) =
                 </div>
             </div>
 
-            {showActivityModal && studentData && (
-                <UserActivityModal 
-                    userId={studentId || ''} 
-                    userName={studentData.name} 
-                    onClose={() => setShowActivityModal(false)} 
-                />
-            )}
+
         </div>
     )
 }

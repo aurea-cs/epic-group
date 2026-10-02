@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom'
 import './ProfessorsAdminScreen.css'
 import CustomSelect from './general/CustomSelect'
 import { getUserRole } from '../utils/getUserRole'
-import UserActivityModal from './UserActivityModal'
 
 function formatTime(totalSeconds?: number): string {
   if (!totalSeconds) return '0m 0s'
@@ -307,8 +306,7 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
   const [editingProfessor, setEditingProfessor] = useState<Professor | null>(null)
   const [deletingProfessor, setDeletingProfessor] = useState<Professor | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [selectedProfessorId, setSelectedProfessorId] = useState<string | null>(null)
-  const [selectedProfessorName, setSelectedProfessorName] = useState<string>('')
+
   const userRole = getUserRole(user)
   const isAdmin = userRole === 'admin'
 
@@ -491,7 +489,7 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
                       </td>
                       <td style={tdStyle}>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <ActionButton label={t('adminProfessors.activityBtn')} bg="rgba(192,132,252,0.15)" hoverBg="rgba(192,132,252,0.25)" textColor="#d8b4fe" border="1px solid rgba(192,132,252,0.3)" onClick={() => { setSelectedProfessorId(professor.id); setSelectedProfessorName(professor.name) }} />
+                          <ActionButton label={t('adminProfessors.activityBtn')} bg="rgba(192,132,252,0.15)" hoverBg="rgba(192,132,252,0.25)" textColor="#d8b4fe" border="1px solid rgba(192,132,252,0.3)" onClick={() => navigate(`/user-activity/${professor.id}`, { state: { userName: professor.name } })} />
                           <ActionButton label={t('adminProfessors.editBtn')} bg="rgba(255,255,255,0.05)" hoverBg="rgba(255,255,255,0.1)" textColor="#fff" border="1px solid rgba(255,255,255,0.15)" onClick={() => setEditingProfessor(professor)} />
                           <ActionButton label={t('adminProfessors.deleteBtnIcon')} bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => setDeletingProfessor(professor)} />
                         </div>
@@ -507,13 +505,7 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
         <div style={{ height: '3rem' }} />
       </div>
 
-      {selectedProfessorId && (
-        <UserActivityModal
-          userId={selectedProfessorId}
-          userName={selectedProfessorName}
-          onClose={() => setSelectedProfessorId(null)}
-        />
-      )}
+
     </>
   )
 }

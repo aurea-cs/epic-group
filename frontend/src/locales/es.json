@@ -511,5 +511,33 @@
       "experimenta": "Experimenta",
       "otro": "Reflexión"
     }
+  },
+  "userActivityModal": {
+    "title": "Actividad Detallada",
+    "last7Days": "(Últimos 7 días)",
+    "loading": "Cargando actividad...",
+    "dailyActivity": "Actividad Diaria",
+    "noDailyActivity": "No hay actividad registrada en los últimos 7 días.",
+    "topSections": "Secciones más visitadas",
+    "noSections": "No hay secciones registradas.",
+    "paths": {
+      "dashboard": "Dashboard Principal",
+      "vrRoom": "Visitando Sala VR",
+      "readingPdf": "Leyendo PDF",
+      "roomsFlashcards": "Salas / Fichas",
+      "readingCourseContent": "Leyendo Contenido de Curso",
+      "exploringPlanet": "Explorando Planeta (Módulo)",
+      "courseDetail": "Detalle de Curso",
+      "studentProfile": "Perfil de Alumno",
+      "courseMap": "Mapa del Curso",
+      "progress": "Progreso",
+      "organizingCalendar": "Organizando Calendario",
+      "assignments": "Tareas",
+      "previousActivity": "Actividad Anterior"
+    }
+  },
+  "filters": {
+    "allLevels": "Todos los grados",
+    "allGrades": "Todos los niveles"
   }
 }
