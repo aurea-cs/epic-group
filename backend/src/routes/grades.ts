@@ -145,7 +145,7 @@ router.delete('/api/grades/:gradeId/students/:studentId', async (req, res) => {
 // Create grade
 router.post('/api/grades', async (req, res) => {
     try {
-        const { center_id, name, level } = req.body;
+        const { center_id, name, level, section } = req.body;
 
         if (!center_id || !name) {
             return res.status(400).json({ error: 'Center ID and name are required' });
@@ -153,7 +153,7 @@ router.post('/api/grades', async (req, res) => {
 
         const { data, error } = await supabase
             .from('grades_levels')
-            .insert({ center_id, name, level })
+            .insert({ center_id, name, level, section: section !== undefined ? section : null })
             .select()
             .single();
 
@@ -189,11 +189,16 @@ router.get('/api/grades/:id', async (req, res) => {
 router.put('/api/grades/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, level, is_active } = req.body;
+        const { name, level, is_active, section } = req.body;
+
+        const updateData: Record<string, any> = { name, level, is_active };
+        if (section !== undefined) {
+            updateData.section = section;
+        }
 
         const { data, error } = await supabase
             .from('grades_levels')
-            .update({ name, level, is_active })
+            .update(updateData)
             .eq('id', id)
             .select()
             .single();
@@ -442,7 +447,7 @@ router.post('/api/grades/:gradeId/content', upload.array('files', 10), async (re
 router.post('/api/grades/:gradeId/clone', async (req, res) => {
     try {
         const { gradeId } = req.params;
-        const { target_center_id, name, level } = req.body;
+        const { target_center_id, name, level, section } = req.body;
 
         if (!target_center_id) {
             return res.status(400).json({ error: 'target_center_id is required' });
@@ -466,6 +471,7 @@ router.post('/api/grades/:gradeId/clone', async (req, res) => {
                 center_id: target_center_id,
                 name: name || sourceGrade.name,
                 level: level !== undefined ? level : sourceGrade.level,
+                section: section !== undefined ? section : sourceGrade.section,
                 is_active: true
             })
             .select()

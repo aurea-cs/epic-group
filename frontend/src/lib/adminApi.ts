@@ -21,6 +21,7 @@ export interface GradeLevel {
     center_id: string
     name: string
     level?: number
+    section?: string | null
     is_active: boolean
     created_at: string
     updated_at: string
@@ -450,13 +451,14 @@ export const cloneGrade = async (
     sourceGradeId: string,
     targetCenterId: string,
     name?: string,
-    level?: number
+    level?: number,
+    section?: string
 ): Promise<GradeLevel> => {
     try {
         const response = await fetch(`${API_URL}/api/grades/${sourceGradeId}/clone`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target_center_id: targetCenterId, name, level }),
+            body: JSON.stringify({ target_center_id: targetCenterId, name, level, section }),
         })
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))

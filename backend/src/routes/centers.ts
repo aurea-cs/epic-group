@@ -130,6 +130,7 @@ router.post('/api/centers/:centerId/clone', async (req, res) => {
                         center_id: newCenter.id,
                         name: sourceGrade.name,
                         level: sourceGrade.level,
+                        section: sourceGrade.section,
                         is_active: true
                     })
                     .select()
