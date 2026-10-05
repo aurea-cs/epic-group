@@ -369,16 +369,20 @@ router.get('/api/users/:userId/activity', async (req, res) => {
     try {
         const { userId } = req.params;
         
-        // Fetch activity for the last 7 days
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        
-        const { data, error } = await supabase
+        const { all } = req.query;
+        let query = supabase
             .from('activity_logs')
             .select('duration_seconds, created_at, path')
             .eq('user_id', userId)
-            .gte('created_at', sevenDaysAgo.toISOString())
             .order('created_at', { ascending: true });
+            
+        if (all !== 'true') {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            query = query.gte('created_at', sevenDaysAgo.toISOString());
+        }
+        
+        const { data, error } = await query;
             
         if (error) throw error;
         
@@ -402,10 +406,19 @@ router.get('/api/users/:userId/activity', async (req, res) => {
         const pathArray = Object.keys(pathActivity)
             .map(k => ({ path: k, seconds: pathActivity[k] }))
             .sort((a,b) => b.seconds - a.seconds);
+            
+        const rawLogs = (data || [])
+            .filter(log => !(log.path || '').startsWith('PROF_ACTION|'))
+            .map(log => ({
+                path: log.path || '/unknown',
+                duration_seconds: log.duration_seconds,
+                created_at: log.created_at
+            }));
         
         res.json({
             daily: dailyArray,
-            sections: pathArray
+            sections: pathArray,
+            rawLogs: rawLogs
         });
     } catch (error: any) {
         console.error('Error fetching student activity:', error);
@@ -417,17 +430,21 @@ router.get('/api/users/:userId/professor-actions', async (req, res) => {
     try {
         const { userId } = req.params;
         
-        // Fetch activity for the last 7 days
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        
-        const { data: logs, error: logsError } = await supabase
+        const { all } = req.query;
+        let query = supabase
             .from('activity_logs')
             .select('id, created_at, path')
             .eq('user_id', userId)
             .like('path', 'PROF_ACTION|%')
-            .gte('created_at', sevenDaysAgo.toISOString())
             .order('created_at', { ascending: false });
+            
+        if (all !== 'true') {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            query = query.gte('created_at', sevenDaysAgo.toISOString());
+        }
+        
+        const { data: logs, error: logsError } = await query;
             
         if (logsError) throw logsError;
         
