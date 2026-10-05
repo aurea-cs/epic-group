@@ -365,6 +365,12 @@
   border: 1px solid rgba(168, 85, 247, 0.4);
 }
 
+.level-badge.preparatoria {
+  background: rgba(247, 201, 85, 0.2);
+  color: #e4fc84;
+  border: 1px solid rgba(231, 247, 85, 0.4);
+}
+
 .category-card-body {
   font-size: 0.88rem;
   color: rgba(255, 255, 255, 0.75);
@@ -1447,4 +1453,531 @@
   color: rgba(255, 255, 255, 0.5);
   font-style: italic;
   padding: 1rem;
+}
+
+/* ------------------------------------------------ */
+/* Subject action buttons (per subject card)        */
+/* ------------------------------------------------ */
+
+.gc-subject-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.gc-subject-action-btn {
+  width: 30px;
+  height: 30px;
+  font-size: 0.82rem;
+}
+
+/* Add-subject button on grade card header */
+.gc-add-subject-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(108, 92, 231, 0.2);
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  color: #d8b4fe;
+  padding: 0.38rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.gc-add-subject-btn:hover {
+  background: rgba(108, 92, 231, 0.38);
+  border-color: #c084fc;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(108, 92, 231, 0.3);
+}
+
+/* ------------------------------------------------ */
+/* Modal overlay & panel                            */
+/* ------------------------------------------------ */
+
+.gc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: gcModalFadeIn 0.2s ease-out;
+}
+
+@keyframes gcModalFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.gc-modal {
+  background: rgba(26, 14, 60, 0.98);
+  border: 1px solid rgba(192, 132, 252, 0.35);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  animation: gcModalSlideIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+@keyframes gcModalSlideIn {
+  from { transform: translateY(24px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0) scale(1);       opacity: 1; }
+}
+
+.gc-modal-danger {
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+/* ── Wide edit modal (subject + modules) ── */
+.gc-modal-wide {
+  max-width: 900px;
+}
+
+.gc-modal-body.gc-edit-modal-body,
+.gc-modal-wide .gc-edit-modal-body {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 0;
+  padding: 0 !important;
+  min-height: 380px;
+  max-height: 75vh;
+  overflow: hidden;
+}
+
+.gc-edit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem 1.75rem;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.gc-edit-panel-subject {
+  flex: 0 0 320px;
+  width: 320px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gc-edit-panel-modules {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.gc-edit-divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.gc-edit-panel-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.55);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.gc-module-count-badge {
+  background: rgba(192, 132, 252, 0.2);
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  color: #d8b4fe;
+  padding: 0.1rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* Add module row */
+.gc-add-module-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.gc-module-title-input {
+  flex: 1;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.9rem;
+}
+
+.gc-add-module-btn {
+  flex-shrink: 0;
+  padding: 0.6rem 1rem;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* Module management list */
+.gc-module-management-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.gc-module-manage-item {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.gc-module-display-row,
+.gc-module-edit-row,
+.gc-module-delete-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  transition: background 0.15s ease;
+}
+
+.gc-module-display-row:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.gc-module-title-manage {
+  flex: 1;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gc-module-row-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.gc-module-display-row:hover .gc-module-row-actions {
+  opacity: 1;
+}
+
+.gc-module-edit-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.gc-module-save-btn,
+.gc-module-cancel-btn {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.82rem;
+  border-radius: 7px;
+}
+
+.gc-module-delete-warning {
+  flex: 1;
+  font-size: 0.88rem;
+  color: #fca5a5;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gc-module-delete-confirm-row {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.07);
+}
+
+/* Modal footer */
+.gc-modal-footer {
+  padding: 1rem 1.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Success feedback */
+.gc-form-success {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #86efac;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 768px) {
+  .gc-modal-body.gc-edit-modal-body,
+  .gc-modal-wide .gc-edit-modal-body {
+    flex-direction: column !important;
+  }
+  .gc-edit-panel-subject {
+    flex: none;
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .gc-modal-wide {
+    max-width: 100%;
+  }
+}
+
+
+.gc-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 1rem;
+}
+
+.gc-modal-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.gc-modal-grade-badge {
+  background: rgba(108, 92, 231, 0.25);
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  color: #d8b4fe;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.gc-badge-danger {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+}
+
+.gc-modal-body {
+  padding: 1.5rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+/* ------------------------------------------------ */
+/* Modal form elements                              */
+/* ------------------------------------------------ */
+
+.gc-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.gc-form-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.gc-form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 0.97rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.gc-form-input:focus {
+  border-color: #c084fc;
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.gc-input-danger:focus {
+  border-color: #f87171;
+  box-shadow: 0 0 10px rgba(248, 113, 113, 0.2);
+}
+
+.gc-form-error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.86rem;
+}
+
+.gc-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+}
+
+/* ------------------------------------------------ */
+/* Translation note box                             */
+/* ------------------------------------------------ */
+
+.gc-translation-note {
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.5;
+}
+
+.gc-translation-note-label {
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+/* ------------------------------------------------ */
+/* Cascade warning block                            */
+/* ------------------------------------------------ */
+
+.gc-cascade-warning {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+}
+
+.gc-cascade-warning-title {
+  margin: 0 0 0.4rem 0;
+  font-weight: 800;
+  color: #f87171;
+  font-size: 0.95rem;
+}
+
+.gc-cascade-warning-msg {
+  margin: 0 0 0.65rem 0;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.gc-cascade-warning-list {
+  margin: 0 0 0.5rem 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.gc-cascade-warning-list li {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.4;
+}
+
+.gc-cascade-module-count {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+/* Confirm name hint */
+.gc-confirm-hint {
+  margin: 0.3rem 0 0 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.gc-confirm-name {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.85rem;
+  color: #fca5a5;
+  font-family: 'Courier New', monospace;
+}
+
+/* Danger confirm button */
+.btn-danger-confirm {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: #ffffff;
+  border: none;
+  padding: 0.7rem 1.25rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-danger-confirm:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-danger-confirm:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------ */
+/* Toast notification                               */
+/* ------------------------------------------------ */
+
+.gc-toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 2000;
+  padding: 0.85rem 1.5rem;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  animation: gcToastIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 380px;
+}
+
+@keyframes gcToastIn {
+  from { transform: translateY(30px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.gc-toast-success {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #6ee7b7;
+}
+
+.gc-toast-error {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
 }

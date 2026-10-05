@@ -182,6 +182,27 @@ router.post('/api/subjects/:subjectId/clone', async (req, res) => {
 
                     if (vrInsertError) throw vrInsertError;
                 }
+
+                // 3d. Fetch & clone exit ticket attachments
+                const { data: sourceExitTickets, error: etFetchError } = await supabase
+                    .from('module_exit_ticket_attachments')
+                    .select('*')
+                    .eq('module_id', sourceMod.id);
+
+                if (etFetchError) throw etFetchError;
+
+                if (sourceExitTickets && sourceExitTickets.length > 0) {
+                    const etToInsert = sourceExitTickets.map(et => ({
+                        module_id: newMod.id,
+                        exit_ticket_id: et.exit_ticket_id
+                    }));
+
+                    const { error: etInsertError } = await supabase
+                        .from('module_exit_ticket_attachments')
+                        .insert(etToInsert);
+
+                    if (etInsertError) throw etInsertError;
+                }
             }
         }
 
@@ -779,6 +800,125 @@ router.get('/api/subjects/:subjectId/quizzes/responses', async (req, res) => {
     } catch (error: any) {
         console.error('Error fetching subject quiz responses:', error);
         res.status(500).json({ error: error.message || 'Error fetching subject quiz responses' });
+    }
+});
+
+// GET /api/subjects/:subjectId/quizzes
+// Returns all quizzes associated to a subject (via module_quizzes) + all student responses
+router.get('/api/subjects/:subjectId/quizzes', async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+
+        // 1. Find all modules for this subject
+        const { data: modules, error: modErr } = await supabase
+            .from('modules')
+            .select('id, title')
+            .eq('subject_id', subjectId);
+
+        if (modErr) throw modErr;
+        if (!modules || modules.length === 0) return res.json({ quizzes: [], responses: [] });
+
+        const moduleIds = modules.map(m => m.id);
+        const moduleMap = new Map(modules.map(m => [m.id, m.title]));
+
+        // 2. Find module_quizzes attachments for these modules
+        const { data: moduleQuizzes, error: mqErr } = await supabase
+            .from('module_quizzes')
+            .select('id, module_id, quiz_id, is_active, due_at, available_from, quizzes(id, title, description, is_active, quiz_questions(id, title, type, question_order, config))')
+            .in('module_id', moduleIds);
+
+        if (mqErr) throw mqErr;
+        if (!moduleQuizzes || moduleQuizzes.length === 0) return res.json({ quizzes: [], responses: [] });
+
+        const moduleQuizIds = moduleQuizzes.map(mq => mq.id);
+        const moduleQuizMap = new Map(moduleQuizzes.map((mq: any) => [
+            mq.id,
+            {
+                module_id: mq.module_id,
+                module_title: moduleMap.get(mq.module_id) || 'Módulo',
+                quiz_id: mq.quiz_id,
+                quiz_title: mq.quizzes?.title || 'Cuestionario'
+            }
+        ]));
+
+        const quizzes = moduleQuizzes.map((mq: any) => ({
+            id: mq.quizzes?.id || mq.quiz_id,
+            module_quiz_id: mq.id,
+            module_id: mq.module_id,
+            module_title: moduleMap.get(mq.module_id) || 'Módulo',
+            title: mq.quizzes?.title || 'Cuestionario sin título',
+            description: mq.quizzes?.description || '',
+            is_active: mq.is_active && (mq.quizzes?.is_active ?? true),
+            due_at: mq.due_at || null,
+            available_from: mq.available_from || null,
+            questions_count: mq.quizzes?.quiz_questions?.length || 0,
+            questions: mq.quizzes?.quiz_questions || []
+        }));
+
+        // 3. Fetch responses for these module_quizzes
+        const { data: responses, error: respErr } = await supabase
+            .from('student_quiz_responses')
+            .select(`
+                *,
+                quiz_snapshot,
+                student_quiz_answers(*, question_snapshot, quiz_questions(title, type, config, question_order))
+            `)
+            .in('module_quiz_id', moduleQuizIds)
+            .order('submitted_at', { ascending: false });
+
+        if (respErr) throw respErr;
+
+        let formattedResponses: any[] = [];
+        if (responses && responses.length > 0) {
+            const studentIds = [...new Set(responses.map(r => r.student_id))];
+            const { data: users } = await supabase
+                .from('users')
+                .select('id, full_name, email')
+                .in('id', studentIds);
+
+            const userMap = new Map((users || []).map(u => [u.id, u]));
+
+            formattedResponses = responses.map(r => {
+                const user = userMap.get(r.student_id);
+                const mqInfo = moduleQuizMap.get(r.module_quiz_id);
+
+                return {
+                    id: r.id,
+                    module_quiz_id: r.module_quiz_id,
+                    quiz_id: mqInfo?.quiz_id || '',
+                    quiz_title: mqInfo?.quiz_title || 'Cuestionario',
+                    module_id: mqInfo?.module_id || null,
+                    module_title: mqInfo?.module_title || 'Módulo',
+                    student_id: r.student_id,
+                    student_name: user?.full_name || user?.email || r.student_id,
+                    student_email: user?.email || '',
+                    score: r.score,
+                    max_score: r.max_score,
+                    status: r.status || 'submitted',
+                    started_at: r.started_at,
+                    submitted_at: r.submitted_at,
+                    answers: (r.student_quiz_answers || []).map((a: any) => {
+                        const snap = a.question_snapshot;
+                        const live = a.quiz_questions;
+                        return {
+                            question_id: a.question_id,
+                            question_title: snap?.title ?? live?.title ?? 'Pregunta sin título',
+                            question_type: snap?.type ?? live?.type ?? 'multiple_choice',
+                            config: snap?.config ?? live?.config ?? {},
+                            question_snapshot: snap ?? null,
+                            answer: a.answer,
+                            is_correct: a.is_correct ?? null,
+                            points_awarded: a.points_awarded ?? null
+                        };
+                    })
+                };
+            });
+        }
+
+        res.json({ quizzes, responses: formattedResponses });
+    } catch (error: any) {
+        console.error('Error fetching subject quizzes:', error);
+        res.status(500).json({ error: error.message || 'Error fetching subject quizzes' });
     }
 });
 

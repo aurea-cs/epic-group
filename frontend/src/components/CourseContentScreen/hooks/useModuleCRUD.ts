@@ -3,6 +3,7 @@ import {
     createCourseModule,
     updateCourseModule,
     deleteCourseModule,
+    duplicateCourseModule,
     type CourseModule,
 } from '../../../lib/adminApi'
 
@@ -65,6 +66,16 @@ export function useModuleCRUD(courseId: string | undefined, onSuccess: () => Pro
         setConfirmDelete(null)
     }
 
+    const duplicate = async (moduleId: string) => {
+        try {
+            await duplicateCourseModule(moduleId)
+            await onSuccess()
+        } catch (err: any) {
+            console.error('[ModuleCRUD] Duplicate error:', err)
+            alert(err.message || 'Error al duplicar módulo')
+        }
+    }
+
     return {
         showModal,
         setShowModal,
@@ -77,5 +88,6 @@ export function useModuleCRUD(courseId: string | undefined, onSuccess: () => Pro
         openEdit,
         save,
         remove,
+        duplicate,
     }
 }

@@ -74,6 +74,20 @@ export interface StudentQuizSubjectResponseAnswer {
     } | null
 }
 
+export interface SubjectQuiz {
+    id: string
+    module_quiz_id: string
+    module_id: string
+    module_title: string
+    title: string
+    description?: string
+    is_active: boolean
+    due_at?: string | null
+    available_from?: string | null
+    questions_count: number
+    questions?: any[]
+}
+
 export interface StudentQuizSubjectResponse {
     id: string
     module_quiz_id: string

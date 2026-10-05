@@ -130,6 +130,7 @@ router.post('/api/centers/:centerId/clone', async (req, res) => {
                         center_id: newCenter.id,
                         name: sourceGrade.name,
                         level: sourceGrade.level,
+                        section: sourceGrade.section,
                         is_active: true
                     })
                     .select()
@@ -247,6 +248,27 @@ router.post('/api/centers/:centerId/clone', async (req, res) => {
                                         .insert(vrToInsert);
 
                                     if (vrInsertErr) throw vrInsertErr;
+                                }
+
+                                // 3h. Fetch & clone exit ticket attachments
+                                const { data: sourceExitTickets, error: etFetchErr } = await supabase
+                                    .from('module_exit_ticket_attachments')
+                                    .select('*')
+                                    .eq('module_id', sourceMod.id);
+
+                                if (etFetchErr) throw etFetchErr;
+
+                                if (sourceExitTickets && sourceExitTickets.length > 0) {
+                                    const etToInsert = sourceExitTickets.map(et => ({
+                                        module_id: newMod.id,
+                                        exit_ticket_id: et.exit_ticket_id
+                                    }));
+
+                                    const { error: etInsertErr } = await supabase
+                                        .from('module_exit_ticket_attachments')
+                                        .insert(etToInsert);
+
+                                    if (etInsertErr) throw etInsertErr;
                                 }
                             }
                         }

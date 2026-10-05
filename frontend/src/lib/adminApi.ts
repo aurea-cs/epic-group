@@ -21,6 +21,7 @@ export interface GradeLevel {
     center_id: string
     name: string
     level?: number
+    section?: string | null
     is_active: boolean
     created_at: string
     updated_at: string
@@ -450,13 +451,14 @@ export const cloneGrade = async (
     sourceGradeId: string,
     targetCenterId: string,
     name?: string,
-    level?: number
+    level?: number,
+    section?: string
 ): Promise<GradeLevel> => {
     try {
         const response = await fetch(`${API_URL}/api/grades/${sourceGradeId}/clone`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target_center_id: targetCenterId, name, level }),
+            body: JSON.stringify({ target_center_id: targetCenterId, name, level, section }),
         })
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
@@ -843,6 +845,35 @@ export const deleteCourseModule = async (id: string): Promise<void> => {
         console.error('Error deleting module:', error)
         throw error
     }
+}
+
+export const duplicateCourseModule = async (moduleId: string): Promise<CourseModule> => {
+    const response = await fetch(`${API_URL}/api/modules/${moduleId}/duplicate`, {
+        method: 'POST',
+    })
+    if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}))
+        const msg = errBody?.error || errBody?.message || `HTTP error! status: ${response.status}`
+        console.error('Error duplicating module:', msg)
+        throw new Error(msg)
+    }
+    return await response.json()
+}
+
+export const copyModuleToSubject = async (
+    sourceModuleId: string,
+    targetSubjectId: string
+): Promise<CourseModule> => {
+    const response = await fetch(`${API_URL}/api/modules/${sourceModuleId}/copy-to/${targetSubjectId}`, {
+        method: 'POST',
+    })
+    if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}))
+        const msg = errBody?.error || errBody?.message || `HTTP error! status: ${response.status}`
+        console.error('Error copying module:', msg)
+        throw new Error(msg)
+    }
+    return await response.json()
 }
 
 // ITEMS
@@ -1404,6 +1435,119 @@ export const getCurriculumTree = async (): Promise<CurriculumGradeTree[]> => {
     }
 }
 
+export const createCurriculumSubject = async (
+    data: { curriculum_grade_id: string; name: string; short_name?: string }
+): Promise<CurriculumSubject> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/subjects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error creating curriculum subject:', error)
+        throw error
+    }
+}
+
+export const updateCurriculumSubject = async (
+    id: string,
+    data: { name?: string; short_name?: string }
+): Promise<CurriculumSubject> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/subjects/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error updating curriculum subject:', error)
+        throw error
+    }
+}
+
+export const deleteCurriculumSubject = async (id: string): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/subjects/${id}`, {
+            method: 'DELETE',
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Error deleting curriculum subject:', error)
+        throw error
+    }
+}
+
+export const createCurriculumModule = async (
+    data: { curriculum_subject_id: string; title: string; order_index?: number }
+): Promise<CurriculumModule> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/modules`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error creating curriculum module:', error)
+        throw error
+    }
+}
+
+export const updateCurriculumModule = async (
+    id: string,
+    data: { title?: string; order_index?: number }
+): Promise<CurriculumModule> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/modules/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error updating curriculum module:', error)
+        throw error
+    }
+}
+
+export const deleteCurriculumModule = async (id: string): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/modules/${id}`, {
+            method: 'DELETE',
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Error deleting curriculum module:', error)
+        throw error
+    }
+}
+
+
 // ============================================
 // THINK BLOCKS (PIENSA, OBSERVA Y EXPERIMENTA)
 // ============================================
@@ -1426,9 +1570,12 @@ export const getThinkBlocks = async (curriculumModuleId?: string): Promise<Think
 }
 
 /** Fetch think blocks for a specific module instance (resolves via curriculum_module_id). */
-export const getModuleThinkBlocks = async (moduleId: string): Promise<ThinkBlock[]> => {
+export const getModuleThinkBlocks = async (moduleId: string, studentId?: string): Promise<ThinkBlock[]> => {
     try {
-        const response = await fetch(`${API_URL}/api/think-blocks/modules/${moduleId}`)
+        const url = studentId
+            ? `${API_URL}/api/think-blocks/modules/${moduleId}?student_id=${studentId}`
+            : `${API_URL}/api/think-blocks/modules/${moduleId}`
+        const response = await fetch(url)
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
             throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
@@ -1437,6 +1584,24 @@ export const getModuleThinkBlocks = async (moduleId: string): Promise<ThinkBlock
     } catch (error) {
         console.error('Error fetching module think blocks:', error)
         throw error
+    }
+}
+
+/** Fetch a student's saved answers for a single think block template. */
+export const getStudentThinkBlockAnswers = async (
+    blockId: string,
+    studentId: string
+): Promise<any[]> => {
+    try {
+        const response = await fetch(`${API_URL}/api/think-blocks/${blockId}/my-answers?student_id=${studentId}`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching student think block answers:', error)
+        return []
     }
 }
 

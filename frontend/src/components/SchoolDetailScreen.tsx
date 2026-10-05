@@ -133,6 +133,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
     const [sourceGradeCenterId, setSourceGradeCenterId] = useState<string>('')
     const [sourceCenterGrades, setSourceCenterGrades] = useState<GradeLevel[]>([])
     const [sourceGradeSelectId, setSourceGradeSelectId] = useState<string>('')
+    const [sourceGradeSection, setSourceGradeSection] = useState<string>('')
     const [loadingGradeCopy, setLoadingGradeCopy] = useState(false)
 
     // Cascading dropdown state for copying courses
@@ -209,6 +210,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
         setGradeCreationMode('options')
         setSourceGradeCenterId('')
         setSourceGradeSelectId('')
+        setSourceGradeSection('')
         setSourceCenterGrades([])
         setShowGradeTypeModal(true)
     }
@@ -218,13 +220,14 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
 
         try {
             setLoadingGradeCopy(true)
-            const newGrade = await cloneGrade(sourceGradeSelectId, centerId)
+            const newGrade = await cloneGrade(sourceGradeSelectId, centerId, undefined, undefined, sourceGradeSection.trim() || undefined)
             await loadGrades(centerId)
             setSelectedGrade(newGrade)
             await loadSubjects(newGrade.id)
             setShowGradeTypeModal(false)
             setSourceGradeCenterId('')
             setSourceGradeSelectId('')
+            setSourceGradeSection('')
         } catch (err: any) {
             setError(err.message || 'Error al copiar el grado')
         } finally {
@@ -266,7 +269,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
     }
 
     // State for forms
-    const [gradeForm, setGradeForm] = useState({ name: '', level: 0 })
+    const [gradeForm, setGradeForm] = useState<{ name: string; level: number; section: string }>({ name: '', level: 0, section: '' })
     const [subjectForm, setSubjectForm] = useState({
         name: '',
         max_students: 30,
@@ -384,7 +387,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
 
     const handleCreateGrade = () => {
         if (!center) return
-        setGradeForm({ name: '', level: 0 })
+        setGradeForm({ name: '', level: 0, section: '' })
         setEditingGrade(null)
         setShowGradeModal(true)
     }
@@ -505,7 +508,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                     className="cascading-dropdown-button"
                                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                 >
-                                    <span>{selectedGrade ? `${i18n.language.startsWith('en') ? t(`dynamicSubjects.${selectedGrade.name}`, selectedGrade.name) : selectedGrade.name} - ${i18n.language.startsWith('en') ? 'Level' : 'Nivel'} ${selectedGrade.level}` : (i18n.language.startsWith('en') ? 'Select grade...' : 'Seleccionar grado...')}</span>
+                                    <span>{selectedGrade ? `${i18n.language.startsWith('en') ? t(`dynamicSubjects.${selectedGrade.name}`, selectedGrade.name) : selectedGrade.name} - ${i18n.language.startsWith('en') ? 'Level' : 'Nivel'} ${selectedGrade.level}${selectedGrade.section ? ` ${selectedGrade.section}` : ''}` : (i18n.language.startsWith('en') ? 'Select grade...' : 'Seleccionar grado...')}</span>
                                     <span style={{ fontSize: '0.8rem' }}>▼</span>
                                 </div>
                                 
@@ -533,7 +536,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                                                 setIsDropdownOpen(false);
                                                             }}
                                                         >
-                                                            {i18n.language.startsWith('en') ? 'Level' : 'Nivel'} {grade.level}
+                                                            {i18n.language.startsWith('en') ? 'Level' : 'Nivel'} {grade.level}{grade.section ? ` ${grade.section}` : ''}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -981,7 +984,7 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                                         : 'Primero selecciona un centro'}
                                                 </option>
                                                 {sourceGrades.map(g => (
-                                                    <option key={g.id} value={g.id}>{g.name} (Nivel {g.level})</option>
+                                                    <option key={g.id} value={g.id}>{g.name} (Nivel {g.level}{g.section ? ` ${g.section}` : ''})</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -1186,9 +1189,24 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                                         : 'Primero selecciona un centro'}
                                                 </option>
                                                 {sourceCenterGrades.map(g => (
-                                                    <option key={g.id} value={g.id}>{g.name} (Nivel {g.level})</option>
+                                                    <option key={g.id} value={g.id}>{g.name} (Nivel {g.level}{g.section ? ` ${g.section}` : ''})</option>
                                                 ))}
                                             </select>
+                                        </div>
+
+                                        {/* 3. Sección (opcional) */}
+                                        <div>
+                                            <label style={{ display: 'block', color: '#1f295a', fontWeight: '600', fontSize: '0.875rem', marginBottom: '0.4rem' }}>
+                                                3. Sección para el nuevo grado (Opcional)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="modern-input"
+                                                style={{ width: '100%', background: '#ffffff', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
+                                                placeholder="Ej. A, B, 1..."
+                                                value={sourceGradeSection}
+                                                onChange={(e) => setSourceGradeSection(e.target.value)}
+                                            />
                                         </div>
 
                                         <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
@@ -1262,6 +1280,17 @@ const SchoolDetailScreen: React.FC<SchoolDetailScreenProps> = () => {
                                             <option key={num} value={num}>{num}</option>
                                         ))}
                                     </select>
+                                </div>
+                                <div className="form-group">
+                                    <label style={{ color: '#1f295a', fontWeight: 'bold' }}>Sección (Opcional)</label>
+                                    <input
+                                        type="text"
+                                        value={gradeForm.section || ''}
+                                        onChange={(e) => setGradeForm({ ...gradeForm, section: e.target.value })}
+                                        placeholder="Ej. A, B, 1, etc."
+                                        className="modern-input"
+                                        style={{ background: '#f8fafc', color: '#1f295a', border: '1px solid rgba(31, 41, 90, 0.2)' }}
+                                    />
                                 </div>
                             </div>
                             <div className="modal-actions">

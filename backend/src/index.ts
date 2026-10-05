@@ -35,6 +35,7 @@ app.use(cors());
 app.use(express.json());
 
 // ── Route Modules ──────────────────────────────────────────────────────────────
+// Registered routes (reloaded)
 app.use(usersRouter);
 app.use(studentsRouter);
 app.use(tutorsRouter);
