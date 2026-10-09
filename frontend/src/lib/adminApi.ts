@@ -1759,6 +1759,8 @@ export type QuizQuestionType =
     | 'complete_sentence'
     | 'matching'
     | 'ordering'
+    | 'numeric'
+    | 'algebraic'
 
 export interface QuizQuestion {
     id: string

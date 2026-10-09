@@ -14,6 +14,8 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
     complete_sentence: 'Completa la oración',
     matching: 'Relacionar conceptos (líneas)',
     ordering: 'Ordenar en secuencia',
+    numeric: 'Respuesta numérica',
+    algebraic: 'Expresión algebraica',
 }
 
 const QuizViewerModal: React.FC<QuizViewerModalProps> = ({ quizId, onClose }) => {
@@ -199,6 +201,41 @@ const QuizViewerModal: React.FC<QuizViewerModalProps> = ({ quizId, onClose }) =>
                                                     <span>{it.text}</span>
                                                 </div>
                                             ))}
+                                        </div>
+                                    )}
+
+                                    {q.type === 'numeric' && (
+                                        <div style={{ marginTop: '0.5rem', paddingLeft: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            <div style={{ fontSize: '0.85rem', color: '#4ade80' }}>
+                                                ✅ Valor correcto:{' '}
+                                                {q.config?.unit_position === 'before' && q.config?.unit
+                                                    ? `${q.config.unit} ${q.config.correct_value}`
+                                                    : `${q.config?.prefix ? q.config.prefix + ' ' : ''}${q.config?.correct_value ?? '—'}${q.config?.unit ? ' ' + q.config.unit : ''}`
+                                                }
+                                            </div>
+                                            {(q.config?.tolerance ?? 0) !== 0 && (
+                                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)' }}>
+                                                    Tolerancia: ±{q.config!.tolerance}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {q.type === 'algebraic' && (
+                                        <div style={{ marginTop: '0.5rem', paddingLeft: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                            <div style={{ fontSize: '0.85rem', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                <span>📊</span>
+                                                <span>Expresión correcta:</span>
+                                                <code style={{ fontFamily: '"Courier New", monospace', background: 'rgba(56,189,248,0.1)', padding: '1px 6px', borderRadius: '4px', color: '#38bdf8', fontSize: '0.9rem' }}>
+                                                    {q.config?.correct_expression ?? '—'}
+                                                </code>
+                                            </div>
+                                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
+                                                Variable: <code style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{q.config?.variable || 'x'}</code>
+                                                {q.config?.input_hint && (
+                                                    <span style={{ marginLeft: '0.75rem', color: 'rgba(255,255,255,0.35)' }}>Hint: {q.config.input_hint}</span>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>

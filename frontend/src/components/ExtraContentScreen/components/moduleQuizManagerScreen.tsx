@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { parse as mathParse } from 'mathjs'
 import { useTranslation } from 'react-i18next'
 import { formatGradeDisplayName } from '../hooks/gradeFormat'
 import {
@@ -37,6 +38,8 @@ const QUESTION_TYPE_LABELS: Record<QuizQuestionType, string> = {
     complete_sentence: 'Completa la oración',
     matching: 'Relacionar conceptos (líneas)',
     ordering: 'Ordenar en secuencia',
+    numeric: 'Respuesta numérica',
+    algebraic: 'Expresión algebraica',
 }
 
 const QUESTION_TYPE_ICONS: Record<QuizQuestionType, string> = {
@@ -47,6 +50,8 @@ const QUESTION_TYPE_ICONS: Record<QuizQuestionType, string> = {
     complete_sentence: '📝',
     matching: '🔗',
     ordering: '🔢',
+    numeric: '🔢',
+    algebraic: '📊',
 }
 
 const EMPTY_QUESTION = (): QuestionFormState => ({
@@ -107,6 +112,21 @@ function defaultConfigForType(type: QuizQuestionType): Record<string, any> {
                     { id: '2', text: 'Segundo paso' },
                     { id: '3', text: 'Tercer paso' },
                 ],
+            }
+        case 'numeric':
+            return {
+                correct_value: 0,
+                tolerance: 0,
+                unit: '',
+                unit_position: 'after',
+                prefix: '',
+            }
+        case 'algebraic':
+            return {
+                correct_expression: '',
+                variable: 'x',
+                input_hint: 'Usa ^ para potencias: x^2, usa * para multiplicar: 3*x',
+                test_values: [-3, -1, 0, 1, 2, 5, 10],
             }
         default:
             return {}
@@ -436,6 +456,154 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, index, total,
                     >+ Agregar elemento</button>
                 </div>
             )}
+
+            {question.type === 'numeric' && (
+                <div className="qm-options-block">
+                    <div className="qm-options-label">Configuración de respuesta numérica:</div>
+
+                    {/* correct_value */}
+                    <div className="qm-option-row" style={{ alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', minWidth: '130px' }}>Valor correcto *</span>
+                        <input
+                            className="qm-option-input"
+                            type="number"
+                            step="any"
+                            placeholder="Ej: 13"
+                            value={question.config.correct_value ?? ''}
+                            onChange={(e) =>
+                                onChange({ ...question, config: { ...question.config, correct_value: e.target.value === '' ? '' : Number(e.target.value) } })
+                            }
+                        />
+                    </div>
+
+                    {/* tolerance */}
+                    <div className="qm-option-row" style={{ alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', minWidth: '130px' }}>Tolerancia (±)</span>
+                        <input
+                            className="qm-option-input"
+                            type="number"
+                            step="any"
+                            min="0"
+                            placeholder="Ej: 0.5 (deja 0 para exacto)"
+                            value={question.config.tolerance ?? 0}
+                            onChange={(e) =>
+                                onChange({ ...question, config: { ...question.config, tolerance: Number(e.target.value) } })
+                            }
+                        />
+                    </div>
+
+                    {/* prefix */}
+                    <div className="qm-option-row" style={{ alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', minWidth: '130px' }}>Prefijo (antes)</span>
+                        <input
+                            className="qm-option-input"
+                            placeholder='Ej: $ (vacío = ninguno)'
+                            value={question.config.prefix ?? ''}
+                            onChange={(e) =>
+                                onChange({ ...question, config: { ...question.config, prefix: e.target.value } })
+                            }
+                        />
+                    </div>
+
+                    {/* unit */}
+                    <div className="qm-option-row" style={{ alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', minWidth: '130px' }}>Unidad</span>
+                        <input
+                            className="qm-option-input"
+                            placeholder='Ej: pesos, litros (vacío = ninguna)'
+                            value={question.config.unit ?? ''}
+                            onChange={(e) =>
+                                onChange({ ...question, config: { ...question.config, unit: e.target.value } })
+                            }
+                        />
+                    </div>
+
+                    {/* unit_position */}
+                    <div className="qm-option-row" style={{ alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', minWidth: '130px' }}>Posición unidad</span>
+                        <select
+                            className="qm-type-select"
+                            value={question.config.unit_position ?? 'after'}
+                            onChange={(e) =>
+                                onChange({ ...question, config: { ...question.config, unit_position: e.target.value } })
+                            }
+                        >
+                            <option value="after">[__] unidad — después del campo</option>
+                            <option value="before">unidad [__] — antes del campo</option>
+                        </select>
+                    </div>
+
+                    {/* preview of layout */}
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)' }}>
+                        Vista previa del campo:{' '}
+                        <span style={{ color: '#38bdf8' }}>
+                            {question.config.unit_position === 'before'
+                                ? `${question.config.unit || 'unidad'} [campo] ${question.config.prefix ? `· prefijo: "${question.config.prefix}"` : ''}`
+                                : `${question.config.prefix ? `${question.config.prefix} ` : ''}[campo] ${question.config.unit || ''}`
+                            }
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {question.type === 'algebraic' && (
+                <div className="qm-options-block">
+                    <div className="qm-options-label">Configuración de expresión algebraica:</div>
+
+                    {/* correct_expression */}
+                    <div className="qm-option-row" style={{ alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', minWidth: '130px' }}>Expresión correcta *</span>
+                        <input
+                            className="qm-option-input"
+                            style={{ fontFamily: '"Courier New", monospace', fontSize: '0.95rem' }}
+                            placeholder='Ej: 4*x, x^2 - 9, -5*x + 20'
+                            value={question.config.correct_expression ?? ''}
+                            onChange={(e) =>
+                                onChange({ ...question, config: { ...question.config, correct_expression: e.target.value } })
+                            }
+                        />
+                    </div>
+
+                    {/* variable */}
+                    <div className="qm-option-row" style={{ alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', minWidth: '130px' }}>Variable</span>
+                        <input
+                            className="qm-option-input"
+                            style={{ fontFamily: '"Courier New", monospace', maxWidth: '80px' }}
+                            placeholder='x'
+                            value={question.config.variable ?? 'x'}
+                            onChange={(e) =>
+                                onChange({ ...question, config: { ...question.config, variable: e.target.value || 'x' } })
+                            }
+                        />
+                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>El alumno resolverá en términos de esta variable</span>
+                    </div>
+
+                    {/* input_hint */}
+                    <div className="qm-option-row" style={{ alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', minWidth: '130px' }}>Sugerencia (hint)</span>
+                        <input
+                            className="qm-option-input"
+                            placeholder='Ej: Usa ^ para potencias: x^2'
+                            value={question.config.input_hint ?? ''}
+                            onChange={(e) =>
+                                onChange({ ...question, config: { ...question.config, input_hint: e.target.value } })
+                            }
+                        />
+                    </div>
+
+                    {/* info box */}
+                    <div style={{
+                        marginTop: '0.5rem', padding: '0.6rem 0.85rem',
+                        background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.2)',
+                        borderRadius: '8px', fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', lineHeight: '1.5',
+                    }}>
+                        ℹ️ La calificación usa <strong style={{ color: '#38bdf8' }}>math.js</strong> para evaluar equivalencia simbólica.
+                        Expresiones como <code>2x+2x</code>, <code>x*4</code>, <code>2(x+2)</code> y <code>2x+4</code>
+                        se consideran equivalentes a sus formas canónicas automáticamente.
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
@@ -588,6 +756,97 @@ const LivePreview: React.FC<LivePreviewProps> = ({ title, questions, i18n }) => 
                             ))}
                         </div>
                     )}
+
+                    {q.type === 'numeric' && (() => {
+                        const prefix = q.config.prefix || ''
+                        const unit = q.config.unit || ''
+                        const unitPos = q.config.unit_position || 'after'
+                        const numVal: string = String(answers[i] ?? '')
+                        return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', margin: 0 }}>
+                                    Escribe un número como respuesta:
+                                </p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    {unitPos === 'before' && unit && (
+                                        <span style={{ color: '#38bdf8', fontWeight: 600, fontSize: '0.95rem' }}>{unit}</span>
+                                    )}
+                                    {prefix && (
+                                        <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, fontSize: '0.95rem' }}>{prefix}</span>
+                                    )}
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        placeholder="0"
+                                        value={numVal}
+                                        onChange={(e) => setAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                                        style={{
+                                            background: 'rgba(56,189,248,0.08)',
+                                            border: '1px solid rgba(56,189,248,0.35)',
+                                            borderRadius: '8px',
+                                            padding: '0.45rem 0.75rem',
+                                            color: 'white',
+                                            fontSize: '1rem',
+                                            width: '120px',
+                                            outline: 'none',
+                                        }}
+                                    />
+                                    {unitPos === 'after' && unit && (
+                                        <span style={{ color: '#38bdf8', fontWeight: 600, fontSize: '0.95rem' }}>{unit}</span>
+                                    )}
+                                </div>
+                            </div>
+                        )
+                    })()}
+
+                    {q.type === 'algebraic' && (() => {
+                        const algVar = q.config.variable || 'x'
+                        const algCorrect = q.config.correct_expression || ''
+                        const algVals: number[] = q.config.test_values || [-3, -1, 0, 1, 2, 5, 10]
+                        const algHint = q.config.input_hint || `Usa ^ para potencias: ${algVar}^2`
+                        const algRaw: string = String(answers[i] ?? '')
+                        // Simple live equivalence check using math.js
+                        let liveEq: boolean | null = null
+                        if (algRaw.trim() && algCorrect.trim()) {
+                            try {
+                                const cn = mathParse(algCorrect)
+                                const sn = mathParse(algRaw.replace(/²/g,'^2').replace(/³/g,'^3').replace(/×/g,'*').trim())
+                                liveEq = algVals.every(v => {
+                                    const sc = { [algVar]: v }
+                                    const a = cn.evaluate(sc), b = sn.evaluate(sc)
+                                    return typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) < 1e-9
+                                })
+                            } catch { liveEq = null }
+                        }
+                        return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', margin: 0 }}>
+                                    Expresión en términos de <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{algVar}</strong>:
+                                </p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                    <input
+                                        type="text"
+                                        placeholder={`Ej: 2*${algVar} + 3`}
+                                        value={algRaw}
+                                        autoComplete="off" spellCheck={false}
+                                        onChange={(e) => setAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                                        style={{
+                                            flex: 1, minWidth: '130px',
+                                            background: 'rgba(56,189,248,0.08)',
+                                            border: liveEq === true ? '1px solid rgba(34,197,94,0.5)' : '1px solid rgba(56,189,248,0.35)',
+                                            borderRadius: '8px', padding: '0.45rem 0.75rem',
+                                            color: 'white', fontSize: '0.95rem', fontWeight: 600,
+                                            fontFamily: '"Courier New", monospace', outline: 'none',
+                                        }}
+                                    />
+                                    {liveEq === true && (
+                                        <span style={{ fontSize: '0.75rem', color: '#4ade80', fontWeight: 700, whiteSpace: 'nowrap' }}>✓ Equiv.</span>
+                                    )}
+                                </div>
+                                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>💡 {algHint}</p>
+                            </div>
+                        )
+                    })()}
                 </div>
             ))}
         </div>
