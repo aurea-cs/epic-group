@@ -459,6 +459,7 @@ const StudentsAdminScreen: React.FC<StudentsAdminScreenProps> = ({ user }) => {
                       {isAdmin && (
                         <td style={{ ...tdStyle, textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                            <ActionButton label="Actividad" bg="rgba(16,185,129,0.13)" hoverBg="rgba(16,185,129,0.25)" textColor="#a7f3d0" border="1px solid rgba(16,185,129,0.3)" onClick={() => navigate(`/user-activity/${student.id}`)} />
                             <ActionButton label={t('adminStudents.editBtn')} bg="rgba(192,132,252,0.13)" hoverBg="rgba(192,132,252,0.25)" textColor="#e9d5ff" border="1px solid rgba(192,132,252,0.3)" onClick={() => setEditingStudent(student)} />
                             <ActionButton label={t('adminStudents.deleteBtnIcon')} bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => setDeletingStudent(student)} />
                           </div>

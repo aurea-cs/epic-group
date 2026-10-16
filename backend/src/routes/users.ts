@@ -369,16 +369,20 @@ router.get('/api/users/:userId/activity', async (req, res) => {
     try {
         const { userId } = req.params;
         
-        // Fetch activity for the last 7 days
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        
-        const { data, error } = await supabase
+        const { all } = req.query;
+        let query = supabase
             .from('activity_logs')
             .select('duration_seconds, created_at, path')
             .eq('user_id', userId)
-            .gte('created_at', sevenDaysAgo.toISOString())
             .order('created_at', { ascending: true });
+            
+        if (all !== 'true') {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            query = query.gte('created_at', sevenDaysAgo.toISOString());
+        }
+        
+        const { data, error } = await query;
             
         if (error) throw error;
         
@@ -386,28 +390,104 @@ router.get('/api/users/:userId/activity', async (req, res) => {
         const dailyActivity: Record<string, number> = {};
         const pathActivity: Record<string, number> = {};
         
-        (data || []).forEach(log => {
-            const dateStr = new Date(log.created_at).toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' });
-            if (!dailyActivity[dateStr]) dailyActivity[dateStr] = 0;
-            dailyActivity[dateStr] += log.duration_seconds;
-            
-            const p = log.path || '/unknown';
-            if (!pathActivity[p]) pathActivity[p] = 0;
-            pathActivity[p] += log.duration_seconds;
-        });
+        (data || [])
+            .filter(log => !(log.path || '').startsWith('PROF_ACTION|'))
+            .forEach(log => {
+                const dateStr = new Date(log.created_at).toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' });
+                if (!dailyActivity[dateStr]) dailyActivity[dateStr] = 0;
+                dailyActivity[dateStr] += log.duration_seconds;
+                
+                const p = log.path || '/unknown';
+                if (!pathActivity[p]) pathActivity[p] = 0;
+                pathActivity[p] += log.duration_seconds;
+            });
         
         const dailyArray = Object.keys(dailyActivity).map(k => ({ date: k, seconds: dailyActivity[k] }));
         const pathArray = Object.keys(pathActivity)
             .map(k => ({ path: k, seconds: pathActivity[k] }))
-            .sort((a,b) => b.seconds - a.seconds)
-            .slice(0, 10);
+            .sort((a,b) => b.seconds - a.seconds);
+            
+        const rawLogs = (data || [])
+            .filter(log => !(log.path || '').startsWith('PROF_ACTION|'))
+            .map(log => ({
+                path: log.path || '/unknown',
+                duration_seconds: log.duration_seconds,
+                created_at: log.created_at
+            }));
         
         res.json({
             daily: dailyArray,
-            sections: pathArray
+            sections: pathArray,
+            rawLogs: rawLogs
         });
     } catch (error: any) {
         console.error('Error fetching student activity:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/api/users/:userId/professor-actions', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const { all } = req.query;
+        let query = supabase
+            .from('activity_logs')
+            .select('id, created_at, path')
+            .eq('user_id', userId)
+            .like('path', 'PROF_ACTION|%')
+            .order('created_at', { ascending: false });
+            
+        if (all !== 'true') {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            query = query.gte('created_at', sevenDaysAgo.toISOString());
+        }
+        
+        const { data: logs, error: logsError } = await query;
+            
+        if (logsError) throw logsError;
+        
+        const actions = (logs || []).map(log => {
+            const parts = log.path.split('|');
+            return {
+                id: log.id,
+                actionType: parts[1], // create or delete
+                type: parts[2],       // assignment or event
+                title: parts[3],
+                subjectName: parts[4],
+                details: parts.slice(5).join('|'),
+                created_at: log.created_at
+            };
+        });
+        
+        res.json(actions);
+    } catch (error: any) {
+        console.error('Error fetching professor actions:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/api/users/:userId/professor-actions', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { actionType, itemType, title, subjectName, details } = req.body;
+        
+        let path = `PROF_ACTION|${actionType}|${itemType}|${title}|${subjectName}`;
+        if (details) path += `|${details}`;
+        
+        const { error } = await supabase
+            .from('activity_logs')
+            .insert({
+                user_id: userId,
+                duration_seconds: 0,
+                path
+            });
+            
+        if (error) throw error;
+        res.status(201).json({ message: 'Action logged' });
+    } catch (error: any) {
+        console.error('Error logging action:', error);
         res.status(500).json({ error: error.message });
     }
 });

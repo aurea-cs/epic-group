@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getCenterProfessors, assignProfessor, unassignProfessor, assignSubjectProfessor } from '../lib/adminApi'
-import UserActivityModal from './UserActivityModal'
+import { useNavigate } from 'react-router-dom'
 import './HierarchyConfig.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -78,6 +78,7 @@ function initials(name: string | null | undefined, email: string): string {
 
 const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
     const { t } = useTranslation()
+    const navigate = useNavigate()
 
     // ── Assigned professors ────────────────────────────────────────────
     const [assignedTeachers, setAssignedTeachers] = useState<AssignedProfessor[]>([])
@@ -96,8 +97,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
     const [searchQuery, setSearchQuery] = useState('')
     const [assigningId, setAssigningId] = useState<string | null>(null)
 
-    const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null)
-    const [selectedTeacherName, setSelectedTeacherName] = useState<string>('')
+
 
     // ── CSV import ─────────────────────────────────────────────────────
     const [importing, setImporting] = useState(false)
@@ -708,10 +708,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <span style={{ fontWeight: 'bold', color: '#334155' }}>⏱️ {formatTime(teacher.total_time_seconds)}</span>
                                             <button
-                                                onClick={() => {
-                                                    setSelectedTeacherId(teacher.id)
-                                                    setSelectedTeacherName(teacher.full_name || teacher.email)
-                                                }}
+                                                onClick={() => navigate(`/user-activity/${teacher.id}`, { state: { userName: teacher.full_name || teacher.email } })}
                                                 style={{ background: '#e2e8f0', color: '#334155', border: 'none', padding: '0.25rem 0.75rem', borderRadius: '16px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', transition: 'background 0.2s' }}
                                                 onMouseEnter={(e) => e.currentTarget.style.background = '#cbd5e1'}
                                                 onMouseLeave={(e) => e.currentTarget.style.background = '#e2e8f0'}
@@ -737,13 +734,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ centerId }) => {
             </div>
 
 
-            {selectedTeacherId && (
-                <UserActivityModal
-                    userId={selectedTeacherId}
-                    userName={selectedTeacherName}
-                    onClose={() => setSelectedTeacherId(null)}
-                />
-            )}
+
         </div>
     )
 }

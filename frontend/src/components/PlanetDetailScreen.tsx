@@ -25,7 +25,20 @@ const PlanetDetailScreen: React.FC<PlanetDetailScreenProps> = ({ user }) => {
   const location = useLocation();
   const state = location.state as { pdfUrl?: string; title?: string } | null;
 
-  const title = state?.title || `Curso ${courseId}`;
+  const [fetchedTitle, setFetchedTitle] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!state?.title && courseId) {
+      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/subjects/${courseId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.name) setFetchedTitle(data.name);
+        })
+        .catch(console.error);
+    }
+  }, [courseId, state?.title]);
+
+  const title = state?.title || fetchedTitle || `Curso ${courseId}`;
 
   const [subPlanets, setSubPlanets] = useState<any[]>([]);
   const [radius, setRadius] = useState(250);

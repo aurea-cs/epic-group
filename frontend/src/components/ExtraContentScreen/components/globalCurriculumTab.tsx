@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
     getCurriculumTree,
     createCurriculumSubject,
     updateCurriculumSubject,
     deleteCurriculumSubject,
+    createCurriculumModule,
+    updateCurriculumModule,
+    deleteCurriculumModule,
     CurriculumGradeTree,
     CurriculumSubjectTree,
+    CurriculumModule,
 } from '../../../lib/adminApi'
 import { formatGradeDisplayName } from '../hooks/gradeFormat'
 
@@ -14,18 +18,24 @@ const CATEGORY_ORDER = ['primaria', 'secundaria', 'preparatoria', 'otros'] as co
 type GradeCategory = (typeof CATEGORY_ORDER)[number]
 type CategoryFilter = 'ALL' | GradeCategory
 
-const CATEGORY_LABELS: Record<GradeCategory, string> = {
-    primaria: 'Primaria',
-    secundaria: 'Secundaria',
-    preparatoria: 'Preparatoria',
-    otros: 'Otros',
-}
-
 const CATEGORY_ICONS: Record<GradeCategory, string> = {
     primaria: '🎒',
     secundaria: '📘',
     preparatoria: '🎓',
     otros: '🏫',
+}
+
+/** Translation key + English fallback for each category filter tab label. */
+const CATEGORY_LABEL_KEYS: Record<GradeCategory, { key: string; fallback: string }> = {
+    primaria: { key: 'extraContent.categoryPrimaria', fallback: 'Elementary' },
+    secundaria: { key: 'extraContent.categorySecundaria', fallback: 'Middle School' },
+    preparatoria: { key: 'extraContent.categoryPreparatoria', fallback: 'High School' },
+    otros: { key: 'extraContent.categoryOtros', fallback: 'Other' },
+}
+
+function getCategoryLabel(t: any, cat: GradeCategory): string {
+    const { key, fallback } = CATEGORY_LABEL_KEYS[cat]
+    return t(key, fallback)
 }
 
 /** Buckets a canonical grade name into one of the three school levels. */
@@ -35,6 +45,18 @@ function categorizeGrade(name: string): GradeCategory {
     if (n.includes('secundaria')) return 'secundaria'
     if (n.includes('primaria')) return 'primaria'
     return 'otros'
+}
+
+/**
+ * Extracts the ordinal grade number (1, 2, 3...) from a grade name so grades
+ * sort in their natural default order — Primaria 1-6, Secundaria 1-3,
+ * Preparatoria 1-6 — regardless of what `level` happens to hold in the DB.
+ * Falls back to `level` (then a high number) if the name has no digit.
+ */
+function getGradeOrdinal(grade: CurriculumGradeTree): number {
+    const match = grade.name.match(/(\d+)/)
+    if (match) return parseInt(match[1], 10)
+    return grade.level ?? 999
 }
 
 /** Formats grade display name for compact chips. */
@@ -57,28 +79,19 @@ interface ModalState {
 const INITIAL_MODAL: ModalState = { mode: null, gradeId: null, gradeName: null, subject: null }
 
 // ─────────────────────────────────────────────────────────
-// Add / Edit Subject Modal
+// Add Subject Modal (simple, no modules)
 // ─────────────────────────────────────────────────────────
-interface SubjectFormModalProps {
-    mode: 'add' | 'edit'
+interface AddSubjectModalProps {
     gradeName: string
-    subject: CurriculumSubjectTree | null
     gradeId: string
     onClose: () => void
     onSaved: () => void
 }
 
-const SubjectFormModal: React.FC<SubjectFormModalProps> = ({
-    mode,
-    gradeName,
-    subject,
-    gradeId,
-    onClose,
-    onSaved,
-}) => {
+const AddSubjectModal: React.FC<AddSubjectModalProps> = ({ gradeName, gradeId, onClose, onSaved }) => {
     const { t } = useTranslation()
-    const [name, setName] = useState(subject?.name ?? '')
-    const [shortName, setShortName] = useState(subject?.short_name ?? '')
+    const [name, setName] = useState('')
+    const [shortName, setShortName] = useState('')
     const [busy, setBusy] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
 
@@ -91,18 +104,11 @@ const SubjectFormModal: React.FC<SubjectFormModalProps> = ({
         setBusy(true)
         setFormError(null)
         try {
-            if (mode === 'add') {
-                await createCurriculumSubject({
-                    curriculum_grade_id: gradeId,
-                    name: name.trim(),
-                    short_name: shortName.trim() || undefined,
-                })
-            } else {
-                await updateCurriculumSubject(subject!.id, {
-                    name: name.trim(),
-                    short_name: shortName.trim() || undefined,
-                })
-            }
+            await createCurriculumSubject({
+                curriculum_grade_id: gradeId,
+                name: name.trim(),
+                short_name: shortName.trim() || undefined,
+            })
             onSaved()
         } catch (err: any) {
             setFormError(err.message || t('extraContent.errorGeneric', 'An error occurred.'))
@@ -116,26 +122,12 @@ const SubjectFormModal: React.FC<SubjectFormModalProps> = ({
             <div className="gc-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="gc-modal-header">
                     <h3 className="gc-modal-title">
-                        {mode === 'add'
-                            ? `📖 ${t('extraContent.addSubject', 'Add Subject')}`
-                            : `✏️ ${t('extraContent.editSubject', 'Edit Subject')}`}
+                        📖 {t('extraContent.addSubject', 'Add Subject')}
                     </h3>
                     <span className="gc-modal-grade-badge">{gradeName}</span>
                 </div>
 
                 <form onSubmit={handleSubmit} className="gc-modal-body">
-                    {/* Translation note */}
-                    <div className="gc-translation-note">
-                        <span className="gc-translation-note-label">
-                            {t('extraContent.translationNoteLabel', 'Translation note:')}
-                        </span>{' '}
-                        {t(
-                            'extraContent.translationNoteText',
-                            'The name will be used as a dynamic translation key (dynamicSubjects.<name>).'
-                        )}
-                    </div>
-
-                    {/* Subject name */}
                     <div className="gc-form-group">
                         <label className="gc-form-label">
                             {t('extraContent.subjectNameLabel', 'Subject name *')}
@@ -151,7 +143,6 @@ const SubjectFormModal: React.FC<SubjectFormModalProps> = ({
                         />
                     </div>
 
-                    {/* Short name */}
                     <div className="gc-form-group">
                         <label className="gc-form-label">
                             {t('extraContent.subjectShortNameLabel', 'Abbreviation (optional)')}
@@ -169,29 +160,353 @@ const SubjectFormModal: React.FC<SubjectFormModalProps> = ({
                     {formError && <div className="gc-form-error">{formError}</div>}
 
                     <div className="gc-modal-actions">
-                        <button
-                            type="button"
-                            className="btn-preview-category"
-                            onClick={onClose}
-                            disabled={busy}
-                        >
+                        <button type="button" className="btn-preview-category" onClick={onClose} disabled={busy}>
                             {t('extraContent.cancel', 'Cancel')}
                         </button>
-                        <button
-                            type="submit"
-                            className="btn-manage-category"
-                            disabled={busy}
-                        >
+                        <button type="submit" className="btn-manage-category" disabled={busy}>
                             {busy
-                                ? mode === 'add'
-                                    ? t('extraContent.creating', 'Creating...')
-                                    : t('extraContent.saving', 'Saving...')
-                                : mode === 'add'
-                                    ? t('extraContent.create', 'Create subject')
-                                    : t('extraContent.saveChanges', 'Save changes')}
+                                ? t('extraContent.creating', 'Creating...')
+                                : t('extraContent.create', 'Create subject')}
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    )
+}
+
+// ─────────────────────────────────────────────────────────
+// Edit Subject + Manage Modules Modal
+// ─────────────────────────────────────────────────────────
+interface EditSubjectModalProps {
+    gradeName: string
+    subject: CurriculumSubjectTree
+    gradeId: string
+    onClose: () => void
+    onSaved: () => void
+}
+
+const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ gradeName, subject, onSaved }) => {
+    const { t } = useTranslation()
+
+    // ── Subject fields ──────────────────────────────────
+    const [name, setName] = useState(subject.name)
+    const [shortName, setShortName] = useState(subject.short_name ?? '')
+    const [subjectBusy, setSubjectBusy] = useState(false)
+    const [subjectError, setSubjectError] = useState<string | null>(null)
+    const [, setSubjectSaved] = useState(false)
+
+    // ── Modules list (local mutable copy) ───────────────
+    const [modules, setModules] = useState<CurriculumModule[]>(
+        [...(subject.modules ?? [])].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+    )
+
+    // ── New module input ─────────────────────────────────
+    const [newModuleTitle, setNewModuleTitle] = useState('')
+    const [addingModule, setAddingModule] = useState(false)
+    const [addModuleError, setAddModuleError] = useState<string | null>(null)
+
+    // ── Inline edit ─────────────────────────────────────
+    const [editingModuleId, setEditingModuleId] = useState<string | null>(null)
+    const [editingModuleTitle, setEditingModuleTitle] = useState('')
+    const [savingModuleId, setSavingModuleId] = useState<string | null>(null)
+    const [editModuleError, setEditModuleError] = useState<string | null>(null)
+
+    // ── Delete confirmation ──────────────────────────────
+    const [deletingModuleId, setDeletingModuleId] = useState<string | null>(null)
+    const [deletingBusy, setDeletingBusy] = useState(false)
+
+    // ── Save subject fields ──────────────────────────────
+    const handleSaveSubject = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!name.trim()) {
+            setSubjectError(t('extraContent.subjectNameRequired', 'Subject name is required.'))
+            return
+        }
+        setSubjectBusy(true)
+        setSubjectError(null)
+        setSubjectSaved(false)
+        try {
+            await updateCurriculumSubject(subject.id, {
+                name: name.trim(),
+                short_name: shortName.trim() || undefined,
+            })
+            setSubjectSaved(true)
+            setTimeout(() => setSubjectSaved(false), 2500)
+        } catch (err: any) {
+            setSubjectError(err.message || t('extraContent.errorGeneric', 'An error occurred.'))
+        } finally {
+            setSubjectBusy(false)
+        }
+    }
+
+    // ── Add module ───────────────────────────────────────
+    const handleAddModule = async () => {
+        if (!newModuleTitle.trim()) {
+            setAddModuleError(t('extraContent.moduleTitleRequired', 'Module title is required.'))
+            return
+        }
+        setAddingModule(true)
+        setAddModuleError(null)
+        try {
+            const created = await createCurriculumModule({
+                curriculum_subject_id: subject.id,
+                title: newModuleTitle.trim(),
+                order_index: modules.length,
+            })
+            setModules((prev) => [...prev, created])
+            setNewModuleTitle('')
+        } catch (err: any) {
+            setAddModuleError(err.message || t('extraContent.errorGeneric', 'An error occurred.'))
+        } finally {
+            setAddingModule(false)
+        }
+    }
+
+    // ── Start inline edit ────────────────────────────────
+    const startEditModule = (mod: CurriculumModule) => {
+        setEditingModuleId(mod.id)
+        setEditingModuleTitle(mod.title)
+        setEditModuleError(null)
+    }
+
+    const cancelEditModule = () => {
+        setEditingModuleId(null)
+        setEditingModuleTitle('')
+        setEditModuleError(null)
+    }
+
+    // ── Save inline edit ─────────────────────────────────
+    const handleSaveModule = async (mod: CurriculumModule) => {
+        if (!editingModuleTitle.trim()) {
+            setEditModuleError(t('extraContent.moduleTitleRequired', 'Module title is required.'))
+            return
+        }
+        setSavingModuleId(mod.id)
+        setEditModuleError(null)
+        try {
+            const updated = await updateCurriculumModule(mod.id, { title: editingModuleTitle.trim() })
+            setModules((prev) => prev.map((m) => (m.id === mod.id ? updated : m)))
+            setEditingModuleId(null)
+        } catch (err: any) {
+            setEditModuleError(err.message || t('extraContent.errorGeneric', 'An error occurred.'))
+        } finally {
+            setSavingModuleId(null)
+        }
+    }
+
+    // ── Delete module ────────────────────────────────────
+    const handleDeleteModule = async (moduleId: string) => {
+        setDeletingBusy(true)
+        try {
+            await deleteCurriculumModule(moduleId)
+            setModules((prev) => prev.filter((m) => m.id !== moduleId))
+            setDeletingModuleId(null)
+        } catch (err: any) {
+            alert(err.message || t('extraContent.errorGeneric', 'An error occurred.'))
+        } finally {
+            setDeletingBusy(false)
+        }
+    }
+
+    return (
+        <div className="gc-modal-overlay" onClick={onSaved}>
+            <div className="gc-modal gc-modal-wide" onClick={(e) => e.stopPropagation()}>
+                {/* Header */}
+                <div className="gc-modal-header">
+                    <h3 className="gc-modal-title">
+                        ✏️ {t('extraContent.editSubject', 'Edit')} {gradeName}
+                    </h3>
+                </div>
+                <div className="gc-modal-body gc-edit-modal-body">
+                    {/* ── Left panel: subject fields ── */}
+                    <div className="gc-edit-panel gc-edit-panel-subject">
+                        <form onSubmit={handleSaveSubject} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <div className="gc-form-group">
+                                <label className="gc-form-label">
+                                    {t('extraContent.subjectNameLabel', 'Subject name *')}
+                                </label>
+                                <input
+                                    type="text"
+                                    className="gc-form-input"
+                                    placeholder={t('extraContent.subjectNamePlaceholder', 'e.g. Mathematics')}
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    maxLength={120}
+                                />
+                            </div>
+
+                            <div className="gc-form-group">
+                                <label className="gc-form-label">
+                                    {t('extraContent.subjectShortNameLabel', 'Abbreviation (optional)')}
+                                </label>
+                                <input
+                                    type="text"
+                                    className="gc-form-input"
+                                    placeholder={t('extraContent.subjectShortNamePlaceholder', 'e.g. MATH')}
+                                    value={shortName}
+                                    onChange={(e) => setShortName(e.target.value)}
+                                    maxLength={20}
+                                />
+                            </div>
+
+                            {subjectError && <div className="gc-form-error">{subjectError}</div>}
+
+                            <button type="submit" className="btn-manage-category" disabled={subjectBusy} style={{ alignSelf: 'flex-start' }}>
+                                {subjectBusy
+                                    ? t('extraContent.saving', 'Saving...')
+                                    : t('extraContent.saveChanges', 'Save changes')}
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* ── Right panel: modules ── */}
+                    <div className="gc-edit-panel gc-edit-panel-modules">
+                        <h4 className="gc-edit-panel-title">
+                            🧩 {t('extraContent.modules', 'Modules')}
+                            <span className="gc-module-count-badge">{modules.length}</span>
+                        </h4>
+
+                        {/* Add new module row */}
+                        <div className="gc-add-module-row">
+                            <input
+                                type="text"
+                                className="gc-form-input gc-module-title-input"
+                                placeholder={t('extraContent.newModulePlaceholder', 'New module title...')}
+                                value={newModuleTitle}
+                                onChange={(e) => setNewModuleTitle(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') { e.preventDefault(); handleAddModule() }
+                                }}
+                                maxLength={200}
+                                disabled={addingModule}
+                            />
+                            <button
+                                type="button"
+                                className="btn-manage-category gc-add-module-btn"
+                                onClick={handleAddModule}
+                                disabled={addingModule || !newModuleTitle.trim()}
+                            >
+                                {addingModule ? '...' : '＋'}
+                            </button>
+                        </div>
+                        {addModuleError && <div className="gc-form-error">{addModuleError}</div>}
+
+                        {/* Modules list */}
+                        <div className="gc-module-management-list">
+                            {modules.length === 0 ? (
+                                <p className="gc-no-modules">
+                                    {t('extraContent.noModulesCreated', 'No modules created yet.')}
+                                </p>
+                            ) : (
+                                modules.map((mod, idx) => (
+                                    <div key={mod.id} className="gc-module-manage-item">
+                                        {editingModuleId === mod.id ? (
+                                            /* Inline edit row — keeps the raw title, not the translated one */
+                                            <div className="gc-module-edit-row">
+                                                <span className="gc-module-order">#{mod.order_index ?? idx + 1}</span>
+                                                <input
+                                                    type="text"
+                                                    className="gc-form-input gc-module-title-input"
+                                                    value={editingModuleTitle}
+                                                    onChange={(e) => setEditingModuleTitle(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') { e.preventDefault(); handleSaveModule(mod) }
+                                                        if (e.key === 'Escape') cancelEditModule()
+                                                    }}
+                                                    autoFocus
+                                                    maxLength={200}
+                                                    disabled={savingModuleId === mod.id}
+                                                />
+                                                <div className="gc-module-edit-actions">
+                                                    <button
+                                                        type="button"
+                                                        className="btn-manage-category gc-module-save-btn"
+                                                        onClick={() => handleSaveModule(mod)}
+                                                        disabled={savingModuleId === mod.id}
+                                                        title={t('extraContent.saveChanges', 'Save')}
+                                                    >
+                                                        {savingModuleId === mod.id ? '...' : '✓'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="btn-preview-category gc-module-cancel-btn"
+                                                        onClick={cancelEditModule}
+                                                        disabled={savingModuleId === mod.id}
+                                                        title={t('extraContent.cancel', 'Cancel')}
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : deletingModuleId === mod.id ? (
+                                            /* Delete confirmation row */
+                                            <div className="gc-module-delete-confirm-row">
+                                                <span className="gc-module-delete-warning">
+                                                    🗑️ {t('extraContent.deleteModuleConfirm', 'Delete')} &ldquo;
+                                                    {t(`dynamicSubjects.${mod.title}`, { defaultValue: mod.title })}
+                                                    &rdquo;?
+                                                </span>
+                                                <div className="gc-module-edit-actions">
+                                                    <button
+                                                        type="button"
+                                                        className="btn-danger-confirm gc-module-save-btn"
+                                                        onClick={() => handleDeleteModule(mod.id)}
+                                                        disabled={deletingBusy}
+                                                    >
+                                                        {deletingBusy ? '...' : t('extraContent.deleteConfirmBtn', 'Yes, delete')}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="btn-preview-category gc-module-cancel-btn"
+                                                        onClick={() => setDeletingModuleId(null)}
+                                                        disabled={deletingBusy}
+                                                    >
+                                                        {t('extraContent.cancel', 'Cancel')}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            /* Normal display row — shows the translated title */
+                                            <div className="gc-module-display-row">
+                                                <span className="gc-module-order">#{mod.order_index ?? idx + 1}</span>
+                                                <span className="gc-module-title gc-module-title-manage">
+                                                    {t(`dynamicSubjects.${mod.title}`, { defaultValue: mod.title })}
+                                                </span>
+                                                <div className="gc-module-row-actions">
+                                                    <button
+                                                        type="button"
+                                                        className="btn-icon-action gc-subject-action-btn"
+                                                        onClick={() => startEditModule(mod)}
+                                                        title={t('extraContent.editModule', 'Edit module')}
+                                                    >
+                                                        ✏️
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="btn-icon-action btn-icon-danger gc-subject-action-btn"
+                                                        onClick={() => setDeletingModuleId(mod.id)}
+                                                        title={t('extraContent.deleteModule', 'Delete module')}
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                            {editModuleError && <div className="gc-form-error" style={{ marginTop: '0.5rem' }}>{editModuleError}</div>}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="gc-modal-footer">
+                    <button type="button" className="btn-preview-category" onClick={onSaved}>
+                        {t('extraContent.closeAndRefresh', 'Close & Refresh')}
+                    </button>
+                </div>
             </div>
         </div>
     )
@@ -315,15 +630,10 @@ const GlobalCurriculumTab: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState<string>('')
     const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('ALL')
     const [selectedGradeId, setSelectedGradeId] = useState<string>('ALL')
-    const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+    const [toast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
 
     // Modal state
     const [modal, setModal] = useState<ModalState>(INITIAL_MODAL)
-
-    const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
-        setToast({ msg, type })
-        setTimeout(() => setToast(null), 3500)
-    }, [])
 
     const loadData = async () => {
         try {
@@ -359,7 +669,9 @@ const GlobalCurriculumTab: React.FC = () => {
         return { totalGrades, totalSubjects, totalModules }
     }, [tree])
 
-    // Grades bucketed by school level, sorted by level within each bucket.
+    // Grades bucketed by school level, sorted 1-6 / 1-3 / 1-6 by their ordinal
+    // within each bucket (see getGradeOrdinal) — not by the raw `level` field,
+    // which may not be contiguous per category.
     const groupedGrades = useMemo(() => {
         const map: Record<GradeCategory, CurriculumGradeTree[]> = {
             primaria: [],
@@ -370,7 +682,7 @@ const GlobalCurriculumTab: React.FC = () => {
         tree.forEach((grade) => {
             map[categorizeGrade(grade.name)].push(grade)
         })
-        Object.values(map).forEach((arr) => arr.sort((a, b) => (a.level ?? 0) - (b.level ?? 0)))
+        Object.values(map).forEach((arr) => arr.sort((a, b) => getGradeOrdinal(a) - getGradeOrdinal(b)))
         return map
     }, [tree])
 
@@ -384,9 +696,15 @@ const GlobalCurriculumTab: React.FC = () => {
         setSelectedGradeId('ALL')
     }
 
-    // Filtered data based on category, grade, and search term
+    // Filtered data based on category, grade, and search term.
+    // When "ALL" is selected we flatten groupedGrades in CATEGORY_ORDER
+    // (primaria → secundaria → preparatoria → otros) instead of using the
+    // raw API order, so the default order holds across the whole list too.
     const filteredTree = useMemo(() => {
-        let result = selectedCategory === 'ALL' ? tree : groupedGrades[selectedCategory]
+        let result: CurriculumGradeTree[] =
+            selectedCategory === 'ALL'
+                ? CATEGORY_ORDER.flatMap((cat) => groupedGrades[cat])
+                : groupedGrades[selectedCategory]
 
         if (selectedGradeId !== 'ALL') {
             result = result.filter((g) => g.id === selectedGradeId)
@@ -435,7 +753,7 @@ const GlobalCurriculumTab: React.FC = () => {
                 return null
             })
             .filter(Boolean) as CurriculumGradeTree[]
-    }, [tree, groupedGrades, selectedCategory, selectedGradeId, searchTerm, t])
+    }, [groupedGrades, selectedCategory, selectedGradeId, searchTerm, t])
 
     // ── Modal handlers ──────────────────────────────────────
     const openAddModal = (grade: CurriculumGradeTree) => {
@@ -468,20 +786,18 @@ const GlobalCurriculumTab: React.FC = () => {
     const closeModal = () => setModal(INITIAL_MODAL)
 
     const handleSaved = async () => {
-        const wasEdit = modal.mode === 'edit'
         closeModal()
         await loadData()
-        showToast(
-            wasEdit
-                ? t('extraContent.updateSuccess', 'Subject updated successfully.')
-                : t('extraContent.createSuccess', 'Subject created successfully.')
-        )
+    }
+
+    const handleAddSaved = async () => {
+        closeModal()
+        await loadData()
     }
 
     const handleDeleted = async () => {
         closeModal()
         await loadData()
-        showToast(t('extraContent.deleteSuccess', 'Subject deleted successfully.'))
     }
 
     return (
@@ -493,10 +809,19 @@ const GlobalCurriculumTab: React.FC = () => {
                 </div>
             )}
 
-            {/* Add / Edit Modal */}
-            {(modal.mode === 'add' || modal.mode === 'edit') && (
-                <SubjectFormModal
-                    mode={modal.mode}
+            {/* Add Subject Modal */}
+            {modal.mode === 'add' && (
+                <AddSubjectModal
+                    gradeName={modal.gradeName ?? ''}
+                    gradeId={modal.gradeId!}
+                    onClose={closeModal}
+                    onSaved={handleAddSaved}
+                />
+            )}
+
+            {/* Edit Subject + Modules Modal */}
+            {modal.mode === 'edit' && modal.subject && (
+                <EditSubjectModal
                     gradeName={modal.gradeName ?? ''}
                     gradeId={modal.gradeId!}
                     subject={modal.subject}
@@ -513,18 +838,6 @@ const GlobalCurriculumTab: React.FC = () => {
                     onDeleted={handleDeleted}
                 />
             )}
-
-            {/* Header & Controls */}
-            <div className="gc-header">
-                <div className="gc-header-info">
-                    <h2>{t('extraContent.globalCurriculumTitle', 'Global Curriculum Structure')}</h2>
-                    <p>{t('extraContent.globalCurriculumSubtitle', 'Visualization and administration of canonical grades, subjects, and modules')}</p>
-                </div>
-                <button className="gc-refresh-btn" onClick={loadData} disabled={loading} title={t('extraContent.reloadTitle', 'Reload Curriculum')}>
-                    🔄 {loading ? t('extraContent.loading', 'Loading...') : t('extraContent.refresh', 'Refresh')}
-                </button>
-            </div>
-
             {error && (
                 <div className="error-banner">
                     <p>⚠️ {error}</p>
@@ -585,7 +898,7 @@ const GlobalCurriculumTab: React.FC = () => {
                         className={`gc-category-chip ${selectedCategory === 'ALL' ? 'active' : ''}`}
                         onClick={() => handleSelectCategory('ALL')}
                     >
-                        {t('extraContent.allGrades', 'Todas')}
+                        {t('extraContent.allGrades', 'All')}
                     </button>
                     {availableCategories.map((cat) => (
                         <button
@@ -593,7 +906,7 @@ const GlobalCurriculumTab: React.FC = () => {
                             className={`gc-category-chip gc-category-${cat} ${selectedCategory === cat ? 'active' : ''}`}
                             onClick={() => handleSelectCategory(cat)}
                         >
-                            {CATEGORY_ICONS[cat]} {CATEGORY_LABELS[cat]}
+                            {CATEGORY_ICONS[cat]} {getCategoryLabel(t, cat)}
                             <span className="gc-category-count">({groupedGrades[cat].length})</span>
                         </button>
                     ))}
@@ -606,7 +919,7 @@ const GlobalCurriculumTab: React.FC = () => {
                             className={`gc-grade-chip ${selectedGradeId === 'ALL' ? 'active' : ''}`}
                             onClick={() => setSelectedGradeId('ALL')}
                         >
-                            {t('extraContent.allGradesInCategory', 'Todos')}
+                            {t('extraContent.allGradesInCategory', 'All Grades')}
                         </button>
                         {groupedGrades[selectedCategory].map((grade) => (
                             <button
@@ -642,17 +955,12 @@ const GlobalCurriculumTab: React.FC = () => {
                             <div key={grade.id} className="gc-grade-card">
                                 <div className="gc-grade-card-header">
                                     <div className="gc-grade-header-left">
-                                        <span className="gc-grade-icon">🏫</span>
                                         <h3>{grade.name}</h3>
                                         <span className={`level-badge ${badgeClass}`}>
-                                            {t(`dynamicSubjects.${CATEGORY_LABELS[badgeClass]}`, { defaultValue: CATEGORY_LABELS[badgeClass] })} • {t('professorCourses.level', { defaultValue: 'Nivel' })} {grade.level ?? '-'}
+                                            {t('professorCourses.level', { defaultValue: 'Nivel' })} {grade.level ?? '-'}
                                         </span>
                                     </div>
                                     <div className="gc-grade-meta">
-                                        <span className="gc-meta-badge">
-                                            {grade.subjects?.length || 0} {t('extraContent.totalSubjects', 'Subjects')}
-                                        </span>
-                                        {/* Add subject button */}
                                         <button
                                             className="gc-add-subject-btn"
                                             onClick={() => openAddModal(grade)}
@@ -673,22 +981,15 @@ const GlobalCurriculumTab: React.FC = () => {
                                             <div key={subj.id} className="gc-subject-card">
                                                 <div className="gc-subject-header">
                                                     <div className="gc-subject-title-area">
-                                                        <span className="gc-subj-icon">📖</span>
                                                         <h4>
                                                             {t(`dynamicSubjects.${subj.name}`, { defaultValue: subj.name })}
                                                         </h4>
                                                     </div>
                                                     <div className="gc-subject-actions">
-                                                        {subj.short_name && (
-                                                            <span className="gc-shortname-badge">
-                                                                {t(`dynamicSubjects.${subj.short_name}`, { defaultValue: subj.short_name })}
-                                                            </span>
-                                                        )}
-                                                        {/* Edit button */}
                                                         <button
                                                             className="btn-icon-action gc-subject-action-btn"
                                                             onClick={() => openEditModal(grade, subj)}
-                                                            title={t('extraContent.editSubject', 'Edit Subject')}
+                                                            title={t('extraContent.editSubject', 'Edit Subject & Modules')}
                                                         >
                                                             ✏️
                                                         </button>
@@ -704,9 +1005,6 @@ const GlobalCurriculumTab: React.FC = () => {
                                                 </div>
 
                                                 <div className="gc-modules-section">
-                                                    <div className="gc-modules-header">
-                                                        <span>{t('extraContent.modules', { defaultValue: 'Módulos' })} ({subj.modules?.length || 0})</span>
-                                                    </div>
 
                                                     {(!subj.modules || subj.modules.length === 0) ? (
                                                         <p className="gc-no-modules">{t('extraContent.noModulesCreated', 'No modules created yet.')}</p>
@@ -717,7 +1015,9 @@ const GlobalCurriculumTab: React.FC = () => {
                                                                     <span className="gc-module-order">
                                                                         #{mod.order_index ?? idx + 1}
                                                                     </span>
-                                                                    <span className="gc-module-title">{mod.title}</span>
+                                                                    <span className="gc-module-title">
+                                                                        {t(`dynamicSubjects.${mod.title}`, { defaultValue: mod.title })}
+                                                                    </span>
                                                                 </div>
                                                             ))}
                                                         </div>

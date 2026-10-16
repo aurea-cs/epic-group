@@ -26,8 +26,10 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ role }) => {
         
         // Si la página no está visible, no contamos el tiempo
         if (document.visibilityState !== 'visible') {
-            console.log('[ActivityTracker] document hidden, resetting timer')
-            lastHeartbeat.current = Date.now()
+            if (!sessionStorage.getItem('external_tracking_path')) {
+                console.log('[ActivityTracker] document hidden, resetting timer')
+                lastHeartbeat.current = Date.now()
+            }
             return
         }
 
@@ -83,6 +85,24 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({ role }) => {
                 // Enviamos un latido justo antes de ocultar
                 sendHeartbeat()
             } else if (document.visibilityState === 'visible') {
+                // Track away time for external links (e.g. VR Rooms)
+                const externalPath = sessionStorage.getItem('external_tracking_path')
+                if (externalPath) {
+                    const awaySeconds = Math.floor((Date.now() - lastHeartbeat.current) / 1000)
+                    if (awaySeconds > 0) {
+                        supabase.auth.getSession().then(({ data: { session } }) => {
+                            if (session?.user) {
+                                supabase.from('activity_logs').insert({
+                                    user_id: session.user.id,
+                                    duration_seconds: awaySeconds,
+                                    path: externalPath
+                                }).then(() => console.log('Logged away time for', externalPath))
+                            }
+                        })
+                    }
+                    sessionStorage.removeItem('external_tracking_path')
+                }
+                
                 // Al volver, reseteamos el temporizador para contar a partir de ahora
                 lastHeartbeat.current = Date.now()
             }

@@ -9,13 +9,29 @@ router.get('/api/students', async (req, res) => {
     try {
         const expandCenters = req.query.expand === 'centers';
 
-        const { data: students, error: studentsError } = await supabase
-            .from('users')
-            .select('id, full_name, email, firstname, lastname, avatar_url, created_at')
-            .eq('role', 'student')
-            .order('full_name', { ascending: true });
+        let students: any[] = [];
+        let from = 0;
+        const limit = 1000;
+        let fetchMore = true;
 
-        if (studentsError) throw studentsError;
+        while (fetchMore) {
+            const { data, error: studentsError } = await supabase
+                .from('users')
+                .select('id, full_name, email, firstname, lastname, avatar_url, created_at')
+                .eq('role', 'student')
+                .order('full_name', { ascending: true })
+                .range(from, from + limit - 1);
+
+            if (studentsError) throw studentsError;
+
+            if (data && data.length > 0) {
+                students = students.concat(data);
+                from += limit;
+                if (data.length < limit) fetchMore = false;
+            } else {
+                fetchMore = false;
+            }
+        }
 
         if (!students || students.length === 0) return res.json([]);
 

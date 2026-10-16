@@ -182,6 +182,27 @@ router.post('/api/subjects/:subjectId/clone', async (req, res) => {
 
                     if (vrInsertError) throw vrInsertError;
                 }
+
+                // 3d. Fetch & clone exit ticket attachments
+                const { data: sourceExitTickets, error: etFetchError } = await supabase
+                    .from('module_exit_ticket_attachments')
+                    .select('*')
+                    .eq('module_id', sourceMod.id);
+
+                if (etFetchError) throw etFetchError;
+
+                if (sourceExitTickets && sourceExitTickets.length > 0) {
+                    const etToInsert = sourceExitTickets.map(et => ({
+                        module_id: newMod.id,
+                        exit_ticket_id: et.exit_ticket_id
+                    }));
+
+                    const { error: etInsertError } = await supabase
+                        .from('module_exit_ticket_attachments')
+                        .insert(etToInsert);
+
+                    if (etInsertError) throw etInsertError;
+                }
             }
         }
 

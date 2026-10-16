@@ -12,6 +12,7 @@ import {
 } from '../lib/adminApi'
 import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, Send, ChevronDown } from 'lucide-react'
 import bannerImg from '../assets/banner.png'
+import { parse as mathParse } from 'mathjs'
 
 interface QuizTakeScreenProps {
   /** The module_quiz attachment id (NOT the quiz template id) */
@@ -27,6 +28,41 @@ interface QuizTakeScreenProps {
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Sanitize student algebraic input for math.js (handles Unicode superscripts, etc.) */
+export function sanitizeForMathjs(input: string): string {
+  return input
+    .replace(/²/g, '^2')
+    .replace(/³/g, '^3')
+    .replace(/⁴/g, '^4')
+    .replace(/⁵/g, '^5')
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/−/g, '-')
+    .trim()
+}
+
+/** Returns true if two algebraic expressions are numerically equivalent via math.js sampling. */
+export function algebraicEquivalent(
+  correct: string,
+  student: string,
+  variable = 'x',
+  testValues: number[] = [-3, -1, 0, 1, 2, 5, 10]
+): boolean {
+  try {
+    const correctNode = mathParse(sanitizeForMathjs(correct))
+    const studentNode = mathParse(sanitizeForMathjs(student))
+    return testValues.every((val) => {
+      const scope: Record<string, number> = { [variable]: val }
+      const a = correctNode.evaluate(scope)
+      const b = studentNode.evaluate(scope)
+      if (typeof a !== 'number' || typeof b !== 'number') return false
+      return Math.abs(a - b) < 1e-9
+    })
+  } catch {
+    return false
+  }
+}
+
 /** Returns true if the question type can be auto-graded by the backend. */
 function isAutoGraded(type: string) {
   return (
@@ -35,7 +71,9 @@ function isAutoGraded(type: string) {
     type === 'checklist' ||
     type === 'complete_sentence' ||
     type === 'matching' ||
-    type === 'ordering'
+    type === 'ordering' ||
+    type === 'numeric' ||
+    type === 'algebraic'
   )
 }
 
@@ -71,6 +109,20 @@ function getCorrectLabel(q: QuizQuestion): string | null {
   if (q.type === 'ordering') {
     const items: { id: string; text: string }[] = cfg.items || []
     return items.map((it, idx) => `${idx + 1}. ${it.text}`).join(' → ')
+  }
+  if (q.type === 'numeric') {
+    const cv = cfg.correct_value ?? '—'
+    const tol = cfg.tolerance ?? 0
+    const prefix = cfg.prefix ? `${cfg.prefix} ` : ''
+    const unit = cfg.unit ? ` ${cfg.unit}` : ''
+    const tolStr = tol !== 0 ? ` (±${tol})` : ''
+    if (cfg.unit_position === 'before' && cfg.unit) {
+      return `${cfg.unit} ${cv}${tolStr}`
+    }
+    return `${prefix}${cv}${unit}${tolStr}`
+  }
+  if (q.type === 'algebraic') {
+    return cfg.correct_expression ? String(cfg.correct_expression) : null
   }
   return null
 }
@@ -332,6 +384,9 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
       } catch {
         return false
       }
+    }
+    if (q.type === 'numeric') {
+      return v !== '' && !isNaN(Number(v))
     }
     return true
   }
@@ -1547,7 +1602,220 @@ const QuizTakeScreen: React.FC<QuizTakeScreenProps> = ({
                       }}
                     />
                   )}
+
+                  {/* ── Numeric ── */}
+                  {q.type === 'numeric' && (() => {
+                    const cfg = q.config || {}
+                    const prefix: string = cfg.prefix || ''
+                    const unit: string = cfg.unit || ''
+                    const unitPos: string = cfg.unit_position || 'after'
+                    const correctVal: number = Number(cfg.correct_value ?? 0)
+                    const tolerance: number = Number(cfg.tolerance ?? 0)
+                    const userRaw: string = typeof currentAnswer === 'string' ? currentAnswer : String(currentAnswer ?? '')
+
+                    const inputStyle: React.CSSProperties = {
+                      background: isReviewing
+                        ? questionCorrectness === true
+                          ? 'rgba(34,197,94,0.12)'
+                          : questionCorrectness === false
+                          ? 'rgba(239,68,68,0.12)'
+                          : 'rgba(0,0,0,0.3)'
+                        : 'rgba(0,0,0,0.3)',
+                      border: isReviewing
+                        ? questionCorrectness === true
+                          ? '2px solid rgba(34,197,94,0.6)'
+                          : questionCorrectness === false
+                          ? '2px solid rgba(239,68,68,0.6)'
+                          : '1px solid rgba(56,189,248,0.35)'
+                        : userRaw !== ''
+                        ? '2px solid #38bdf8'
+                        : '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '12px',
+                      padding: '0.85rem 1.1rem',
+                      color: 'white',
+                      fontSize: '1.5rem',
+                      fontWeight: 700,
+                      width: '140px',
+                      outline: 'none',
+                      textAlign: 'center',
+                      transition: 'border 0.2s ease, background 0.2s ease',
+                    }
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        {/* description from config */}
+                        {cfg.description && (
+                          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.95rem', margin: 0, lineHeight: '1.5' }}>
+                            {cfg.description}
+                          </p>
+                        )}
+
+                        {/* Input row */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                          {unitPos === 'before' && unit && (
+                            <span style={{ color: '#38bdf8', fontWeight: 700, fontSize: '1.2rem' }}>{unit}</span>
+                          )}
+                          {prefix && (
+                            <span style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontSize: '1.2rem' }}>{prefix}</span>
+                          )}
+                          <input
+                            type="number"
+                            step="any"
+                            id={`numeric-input-${q.id}`}
+                            disabled={isReviewing}
+                            value={userRaw}
+                            onChange={(e) => handleTextChange(q.id, e.target.value)}
+                            placeholder="?"
+                            style={inputStyle}
+                          />
+                          {unitPos === 'after' && unit && (
+                            <span style={{ color: '#38bdf8', fontWeight: 700, fontSize: '1.2rem' }}>{unit}</span>
+                          )}
+                          {isReviewing && questionCorrectness === true && (
+                            <CheckCircle2 size={24} color="#4ade80" />
+                          )}
+                          {isReviewing && questionCorrectness === false && (
+                            <XCircle size={24} color="#f87171" />
+                          )}
+                        </div>
+
+                        {/* Hint about tolerance while taking */}
+                        {!isReviewing && tolerance !== 0 && (
+                          <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', margin: 0 }}>
+                            Se acepta un margen de ±{tolerance}
+                          </p>
+                        )}
+
+                        {/* Review: show correct value if wrong */}
+                        {isReviewing && questionCorrectness === false && (
+                          <div
+                            style={{
+                              background: 'rgba(34,197,94,0.1)',
+                              border: '1px solid rgba(34,197,94,0.3)',
+                              borderRadius: '10px',
+                              padding: '8px 14px',
+                              color: '#4ade80',
+                              fontSize: '0.88rem',
+                              fontWeight: 600,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <CheckCircle2 size={15} />
+                            Valor correcto:{' '}
+                            {unitPos === 'before' && unit
+                              ? `${unit} ${correctVal}`
+                              : `${prefix ? prefix + ' ' : ''}${correctVal}${unit ? ' ' + unit : ''}`
+                            }
+                            {tolerance !== 0 && ` (±${tolerance})`}
+                          </div>
+                        )}
+
+                        {/* Review: celebrate if correct */}
+                        {isReviewing && questionCorrectness === true && (
+                          <div style={{ color: '#4ade80', fontSize: '0.88rem', fontWeight: 600 }}>
+                            ¡Respuesta correcta!
+                            {tolerance !== 0 && (
+                              <span style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 400 }}>
+                                {' '}(margen ±{tolerance} aplicado)
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
+
+                  {/* ── Algebraic (math.js symbolic evaluation) ── */}
+                  {q.type === 'algebraic' && (() => {
+                    const algCfg = q.config || {}
+                    const correctExpr: string = algCfg.correct_expression || ''
+                    const algVar: string = algCfg.variable || 'x'
+                    const algTestVals: number[] = algCfg.test_values || [-3, -1, 0, 1, 2, 5, 10]
+                    const inputHint: string = algCfg.input_hint || `Usa ^ para potencias: ${algVar}^2`
+                    const userRaw: string = typeof currentAnswer === 'string' ? currentAnswer : String(currentAnswer ?? '')
+                    const liveEq = !isReviewing && userRaw.trim() !== ''
+                      ? algebraicEquivalent(correctExpr, userRaw, algVar, algTestVals)
+                      : null
+                    const algBorder = isReviewing
+                      ? questionCorrectness === true ? '2px solid rgba(34,197,94,0.6)'
+                        : questionCorrectness === false ? '2px solid rgba(239,68,68,0.6)'
+                        : '1px solid rgba(255,255,255,0.15)'
+                      : userRaw.trim() === '' ? '1px solid rgba(255,255,255,0.15)' : '2px solid #38bdf8'
+                    const algBg = isReviewing
+                      ? questionCorrectness === true ? 'rgba(34,197,94,0.08)'
+                        : questionCorrectness === false ? 'rgba(239,68,68,0.08)'
+                        : 'rgba(0,0,0,0.3)'
+                      : 'rgba(0,0,0,0.3)'
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        {algCfg.description && (
+                          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.95rem', margin: 0, lineHeight: '1.5' }}>
+                            {algCfg.description}
+                          </p>
+                        )}
+                        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', margin: 0 }}>
+                          Escribe la expresión en términos de{' '}
+                          <span style={{ color: '#38bdf8', fontWeight: 700, fontFamily: 'monospace' }}>{algVar}</span>:
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                          <input
+                            id={`algebraic-input-${q.id}`}
+                            type="text"
+                            disabled={isReviewing}
+                            value={userRaw}
+                            onChange={(e) => handleTextChange(q.id, e.target.value)}
+                            placeholder={`Ej: 2*${algVar} + 3`}
+                            autoComplete="off"
+                            spellCheck={false}
+                            style={{
+                              flex: 1, minWidth: '180px',
+                              background: algBg, border: algBorder,
+                              borderRadius: '12px', padding: '0.85rem 1.1rem',
+                              color: 'white', fontSize: '1.25rem', fontWeight: 600,
+                              fontFamily: '"Courier New", "Fira Code", monospace',
+                              outline: 'none', transition: 'border 0.2s ease, background 0.2s ease',
+                              opacity: isReviewing ? 0.85 : 1,
+                            }}
+                          />
+                          {isReviewing && questionCorrectness === true && <CheckCircle2 size={24} color="#4ade80" />}
+                          {isReviewing && questionCorrectness === false && <XCircle size={24} color="#f87171" />}
+                          {!isReviewing && liveEq === true && (
+                            <span style={{
+                              fontSize: '0.8rem', fontWeight: 700, color: '#4ade80',
+                              background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)',
+                              padding: '4px 10px', borderRadius: '20px',
+                              display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap',
+                            }}>
+                              <CheckCircle2 size={13} /> ¡Equivalente!
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+                          💡 {inputHint}
+                        </p>
+                        {isReviewing && questionCorrectness === false && (
+                          <div style={{
+                            background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
+                            borderRadius: '10px', padding: '10px 14px', color: '#4ade80',
+                            fontSize: '0.88rem', fontWeight: 600,
+                            display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+                          }}>
+                            <CheckCircle2 size={15} />
+                            Expresión correcta:{' '}
+                            <span style={{ fontFamily: '"Courier New", monospace', fontSize: '1rem' }}>{correctExpr}</span>
+                          </div>
+                        )}
+                        {isReviewing && questionCorrectness === true && (
+                          <div style={{ color: '#4ade80', fontSize: '0.88rem', fontWeight: 600 }}>
+                            ¡Expresión correcta! (evaluación simbólica)
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
 
                 <button
                   onClick={() => scrollToIndex(idx + 2)}

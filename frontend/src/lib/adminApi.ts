@@ -21,6 +21,7 @@ export interface GradeLevel {
     center_id: string
     name: string
     level?: number
+    section?: string | null
     is_active: boolean
     created_at: string
     updated_at: string
@@ -450,13 +451,14 @@ export const cloneGrade = async (
     sourceGradeId: string,
     targetCenterId: string,
     name?: string,
-    level?: number
+    level?: number,
+    section?: string
 ): Promise<GradeLevel> => {
     try {
         const response = await fetch(`${API_URL}/api/grades/${sourceGradeId}/clone`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target_center_id: targetCenterId, name, level }),
+            body: JSON.stringify({ target_center_id: targetCenterId, name, level, section }),
         })
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
@@ -853,6 +855,22 @@ export const duplicateCourseModule = async (moduleId: string): Promise<CourseMod
         const errBody = await response.json().catch(() => ({}))
         const msg = errBody?.error || errBody?.message || `HTTP error! status: ${response.status}`
         console.error('Error duplicating module:', msg)
+        throw new Error(msg)
+    }
+    return await response.json()
+}
+
+export const copyModuleToSubject = async (
+    sourceModuleId: string,
+    targetSubjectId: string
+): Promise<CourseModule> => {
+    const response = await fetch(`${API_URL}/api/modules/${sourceModuleId}/copy-to/${targetSubjectId}`, {
+        method: 'POST',
+    })
+    if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}))
+        const msg = errBody?.error || errBody?.message || `HTTP error! status: ${response.status}`
+        console.error('Error copying module:', msg)
         throw new Error(msg)
     }
     return await response.json()
@@ -1473,6 +1491,63 @@ export const deleteCurriculumSubject = async (id: string): Promise<void> => {
     }
 }
 
+export const createCurriculumModule = async (
+    data: { curriculum_subject_id: string; title: string; order_index?: number }
+): Promise<CurriculumModule> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/modules`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error creating curriculum module:', error)
+        throw error
+    }
+}
+
+export const updateCurriculumModule = async (
+    id: string,
+    data: { title?: string; order_index?: number }
+): Promise<CurriculumModule> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/modules/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error updating curriculum module:', error)
+        throw error
+    }
+}
+
+export const deleteCurriculumModule = async (id: string): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/curriculum/modules/${id}`, {
+            method: 'DELETE',
+        })
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Error deleting curriculum module:', error)
+        throw error
+    }
+}
+
+
 // ============================================
 // THINK BLOCKS (PIENSA, OBSERVA Y EXPERIMENTA)
 // ============================================
@@ -1684,6 +1759,8 @@ export type QuizQuestionType =
     | 'complete_sentence'
     | 'matching'
     | 'ordering'
+    | 'numeric'
+    | 'algebraic'
 
 export interface QuizQuestion {
     id: string
