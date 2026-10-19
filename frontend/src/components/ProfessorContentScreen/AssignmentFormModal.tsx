@@ -88,7 +88,7 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
     const [moduleItemId, setModuleItemId] = useState<string>(initial?.module_item_id || '')
 
     // Attachments state
-    const [existingAttachments, setExistingAttachments] = useState<AssignmentAttachment[]>(initial?.attachments || [])
+    const [existingAttachments] = useState<AssignmentAttachment[]>(initial?.attachments || [])
     const [deletedAttachmentIds, setDeletedAttachmentIds] = useState<string[]>([])
     const [newFiles, setNewFiles] = useState<File[]>([])
     const [isDragging, setIsDragging] = useState(false)
