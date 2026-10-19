@@ -4,6 +4,18 @@ import type { CourseModule } from '../../lib/adminApi'
 // Types — mirror the `assignments` and `calendar_events` tables exactly.
 // ============================================================================
 
+export interface AssignmentAttachment {
+    id: string
+    assignment_id: string
+    file_name: string
+    mime_type?: string | null
+    file_size_bytes?: number | null
+    storage_path?: string | null
+    file_url?: string | null
+    url?: string | null
+    created_at?: string
+}
+
 export interface Assignment {
     id: string
     subject_id: string
@@ -22,6 +34,7 @@ export interface Assignment {
     updated_at: string | null
     module_item_id?: string | null
     assigned_pages?: string | null
+    attachments?: AssignmentAttachment[]
 }
 
 export interface StudentExitTicketResponse {
@@ -195,6 +208,9 @@ export interface AssignmentDetail {
   submission: Submission | null
   module_item_id?: string | null
   assigned_pages?: string | null
+  module_item_pdf_url?: string | null
+  module_item_title?: string | null
+  attachments?: AssignmentAttachment[]
 }
 
 export type ModuleWithItems = CourseModule & { items?: ModuleItem[] }

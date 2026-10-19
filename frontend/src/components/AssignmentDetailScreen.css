@@ -285,3 +285,240 @@
   background: #d1d5db;
   cursor: not-allowed;
 }
+
+/* Professor Attachments Section for Students */
+.assignment-attachments-section {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.assignment-attachments-heading {
+  margin: 0 0 0.85rem 0;
+  font-size: 0.95rem;
+  color: #374151;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.assignment-attachments-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.assignment-attachment-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.assignment-attachment-card:hover {
+  background: #f3f0ff;
+  border-color: #c084fc;
+  box-shadow: 0 4px 12px rgba(147, 51, 234, 0.08);
+  transform: translateY(-1px);
+}
+
+.attachment-card-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.attachment-card-emoji {
+  font-size: 1.25rem;
+}
+
+.attachment-card-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  background: #6b7280;
+  color: white;
+  letter-spacing: 0.02em;
+}
+
+.attachment-card-badge.badge-pdf {
+  background: #ef4444;
+}
+
+.attachment-card-badge.badge-doc,
+.attachment-card-badge.badge-docx {
+  background: #2563eb;
+}
+
+.attachment-card-badge.badge-xls,
+.attachment-card-badge.badge-xlsx,
+.attachment-card-badge.badge-csv {
+  background: #059669;
+}
+
+.attachment-card-badge.badge-ppt,
+.attachment-card-badge.badge-pptx {
+  background: #ea580c;
+}
+
+.attachment-card-badge.badge-png,
+.attachment-card-badge.badge-jpg,
+.attachment-card-badge.badge-jpeg {
+  background: #8b5cf6;
+}
+
+.attachment-card-badge.badge-zip,
+.attachment-card-badge.badge-rar {
+  background: #d97706;
+}
+
+.attachment-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.attachment-card-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1f2937;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assignment-attachment-card:hover .attachment-card-name {
+  color: #7e22ce;
+}
+
+.attachment-card-size {
+  font-size: 0.72rem;
+  color: #6b7280;
+}
+
+.attachment-card-download {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #9ca3af;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.assignment-attachment-card:hover .attachment-card-download {
+  color: #9333ea;
+  transform: translate(2px, -2px);
+}
+
+/* Module Item PDF Resource Card (Read-only, secure view) */
+.assignment-module-pdf-card {
+  margin-top: 1.5rem;
+  padding: 1.1rem 1.25rem;
+  background: linear-gradient(135deg, #f8faff 0%, #f1f5f9 100%);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.assignment-module-pdf-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+}
+
+.assignment-module-pdf-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.assignment-module-pdf-icon {
+  font-size: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
+}
+
+.assignment-module-pdf-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.assignment-module-pdf-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.assignment-module-pdf-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assignment-module-pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.15rem;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(109, 40, 217, 0.2);
+}
+
+.assignment-module-pdf-btn:hover {
+  background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(109, 40, 217, 0.25);
+}
+
+.assignment-module-pdf-btn:active {
+  transform: translateY(0);
+}

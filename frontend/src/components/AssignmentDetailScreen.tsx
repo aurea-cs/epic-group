@@ -5,6 +5,35 @@ import './AssignmentDetailScreen.css'
 import type { AssignmentDetail } from './ProfessorContentScreen/types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import PdfViewerModal from './general/PdfViewerModal'
+
+const formatFileSize = (bytes?: number) => {
+  if (!bytes) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+const getFileIcon = (filename: string) => {
+  const ext = filename.split('.').pop()?.toLowerCase() || ''
+  switch (ext) {
+    case 'pdf': return '📄'
+    case 'doc':
+    case 'docx': return '📝'
+    case 'xls':
+    case 'xlsx':
+    case 'csv': return '📊'
+    case 'ppt':
+    case 'pptx': return '📽️'
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'gif': return '🖼️'
+    case 'zip':
+    case 'rar': return '📦'
+    default: return '📎'
+  }
+}
 
 interface AssignmentDetailScreenProps {
   user: User
@@ -22,6 +51,7 @@ const AssignmentDetailScreen: React.FC<AssignmentDetailScreenProps> = ({ user })
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [pdfOpen, setPdfOpen] = useState(false)
 
   // Local, client-only checklist state — not persisted anywhere
   const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set())
@@ -187,6 +217,72 @@ const AssignmentDetailScreen: React.FC<AssignmentDetailScreenProps> = ({ user })
             <p className="assignment-no-instructions">El profesor no agregó instrucciones adicionales.</p>
           )}
 
+          {/* Linked PDF module resource — read-only, no download */}
+          {assignment.module_item_pdf_url && (
+            <div className="assignment-module-pdf-card">
+              <div className="assignment-module-pdf-header">
+                <span className="assignment-module-pdf-icon">📄</span>
+                <div className="assignment-module-pdf-info">
+                  <span className="assignment-module-pdf-label">Recurso asociado</span>
+                  <span className="assignment-module-pdf-name">
+                    {assignment.module_item_title || 'Documento PDF'}
+                  </span>
+                </div>
+              </div>
+              <button
+                id="btn-open-module-pdf"
+                className="assignment-module-pdf-btn"
+                onClick={() => setPdfOpen(true)}
+              >
+                📖 Abrir PDF
+              </button>
+            </div>
+          )}
+
+          {assignment.attachments && assignment.attachments.length > 0 && (
+            <div className="assignment-attachments-section">
+              <h4 className="assignment-attachments-heading">
+                <span>📎</span> Material adjunto ({assignment.attachments.length})
+              </h4>
+              <div className="assignment-attachments-grid">
+                {assignment.attachments.map(att => {
+                  const ext = att.file_name.split('.').pop()?.toUpperCase() || 'FILE'
+                  return (
+                    <a
+                      key={att.id}
+                      href={att.url || att.file_url || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="assignment-attachment-card"
+                      download={att.file_name}
+                      title={`Descargar / Abrir ${att.file_name}`}
+                    >
+                      <div className="attachment-card-icon-wrapper">
+                        <span className="attachment-card-emoji">{getFileIcon(att.file_name)}</span>
+                        <span className={`attachment-card-badge badge-${ext.toLowerCase()}`}>
+                          {ext}
+                        </span>
+                      </div>
+                      <div className="attachment-card-info">
+                        <span className="attachment-card-name" title={att.file_name}>
+                          {att.file_name}
+                        </span>
+                        {att.file_size_bytes ? (
+                          <span className="attachment-card-size">
+                            {formatFileSize(att.file_size_bytes)}
+                          </span>
+                        ) : null}
+                      </div>
+                      <span className="attachment-card-download" aria-label="Abrir o descargar">
+                        ↗
+                      </span>
+                    </a>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {(assignment.allowed_file_types?.length || assignment.max_file_size_mb) && (
             <div className="assignment-constraints">
               {assignment.allowed_file_types?.length && (
@@ -286,6 +382,16 @@ const AssignmentDetailScreen: React.FC<AssignmentDetailScreenProps> = ({ user })
           )}
         </section>
       </div>
+
+      {/* Read-only PDF viewer for the linked module resource */}
+      {pdfOpen && assignment.module_item_pdf_url && (
+        <PdfViewerModal
+          url={assignment.module_item_pdf_url}
+          onClose={() => setPdfOpen(false)}
+          isEditable={false}
+          assignedPages={assignment.assigned_pages}
+        />
+      )}
     </div>
   )
 }

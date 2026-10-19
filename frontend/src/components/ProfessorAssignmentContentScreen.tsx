@@ -40,8 +40,32 @@ async function fetchAssignments(subjectId: string): Promise<Assignment[]> {
 }
 
 async function createAssignmentRequest(
-    payload: Omit<Assignment, 'id' | 'created_at' | 'updated_at'>
+    payload: Omit<Assignment, 'id' | 'created_at' | 'updated_at'>,
+    newAttachments?: File[]
 ): Promise<Assignment> {
+    if (newAttachments && newAttachments.length > 0) {
+        const formData = new FormData()
+        Object.entries(payload).forEach(([key, val]) => {
+            if (val !== undefined && val !== null) {
+                if (Array.isArray(val)) {
+                    formData.append(key, val.join(','))
+                } else {
+                    formData.append(key, String(val))
+                }
+            }
+        })
+        newAttachments.forEach(f => formData.append('attachments', f))
+        const res = await fetch(`${API_URL}/api/subjects/${payload.subject_id}/assignments`, {
+            method: 'POST',
+            body: formData,
+        })
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            throw new Error(err.error || `Error al crear tarea: ${res.status}`)
+        }
+        return res.json()
+    }
+
     const res = await fetch(`${API_URL}/api/subjects/${payload.subject_id}/assignments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -56,8 +80,39 @@ async function createAssignmentRequest(
 
 async function updateAssignmentRequest(
     id: string,
-    payload: Partial<Omit<Assignment, 'id' | 'created_at' | 'subject_id' | 'professor_id'>>
+    payload: Partial<Omit<Assignment, 'id' | 'created_at' | 'subject_id' | 'professor_id'>>,
+    newAttachments?: File[],
+    deletedAttachmentIds?: string[]
 ): Promise<Assignment> {
+    if ((newAttachments && newAttachments.length > 0) || (deletedAttachmentIds && deletedAttachmentIds.length > 0)) {
+        const formData = new FormData()
+        Object.entries(payload).forEach(([key, val]) => {
+            if (val !== undefined && val !== null) {
+                if (Array.isArray(val)) {
+                    formData.append(key, val.join(','))
+                } else {
+                    formData.append(key, String(val))
+                }
+            }
+        })
+        if (deletedAttachmentIds && deletedAttachmentIds.length > 0) {
+            formData.append('deleted_attachment_ids', JSON.stringify(deletedAttachmentIds))
+        }
+        if (newAttachments) {
+            newAttachments.forEach(f => formData.append('attachments', f))
+        }
+
+        const res = await fetch(`${API_URL}/api/assignments/${id}`, {
+            method: 'PATCH',
+            body: formData,
+        })
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            throw new Error(err.error || `Error al actualizar tarea: ${res.status}`)
+        }
+        return res.json()
+    }
+
     const res = await fetch(`${API_URL}/api/assignments/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -417,19 +472,26 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
         }
     }
 
-    const handleCreateAssignment = async (payload: Omit<Assignment, 'id' | 'created_at' | 'updated_at' | 'subject_id' | 'professor_id'>) => {
+    const handleCreateAssignment = async (
+        payload: Omit<Assignment, 'id' | 'created_at' | 'updated_at' | 'subject_id' | 'professor_id'>,
+        newAttachments?: File[]
+    ) => {
         if (!courseId) return
         const created = await createAssignmentRequest({
             ...payload,
             subject_id: courseId,
             professor_id: user.id,
-        })
+        }, newAttachments)
         setAssignments(prev => [created, ...prev])
         setShowAssignmentModal(false)
         logAction('create', 'assignment', created.title || 'Sin título')
     }
 
-    const handleUpdateAssignment = async (payload: Omit<Assignment, 'id' | 'created_at' | 'updated_at' | 'subject_id' | 'professor_id'>) => {
+    const handleUpdateAssignment = async (
+        payload: Omit<Assignment, 'id' | 'created_at' | 'updated_at' | 'subject_id' | 'professor_id'>,
+        newAttachments?: File[],
+        deletedAttachmentIds?: string[]
+    ) => {
         if (!editingAssignment) return
         
         const changes: string[] = [];
@@ -449,11 +511,17 @@ const ProfessorAssignmentContentScreen: React.FC<ProfessorAssignmentContentScree
         if (payload.status !== editingAssignment.status) {
              changes.push(`Estatus: ${payload.status}`);
         }
+        if (newAttachments && newAttachments.length > 0) {
+            changes.push(`+${newAttachments.length} archivo(s)`);
+        }
+        if (deletedAttachmentIds && deletedAttachmentIds.length > 0) {
+            changes.push(`-${deletedAttachmentIds.length} archivo(s)`);
+        }
         
         let details = changes.length > 0 ? changes.join('; ') : undefined;
         if (details && details.length > 120) details = details.slice(0, 117) + '...';
 
-        const updated = await updateAssignmentRequest(editingAssignment.id, payload)
+        const updated = await updateAssignmentRequest(editingAssignment.id, payload, newAttachments, deletedAttachmentIds)
         setAssignments(prev => prev.map(a => a.id === updated.id ? updated : a))
         setEditingAssignment(null)
         setShowAssignmentModal(false)

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { supabase } from '../config/supabase';
 import { upload } from '../middleware/upload';
 import { translateToEnglish } from '../utils/translator';
+import { AssignmentAttachmentRow, getAssignmentsAttachmentsMap, saveAssignmentAttachments } from '../utils/assignmentAttachments';
 
 const router = Router();
 
@@ -617,15 +618,24 @@ router.get('/api/subjects/:subjectId/assignments', async (req, res) => {
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        res.json(data || []);
+
+        const assignmentsList = data || [];
+        const ids = assignmentsList.map((a: any) => a.id);
+        const attachMap = await getAssignmentsAttachmentsMap(ids);
+        const withAttachments = assignmentsList.map((a: any) => ({
+            ...a,
+            attachments: attachMap[a.id] || []
+        }));
+
+        res.json(withAttachments);
     } catch (error: any) {
         console.error('Error fetching assignments:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// POST create assignment for a subject
-router.post('/api/subjects/:subjectId/assignments', async (req, res) => {
+// POST create assignment for a subject (supports multipart attachments or json)
+router.post('/api/subjects/:subjectId/assignments', upload.array('attachments'), async (req, res) => {
     try {
         const { subjectId } = req.params;
         const {
@@ -648,6 +658,10 @@ router.post('/api/subjects/:subjectId/assignments', async (req, res) => {
             return res.status(400).json({ error: 'title and professor_id are required' });
         }
 
+        const parsedAllowedFileTypes = typeof allowed_file_types === 'string'
+            ? allowed_file_types.split(',').map((t: string) => t.trim()).filter(Boolean)
+            : allowed_file_types || null;
+
         const { data, error } = await supabase
             .from('assignments')
             .insert({
@@ -659,9 +673,9 @@ router.post('/api/subjects/:subjectId/assignments', async (req, res) => {
                 due_at: due_at || null,
                 available_from: available_from || null,
                 max_score: max_score != null ? Number(max_score) : null,
-                allowed_file_types: allowed_file_types || null,
+                allowed_file_types: parsedAllowedFileTypes,
                 max_file_size_mb: max_file_size_mb != null ? Number(max_file_size_mb) : null,
-                allow_resubmission: allow_resubmission ?? null,
+                allow_resubmission: allow_resubmission === true || allow_resubmission === 'true',
                 status: status || 'draft',
                 module_item_id: module_item_id || null,
                 assigned_pages: assigned_pages || null,
@@ -670,7 +684,17 @@ router.post('/api/subjects/:subjectId/assignments', async (req, res) => {
             .single();
 
         if (error) throw error;
-        res.status(201).json(data);
+
+        const files: Express.Multer.File[] = Array.isArray(req.files)
+            ? (req.files as Express.Multer.File[])
+            : req.files ? (Object.values(req.files).flat() as Express.Multer.File[]) : [];
+
+        let attachments: AssignmentAttachmentRow[] = [];
+        if (files.length > 0) {
+            attachments = await saveAssignmentAttachments(data.id, files);
+        }
+
+        res.status(201).json({ ...data, attachments });
     } catch (error: any) {
         console.error('Error creating assignment:', error);
         res.status(500).json({ error: error.message });

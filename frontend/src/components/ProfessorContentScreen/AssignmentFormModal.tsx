@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import {
     MDXEditor,
     headingsPlugin,
@@ -21,7 +21,7 @@ import {
 import '@mdxeditor/editor/style.css'
 import './AssignmentFormModal.css'
 import type { CourseModule } from '../../lib/adminApi'
-import {type Assignment } from './types'
+import { type Assignment, type AssignmentAttachment } from './types'
 import ConfirmModal from '../general/ConfirmModal'
 import { ActionButton, Modal, Toggle, fieldLabelStyle, inputStyle } from '../general/SharedUI'
 import CustomSelect from '../general/CustomSelect'
@@ -30,13 +30,45 @@ import 'react-widgets/styles.css'
 import CustomDatePicker from '../general/CustomDatePicker'
 import CustomMultiSelect from '../general/CustomMultiSelect'
 
+const formatFileSize = (bytes?: number | null): string => {
+    if (!bytes || bytes <= 0) return ''
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+const getFileIcon = (fileName?: string): string => {
+    if (!fileName) return '📎'
+    const ext = fileName.split('.').pop()?.toLowerCase()
+    switch (ext) {
+        case 'pdf': return '📄'
+        case 'doc':
+        case 'docx': return '📝'
+        case 'xls':
+        case 'xlsx':
+        case 'csv': return '📊'
+        case 'ppt':
+        case 'pptx': return '📽️'
+        case 'png':
+        case 'jpg':
+        case 'jpeg':
+        case 'gif': return '🖼️'
+        case 'zip':
+        case 'rar': return '📦'
+        default: return '📎'
+    }
+}
 
 const NO_MODULE = '__none__'
 interface AssignmentFormModalProps {
     modules: CourseModule[]
     initial: Assignment | null
     onClose: () => void
-    onSubmit: (payload: Omit<Assignment, 'id' | 'created_at' | 'updated_at' | 'subject_id' | 'professor_id'>) => Promise<void>
+    onSubmit: (
+        payload: Omit<Assignment, 'id' | 'created_at' | 'updated_at' | 'subject_id' | 'professor_id'>,
+        newAttachments?: File[],
+        deletedAttachmentIds?: string[]
+    ) => Promise<void>
 }
 
 const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, initial, onClose, onSubmit }) => {
@@ -54,7 +86,13 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
     const [formError, setFormError] = useState<string | null>(null)
     const [showConfirm, setShowConfirm] = useState(false)
     const [moduleItemId, setModuleItemId] = useState<string>(initial?.module_item_id || '')
-    const [assignedPages, setAssignedPages] = useState<string>(initial?.assigned_pages || '')
+
+    // Attachments state
+    const [existingAttachments, setExistingAttachments] = useState<AssignmentAttachment[]>(initial?.attachments || [])
+    const [deletedAttachmentIds, setDeletedAttachmentIds] = useState<string[]>([])
+    const [newFiles, setNewFiles] = useState<File[]>([])
+    const [isDragging, setIsDragging] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const isEditing = !!initial
 
@@ -70,11 +108,16 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
     allowResubmission !== (initial?.allow_resubmission ?? false) ||
     status !== (initial?.status || 'draft') ||
     moduleItemId !== (initial?.module_item_id || '') ||
-    assignedPages !== (initial?.assigned_pages || '')
+    newFiles.length > 0 ||
+    deletedAttachmentIds.length > 0
 
     const handleAttemptClose = () => {
         if (!isDirty) return onClose()
         setShowConfirm(true)
+    }
+
+    const handleFilesSelected = (selected: File[]) => {
+        setNewFiles(prev => [...prev, ...selected])
     }
     
     const handleSubmit = async () => {
@@ -82,20 +125,23 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
         setSaving(true)
         setFormError(null)
         try {
-            await onSubmit({
-                module_id: moduleId || null,
-                title: title.trim(),
-                instructions_md: instructions.trim() || null,
-                due_at: dueAt ? new Date(dueAt).toISOString() : null,
-                available_from: availableFrom ? new Date(availableFrom).toISOString() : null,
-                max_score: maxScore,
-                allowed_file_types: allowedFileTypes.split(',').map(t => t.trim()).filter(Boolean),
-                max_file_size_mb: maxFileSizeMb,
-                allow_resubmission: allowResubmission,
-                status,
-                module_item_id: moduleItemId || null,
-                assigned_pages: assignedPages.trim() || null,
-            })
+            await onSubmit(
+                {
+                    module_id: moduleId || null,
+                    title: title.trim(),
+                    instructions_md: instructions.trim() || null,
+                    due_at: dueAt ? new Date(dueAt).toISOString() : null,
+                    available_from: availableFrom ? new Date(availableFrom).toISOString() : null,
+                    max_score: maxScore,
+                    allowed_file_types: allowedFileTypes.split(',').map(t => t.trim()).filter(Boolean),
+                    max_file_size_mb: maxFileSizeMb,
+                    allow_resubmission: allowResubmission,
+                    status,
+                    module_item_id: moduleItemId || null,
+                },
+                newFiles,
+                deletedAttachmentIds
+            )
         } catch (e: any) {
             setFormError(e.message || 'Error al guardar')
         } finally {
@@ -167,10 +213,7 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
                 onChange={v => {
                     const val = v === NO_MODULE ? '' : v;
                     setModuleId(val);
-                    if (!val) {
-                        setModuleItemId('');
-                        setAssignedPages('');
-                    }
+                    setModuleItemId('');
                 }}
                 options={[
                     { value: NO_MODULE, label: 'Sin módulo' },
@@ -188,7 +231,6 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
                             onChange={v => {
                                 const val = v === NO_MODULE ? '' : v;
                                 setModuleItemId(val);
-                                if (!val) setAssignedPages('');
                             }}
                             options={[
                                 { value: NO_MODULE, label: 'Ninguno' },
@@ -202,17 +244,144 @@ const AssignmentFormModal: React.FC<AssignmentFormModalProps> = ({ modules, init
                 </>
             )}
 
-            {moduleId && moduleItemId && (
-                <div style={{ marginBottom: '1rem' }}>
-                    <label style={fieldLabelStyle}>Páginas asignadas (ej. 10-15 o dejar vacío para todo el documento)</label>
+            {/* Document Attachments Section */}
+            <div style={{ marginBottom: '1.25rem' }}>
+                <label style={fieldLabelStyle}>📎 Documentos adjuntos (Material para el alumno)</label>
+                
+                {/* Existing attachments list */}
+                {existingAttachments.length > 0 && (
+                    <div className="existing-attachments-container">
+                        <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginBottom: '0.35rem' }}>
+                            Archivos actuales:
+                        </div>
+                        <div className="attachments-list">
+                            {existingAttachments.map(att => {
+                                const isDeleted = deletedAttachmentIds.includes(att.id)
+                                return (
+                                    <div
+                                        key={att.id}
+                                        className={`attachment-item ${isDeleted ? 'attachment-item--deleted' : ''}`}
+                                    >
+                                        <span className="attachment-item__icon">{getFileIcon(att.file_name)}</span>
+                                        <div className="attachment-item__info">
+                                            {(att.url || att.file_url) && !isDeleted ? (
+                                                <a
+                                                    href={att.url || att.file_url || '#'}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="attachment-item__name"
+                                                    title={att.file_name}
+                                                >
+                                                    {att.file_name}
+                                                </a>
+                                            ) : (
+                                                <span className="attachment-item__name" title={att.file_name}>
+                                                    {att.file_name}
+                                                </span>
+                                            )}
+                                            {att.file_size_bytes && (
+                                                <span className="attachment-item__size">
+                                                    {formatFileSize(att.file_size_bytes)}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {isDeleted ? (
+                                            <button
+                                                type="button"
+                                                className="attachment-item__del-btn"
+                                                style={{ color: '#34d399' }}
+                                                onClick={() => setDeletedAttachmentIds(prev => prev.filter(id => id !== att.id))}
+                                                title="Deshacer eliminación"
+                                            >
+                                                Deshacer
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                className="attachment-item__del-btn"
+                                                onClick={() => setDeletedAttachmentIds(prev => [...prev, att.id])}
+                                                title="Eliminar archivo"
+                                            >
+                                                ✕
+                                            </button>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Newly selected files list */}
+                {newFiles.length > 0 && (
+                    <div className="new-attachments-container" style={{ marginTop: existingAttachments.length > 0 ? '0.6rem' : 0 }}>
+                        <div style={{ fontSize: '0.78rem', color: '#c084fc', marginBottom: '0.35rem' }}>
+                            Nuevos archivos para adjuntar:
+                        </div>
+                        <div className="attachments-list">
+                            {newFiles.map((file, idx) => (
+                                <div key={idx} className="attachment-item attachment-item--new">
+                                    <span className="attachment-item__icon">{getFileIcon(file.name)}</span>
+                                    <div className="attachment-item__info">
+                                        <span className="attachment-item__name" title={file.name}>
+                                            {file.name}
+                                        </span>
+                                        <span className="attachment-item__size">{formatFileSize(file.size)}</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="attachment-item__del-btn"
+                                        onClick={() => setNewFiles(prev => prev.filter((_, i) => i !== idx))}
+                                        title="Quitar archivo"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Drag and Drop Zone */}
+                <div
+                    className={`attachment-dropzone ${isDragging ? 'attachment-dropzone--active' : ''}`}
+                    style={{ marginTop: (existingAttachments.length > 0 || newFiles.length > 0) ? '0.6rem' : 0 }}
+                    onDragOver={e => {
+                        e.preventDefault()
+                        setIsDragging(true)
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={e => {
+                        e.preventDefault()
+                        setIsDragging(false)
+                        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                            handleFilesSelected(Array.from(e.dataTransfer.files))
+                        }
+                    }}
+                    onClick={() => fileInputRef.current?.click()}
+                >
                     <input
-                        style={inputStyle}
-                        value={assignedPages}
-                        onChange={e => setAssignedPages(e.target.value)}
-                        placeholder="Ej. 10-15 o 3,4,7"
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        style={{ display: 'none' }}
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.png,.jpg,.jpeg,.zip"
+                        onChange={e => {
+                            if (e.target.files && e.target.files.length > 0) {
+                                handleFilesSelected(Array.from(e.target.files))
+                                e.target.value = ''
+                            }
+                        }}
                     />
+                    <div style={{ fontSize: '1.25rem' }}>📁</div>
+                    <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 500 }}>
+                        Haz clic o arrastra archivos aquí para adjuntarlos
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'rgba(255, 255, 255, 0.5)' }}>
+                        PDF, DOCX, XLSX, PPTX, imágenes, etc.
+                    </div>
                 </div>
-            )}
+            </div>
 
             <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>

@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { supabase } from '../config/supabase';
 import { upload, assignmentUpload } from '../middleware/upload';
+import {
+    getAssignmentAttachments,
+    saveAssignmentAttachments,
+    deleteAssignmentAttachments,
+    deleteAssignmentAttachmentsByAssignment,
+} from '../utils/assignmentAttachments';
 
 const router = Router();
 
@@ -159,14 +165,15 @@ router.get('/api/assignments/by-item/:itemId', async (req, res) => {
             submission = { ...s, files };
         }
 
-        res.json({ ...chosen, submission, submitted_ranges: submittedRanges });
+        const attachments = await getAssignmentAttachments(chosen.id);
+        res.json({ ...chosen, submission, attachments, submitted_ranges: submittedRanges });
     } catch (error: any) {
         console.error('Error fetching assignment by item:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// GET a single assignment, with the current student's own submission (if any)
+// GET a single assignment, with the current student's own submission (if any) and attachments
 router.get('/api/assignments/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -207,15 +214,61 @@ router.get('/api/assignments/:id', async (req, res) => {
             }
         }
 
-        res.json({ ...assignment, submission });
+        const attachments = await getAssignmentAttachments(id);
+
+        // Resolve the PDF URL for the linked module item (read-only, not downloadable)
+        let module_item_pdf_url: string | null = null;
+        let module_item_title: string | null = null;
+        if (assignment.module_item_id) {
+            try {
+                const { data: moduleItem } = await supabase
+                    .from('module_items')
+                    .select('id, title, type, content_url')
+                    .eq('id', assignment.module_item_id)
+                    .maybeSingle();
+
+                if (moduleItem && moduleItem.type === 'pdf' && moduleItem.content_url) {
+                    module_item_title = moduleItem.title || null;
+                    const rawUrl: string = moduleItem.content_url;
+
+                    // Extract the storage path from whatever form the URL is stored in
+                    const extractPath = (url: string, bucket: string): string => {
+                        if (!url.startsWith('http')) return url;
+                        for (const pattern of [`/object/sign/${bucket}/`, `/object/public/${bucket}/`, `/object/authenticated/${bucket}/`]) {
+                            if (url.includes(pattern)) return url.split(pattern)[1].split('?')[0];
+                        }
+                        return url;
+                    };
+
+                    const storagePath = extractPath(rawUrl, 'grade-content');
+                    // Sign for 7 days — frontend will open in iframe/modal without download controls
+                    const { data: signed, error: signErr } = await supabase.storage
+                        .from('grade-content')
+                        .createSignedUrl(storagePath, 3600 * 24 * 7);
+
+                    if (!signErr && signed?.signedUrl) {
+                        module_item_pdf_url = signed.signedUrl;
+                    } else {
+                        // Fallback to public URL
+                        const { data: pub } = supabase.storage.from('grade-content').getPublicUrl(storagePath);
+                        module_item_pdf_url = pub.publicUrl;
+                    }
+                }
+            } catch (itemErr) {
+                console.error('Error resolving module item PDF URL:', itemErr);
+            }
+        }
+
+        res.json({ ...assignment, submission, attachments, module_item_pdf_url, module_item_title });
     } catch (error: any) {
         console.error('Error fetching assignment:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// PATCH update assignment
-router.patch('/api/assignments/:id', async (req, res) => {
+
+// PATCH update assignment (supports multipart attachments or json)
+router.patch('/api/assignments/:id', upload.array('attachments'), async (req, res) => {
     try {
         const { id } = req.params;
         const {
@@ -231,6 +284,7 @@ router.patch('/api/assignments/:id', async (req, res) => {
             status,
             module_item_id,
             assigned_pages,
+            deleted_attachment_ids,
         } = req.body;
 
         const updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
@@ -240,9 +294,15 @@ router.patch('/api/assignments/:id', async (req, res) => {
         if (due_at !== undefined) updatePayload.due_at = due_at || null;
         if (available_from !== undefined) updatePayload.available_from = available_from || null;
         if (max_score !== undefined) updatePayload.max_score = max_score != null ? Number(max_score) : null;
-        if (allowed_file_types !== undefined) updatePayload.allowed_file_types = allowed_file_types;
+        if (allowed_file_types !== undefined) {
+            updatePayload.allowed_file_types = typeof allowed_file_types === 'string'
+                ? allowed_file_types.split(',').map(t => t.trim()).filter(Boolean)
+                : allowed_file_types;
+        }
         if (max_file_size_mb !== undefined) updatePayload.max_file_size_mb = max_file_size_mb != null ? Number(max_file_size_mb) : null;
-        if (allow_resubmission !== undefined) updatePayload.allow_resubmission = allow_resubmission;
+        if (allow_resubmission !== undefined) {
+            updatePayload.allow_resubmission = allow_resubmission === true || allow_resubmission === 'true';
+        }
         if (status !== undefined) updatePayload.status = status;
         if (module_item_id !== undefined) updatePayload.module_item_id = module_item_id || null;
         if (assigned_pages !== undefined) updatePayload.assigned_pages = assigned_pages || null;
@@ -255,17 +315,77 @@ router.patch('/api/assignments/:id', async (req, res) => {
             .single();
 
         if (error) throw error;
-        res.json(data);
+
+        // Handle attachment deletions if requested
+        if (deleted_attachment_ids) {
+            let toDelete: string[] = [];
+            try {
+                toDelete = typeof deleted_attachment_ids === 'string'
+                    ? JSON.parse(deleted_attachment_ids)
+                    : deleted_attachment_ids;
+            } catch {
+                toDelete = [deleted_attachment_ids];
+            }
+            if (Array.isArray(toDelete) && toDelete.length > 0) {
+                await deleteAssignmentAttachments(toDelete);
+            }
+        }
+
+        // Handle new file attachments if uploaded
+        const files: Express.Multer.File[] = Array.isArray(req.files)
+            ? (req.files as Express.Multer.File[])
+            : req.files ? (Object.values(req.files).flat() as Express.Multer.File[]) : [];
+
+        if (files.length > 0) {
+            await saveAssignmentAttachments(id, files);
+        }
+
+        const attachments = await getAssignmentAttachments(id);
+        res.json({ ...data, attachments });
     } catch (error: any) {
         console.error('Error updating assignment:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// DELETE assignment
+// POST upload attachments to an existing assignment
+router.post('/api/assignments/:id/attachments', upload.array('attachments'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const files: Express.Multer.File[] = Array.isArray(req.files)
+            ? (req.files as Express.Multer.File[])
+            : req.files ? (Object.values(req.files).flat() as Express.Multer.File[]) : [];
+
+        if (files.length === 0) {
+            return res.status(400).json({ error: 'No files provided' });
+        }
+
+        const inserted = await saveAssignmentAttachments(id, files);
+        res.status(201).json({ attachments: inserted });
+    } catch (error: any) {
+        console.error('Error adding attachments to assignment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE an attachment
+router.delete('/api/assignments/:id/attachments/:attachmentId', async (req, res) => {
+    try {
+        const { attachmentId } = req.params;
+        await deleteAssignmentAttachments([attachmentId]);
+        res.json({ message: 'Attachment deleted successfully' });
+    } catch (error: any) {
+        console.error('Error deleting attachment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE assignment (with attachment cleanup)
 router.delete('/api/assignments/:id', async (req, res) => {
     try {
         const { id } = req.params;
+
+        await deleteAssignmentAttachmentsByAssignment(id);
 
         const { error } = await supabase
             .from('assignments')
