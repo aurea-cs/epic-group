@@ -6,6 +6,7 @@ interface UserData {
     password: string
     full_name: string
     grade_level: string
+    section?: string
 }
 
 export interface DetailedStudentResult {
@@ -16,6 +17,7 @@ export interface DetailedStudentResult {
     gradeStatus: 'enrolled' | 'already_enrolled' | 'grade_not_found' | 'error' | 'skipped'
     gradeMessage: string
     gradeLevel: string
+    section?: string
 }
 
 interface Results {
@@ -470,32 +472,56 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
             const parsed: UserData[] = []
             let start = 0
 
-            let emailCol = 0, passCol = 1, nameCol = 2, gradeCol = 3
+            let emailCol = 0, passCol = 1, nameCol = 2, gradeCol = 3, sectionCol = -1
 
-            if (lines[0].toLowerCase().includes('email')) {
+            const parseCsvLine = (line: string): string[] => {
+                const result: string[] = []
+                let current = ''
+                let inQuotes = false
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j]
+                    if (char === '"' || char === "'") {
+                        inQuotes = !inQuotes
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current.trim().replace(/^["']|["']$/g, ''))
+                        current = ''
+                    } else {
+                        current += char
+                    }
+                }
+                result.push(current.trim().replace(/^["']|["']$/g, ''))
+                return result
+            }
+
+            if (lines[0].toLowerCase().includes('email') || lines[0].toLowerCase().includes('correo')) {
                 start = 1
-                const headers = lines[0].toLowerCase().split(',').map(h => h.trim())
-                const eIdx = headers.findIndex(h => h.includes('email'))
-                const pIdx = headers.findIndex(h => h.includes('pass'))
+                const headers = parseCsvLine(lines[0].toLowerCase())
+                const eIdx = headers.findIndex(h => h.includes('email') || h.includes('correo'))
+                const pIdx = headers.findIndex(h => h.includes('pass') || h.includes('contras'))
                 const nIdx = headers.findIndex(h => h.includes('name') || h.includes('nombre'))
                 const gIdx = headers.findIndex(h => h.includes('grade') || h.includes('grado') || h.includes('nivel'))
+                const sIdx = headers.findIndex(h => h.includes('section') || h.includes('seccion') || h.includes('sección') || h.includes('grupo') || h.includes('group'))
                 if (eIdx !== -1) emailCol = eIdx
                 if (pIdx !== -1) passCol = pIdx
                 if (nIdx !== -1) nameCol = nIdx
                 if (gIdx !== -1) gradeCol = gIdx
+                if (sIdx !== -1) sectionCol = sIdx
+            } else {
+                sectionCol = 4
             }
 
             for (let i = start; i < lines.length; i++) {
                 const line = lines[i].trim()
                 if (!line) continue
-                const parts = line.split(',')
+                const parts = parseCsvLine(line)
                 if (parts.length >= 3) {
                     const email = parts[emailCol]?.trim() || ''
                     const password = parts[passCol]?.trim() || 'ingles2025'
                     const full_name = parts[nameCol]?.trim() || ''
                     const grade_level = parts[gradeCol]?.trim() || ''
+                    const section = sectionCol !== -1 && parts[sectionCol] ? parts[sectionCol]?.trim() : ''
                     if (email && full_name) {
-                        parsed.push({ email, password, full_name, grade_level })
+                        parsed.push({ email, password, full_name, grade_level, ...(section ? { section } : {}) })
                     }
                 }
             }
@@ -631,7 +657,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
                     <div className="csv-upload-subject">
                         <h4 style={{ color: '#ffffff', textAlign: 'center' }}>Subir Archivo CSV</h4>
                         <div className="csv-helper-text" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                            Formato requerido: <code style={{ color: '#a855f7', background: 'rgba(168,85,247,0.1)' }}>email, password, full_name, grade_level</code>
+                            Formato requerido: <code style={{ color: '#a855f7', background: 'rgba(168,85,247,0.1)' }}>email, password, full_name, grade_level, section (opcional)</code>
                         </div>
                         <input
                             type="file"
@@ -700,7 +726,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ centerId, gradeId
                                     </div>
                                     {item.gradeLevel && (
                                         <div style={{ marginTop: '0.35rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>
-                                            Nivel solicitado: <code style={{ color: '#c084fc', background: 'rgba(192,132,252,0.1)', padding: '1px 5px', borderRadius: '3px' }}>{item.gradeLevel}</code>
+                                            Nivel solicitado: <code style={{ color: '#c084fc', background: 'rgba(192,132,252,0.1)', padding: '1px 5px', borderRadius: '3px' }}>{item.gradeLevel}{item.section ? ` (${item.section})` : ''}</code>
                                         </div>
                                     )}
                                 </div>

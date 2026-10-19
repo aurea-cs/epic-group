@@ -537,7 +537,7 @@ router.post('/api/students/csv-import', async (req, res) => {
     try {
         const { center_id, students } = req.body as {
             center_id: string
-            students: { email: string; password: string; full_name: string; grade_level: string }[]
+            students: { email: string; password: string; full_name: string; grade_level: string; section?: string }[]
         }
 
         if (!center_id) return res.status(400).json({ error: 'center_id is required' })
@@ -546,7 +546,7 @@ router.post('/api/students/csv-import', async (req, res) => {
         // Pre-fetch all grade_levels for this center so we can resolve grade_id without N queries
         const { data: grades, error: gradesErr } = await supabase
             .from('grades_levels')
-            .select('id, name, level')
+            .select('id, name, level, section')
             .eq('center_id', center_id)
 
         if (gradesErr) throw gradesErr
@@ -559,6 +559,7 @@ router.post('/api/students/csv-import', async (req, res) => {
             gradeStatus: 'enrolled' | 'already_enrolled' | 'grade_not_found' | 'error' | 'skipped'
             gradeMessage: string
             gradeLevel: string
+            section?: string
         }[] = []
 
         for (const student of students) {
@@ -569,19 +570,37 @@ router.post('/api/students/csv-import', async (req, res) => {
                 accountMessage: '',
                 gradeStatus: 'skipped' as any,
                 gradeMessage: '',
-                gradeLevel: student.grade_level || ''
+                gradeLevel: student.grade_level || '',
+                section: student.section || ''
             }
 
-            // 1. Parse grade_level string → name + level
-            // Format: "Primaria 1", "Secundaria 3", etc.
+            // 1. Parse grade_level string → name + level + section
+            // Format: "Primaria 1", "Secundaria 3", "Primaria 1 A", etc.
             let gradeName: string | null = null
             let gradeLevel: number | null = null
+            let explicitSection = (student.section || '').trim()
 
             if (student.grade_level) {
                 const parts = student.grade_level.trim().split(/\s+/)
-                if (parts.length === 2) {
-                    gradeName = parts[0]           // e.g. "Primaria"
-                    gradeLevel = parseInt(parts[1], 10) // e.g. 1
+                if (parts.length >= 2) {
+                    const lastPart = parts[parts.length - 1]
+                    const parsedLast = parseInt(lastPart, 10)
+                    if (!isNaN(parsedLast)) {
+                        gradeLevel = parsedLast
+                        gradeName = parts.slice(0, -1).join(' ')
+                    } else if (parts.length >= 3 && !explicitSection) {
+                        // e.g. "Primaria 1 A"
+                        const secondToLast = parseInt(parts[parts.length - 2], 10)
+                        if (!isNaN(secondToLast)) {
+                            gradeLevel = secondToLast
+                            explicitSection = lastPart
+                            result.section = explicitSection
+                            gradeName = parts.slice(0, -2).join(' ')
+                        }
+                    } else {
+                        gradeName = parts[0]
+                        gradeLevel = parseInt(parts[1], 10)
+                    }
                 }
             }
 
@@ -696,13 +715,48 @@ router.post('/api/students/csv-import', async (req, res) => {
                 continue
             }
 
-            const matchedGrade = (grades || []).find(
-                g => g.name.toLowerCase() === gradeName!.toLowerCase() && Number(g.level) === gradeLevel
-            )
+            const targetSection = explicitSection.trim().toLowerCase()
+            let matchedGrade = null
+
+            if (targetSection) {
+                // Match grade by name, level, and section
+                matchedGrade = (grades || []).find(
+                    g => g.name.toLowerCase() === gradeName!.toLowerCase() &&
+                         Number(g.level) === gradeLevel &&
+                         (g.section || '').trim().toLowerCase() === targetSection
+                )
+                // If not found with section, check if there's only one grade for this level without section specified
+                if (!matchedGrade) {
+                    const candidates = (grades || []).filter(
+                        g => g.name.toLowerCase() === gradeName!.toLowerCase() && Number(g.level) === gradeLevel
+                    )
+                    if (candidates.length === 1 && !candidates[0].section) {
+                        matchedGrade = candidates[0]
+                    }
+                }
+            } else {
+                // If no section provided in CSV, prefer grade without section
+                matchedGrade = (grades || []).find(
+                    g => g.name.toLowerCase() === gradeName!.toLowerCase() &&
+                         Number(g.level) === gradeLevel &&
+                         !(g.section || '').trim()
+                )
+                // If not found, fallback if there is only one grade with that name and level
+                if (!matchedGrade) {
+                    const candidates = (grades || []).filter(
+                        g => g.name.toLowerCase() === gradeName!.toLowerCase() && Number(g.level) === gradeLevel
+                    )
+                    if (candidates.length === 1) {
+                        matchedGrade = candidates[0]
+                    }
+                }
+            }
+
+            const gradeDisplay = `${student.grade_level}${explicitSection ? ` ${explicitSection}` : ''}`
 
             if (!matchedGrade) {
                 result.gradeStatus = 'grade_not_found'
-                result.gradeMessage = `Grado "${student.grade_level}" no encontrado en este centro`
+                result.gradeMessage = `Grado "${gradeDisplay}" no encontrado en este centro`
                 results.push(result)
                 continue
             }
@@ -719,7 +773,7 @@ router.post('/api/students/csv-import', async (req, res) => {
 
                 if (!subjects || subjects.length === 0) {
                     result.gradeStatus = 'error'
-                    result.gradeMessage = `El grado "${student.grade_level}" no tiene materias`
+                    result.gradeMessage = `El grado "${gradeDisplay}" no tiene materias`
                     results.push(result)
                     continue
                 }
@@ -742,13 +796,13 @@ router.post('/api/students/csv-import', async (req, res) => {
                     // Unique constraint = already enrolled
                     if (enrollErr.code === '23505') {
                         result.gradeStatus = 'already_enrolled'
-                        result.gradeMessage = `Ya inscrito en ${student.grade_level}`
+                        result.gradeMessage = `Ya inscrito en ${gradeDisplay}`
                     } else {
                         throw enrollErr
                     }
                 } else {
                     result.gradeStatus = 'enrolled'
-                    result.gradeMessage = `Inscrito en ${student.grade_level} exitosamente`
+                    result.gradeMessage = `Inscrito en ${gradeDisplay} exitosamente`
                     // Update user's center_id
                     await supabase.from('users').update({ center_id }).eq('id', userId)
                 }
