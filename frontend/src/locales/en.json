@@ -832,5 +832,32 @@
   "filters": {
     "allLevels": "All grades",
     "allGrades": "All levels"
+  },
+  "impersonation": {
+    "title": "Impersonate User",
+    "searchPlaceholder": "Search by name or email...",
+    "tabAll": "All",
+    "tabStudents": "Students",
+    "tabProfessors": "Professors",
+    "loading": "Loading users...",
+    "noResults": "No users match your search.",
+    "noName": "No name",
+    "impersonateBtn": "Impersonate",
+    "showingOf": "Showing {{shown}} of {{total}} results",
+    "loadMore": "Load more",
+    "warningTitle": "⚠️ Important notice:",
+    "warningBody": "You will enter the system acting exactly as this user. Your actions will be reflected under their account with their RLS permissions. You can return to your admin account at any time by clicking the button on the top banner.",
+    "chooseAnother": "Choose another user",
+    "enterAs": "Enter as {{name}}",
+    "connecting": "Connecting...",
+    "noActiveSession": "No active admin session",
+    "fetchError": "Could not load the user list",
+    "bannerViewingAs": "Viewing as:",
+    "bannerExit": "Return to Admin",
+    "bannerRestoring": "Restoring account...",
+    "bannerExitTitle": "End impersonation session and return to your admin account",
+    "roleStudent": "Student",
+    "roleProfessor": "Professor",
+    "roleUser": "User"
   }
 }

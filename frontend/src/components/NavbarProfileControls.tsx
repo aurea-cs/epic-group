@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useImpersonation } from '../context/ImpersonationContext'
 import './NavbarProfileControls.css'
 
 interface NavbarProfileControlsProps {
   userDisplayName: string
+  userRole?: string
   onNavigate: (path: string) => void
   onLogout?: () => Promise<void> | void
   onOpenNotifications?: () => void
@@ -26,6 +28,7 @@ const getInitials = (name: string) => {
 
 const NavbarProfileControls: React.FC<NavbarProfileControlsProps> = ({
   userDisplayName,
+  userRole,
   onNavigate,
   onLogout,
   // onOpenNotifications,
@@ -36,6 +39,7 @@ const NavbarProfileControls: React.FC<NavbarProfileControlsProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const { isImpersonating, openModal, exitImpersonation } = useImpersonation()
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -114,6 +118,38 @@ const NavbarProfileControls: React.FC<NavbarProfileControlsProps> = ({
               <span className="dropdown-item-icon" aria-hidden="true">👤</span>
               <span>Ver perfil</span>
             </button>
+
+            {userRole === 'admin' && !isImpersonating && (
+              <button
+                className="dropdown-item"
+                type="button"
+                onClick={() => {
+                  setIsOpen(false)
+                  openModal()
+                }}
+                role="menuitem"
+              >
+                <span className="dropdown-item-icon" aria-hidden="true">🎭</span>
+                <span>Suplantar usuario</span>
+              </button>
+            )}
+
+            {isImpersonating && (
+              <button
+                className="dropdown-item"
+                type="button"
+                onClick={() => {
+                  setIsOpen(false)
+                  exitImpersonation()
+                }}
+                role="menuitem"
+                style={{ color: '#fbbf24' }}
+              >
+                <span className="dropdown-item-icon" aria-hidden="true">↩</span>
+                <span>Volver a Administrador</span>
+              </button>
+            )}
+
             {settingsPath && (
               <button
                 className="dropdown-item"

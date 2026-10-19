@@ -123,6 +123,7 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
             <LanguageToggle />
             <NavbarProfileControls
               userDisplayName={userDisplayName}
+              userRole={userRole}
               onNavigate={onNavigate}
               onLogout={onLogout}
               logoutLoading={logoutLoading}

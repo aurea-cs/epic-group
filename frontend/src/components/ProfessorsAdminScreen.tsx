@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import './ProfessorsAdminScreen.css'
 import CustomSelect from './general/CustomSelect'
 import { getUserRole } from '../utils/getUserRole'
+import { useImpersonation } from '../context/ImpersonationContext'
 
 function formatTime(totalSeconds?: number): string {
   if (!totalSeconds) return '0m 0s'
@@ -309,6 +310,7 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
 
   const userRole = getUserRole(user)
   const isAdmin = userRole === 'admin'
+  const { startImpersonation } = useImpersonation()
 
   const fetchProfessors = useCallback(async () => {
     setLoading(true)
@@ -489,6 +491,11 @@ const ProfessorsAdminScreen: React.FC<ProfessorsAdminScreenProps> = ({ user }) =
                       </td>
                       <td style={tdStyle}>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <ActionButton label="🎭 Suplantar" bg="rgba(245,158,11,0.13)" hoverBg="rgba(245,158,11,0.25)" textColor="#fbbf24" border="1px solid rgba(245,158,11,0.3)" onClick={() => {
+                            if (window.confirm(`¿Iniciar sesión simulada como profesor: ${professor.name}?`)) {
+                              startImpersonation(professor.id)
+                            }
+                          }} />
                           <ActionButton label={t('adminProfessors.activityBtn')} bg="rgba(192,132,252,0.15)" hoverBg="rgba(192,132,252,0.25)" textColor="#d8b4fe" border="1px solid rgba(192,132,252,0.3)" onClick={() => navigate(`/user-activity/${professor.id}`, { state: { userName: professor.name } })} />
                           <ActionButton label={t('adminProfessors.editBtn')} bg="rgba(255,255,255,0.05)" hoverBg="rgba(255,255,255,0.1)" textColor="#fff" border="1px solid rgba(255,255,255,0.15)" onClick={() => setEditingProfessor(professor)} />
                           <ActionButton label={t('adminProfessors.deleteBtnIcon')} bg="rgba(239,68,68,0.1)" hoverBg="rgba(239,68,68,0.22)" textColor="#fca5a5" border="1px solid rgba(239,68,68,0.22)" onClick={() => setDeletingProfessor(professor)} />

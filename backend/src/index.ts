@@ -24,7 +24,8 @@ import {
     aiRouter,
     quizzesRouter,
     curriculumRouter,
-    thinkBlocksRouter
+    thinkBlocksRouter,
+    impersonationRouter
 } from './routes';
 
 const app = express();
@@ -55,6 +56,7 @@ app.use('/api/ai', aiRouter);
 app.use('/api/quizzes', quizzesRouter);
 app.use('/api/curriculum', curriculumRouter);
 app.use('/api/think-blocks', thinkBlocksRouter);
+app.use(impersonationRouter);
 // ── Utility Routes ─────────────────────────────────────────────────────────────
 
 // Basic Route

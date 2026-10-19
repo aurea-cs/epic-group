@@ -540,5 +540,32 @@
   "filters": {
     "allLevels": "Todos los grados",
     "allGrades": "Todos los niveles"
+  },
+  "impersonation": {
+    "title": "Suplantar Usuario",
+    "searchPlaceholder": "Buscar por nombre o correo electrónico...",
+    "tabAll": "Todos",
+    "tabStudents": "Estudiantes",
+    "tabProfessors": "Profesores",
+    "loading": "Cargando usuarios...",
+    "noResults": "No se encontraron usuarios que coincidan con la búsqueda.",
+    "noName": "Sin nombre",
+    "impersonateBtn": "Suplantar",
+    "showingOf": "Mostrando {{shown}} de {{total}} resultados",
+    "loadMore": "Cargar más",
+    "warningTitle": "⚠️ Aviso importante:",
+    "warningBody": "Entrarás al sistema actuando exactamente como este usuario. Tus acciones se reflejarán bajo su cuenta con sus permisos de RLS. Podrás volver a tu cuenta de administrador en cualquier momento haciendo clic en el botón del banner superior.",
+    "chooseAnother": "Elegir otro usuario",
+    "enterAs": "Entrar como {{name}}",
+    "connecting": "Conectando...",
+    "noActiveSession": "No hay sesión de administrador activa",
+    "fetchError": "No se pudo cargar la lista de usuarios",
+    "bannerViewingAs": "Viendo como:",
+    "bannerExit": "Volver a Administrador",
+    "bannerRestoring": "Restaurando cuenta...",
+    "bannerExitTitle": "Finalizar sesión simulada y volver a tu cuenta de administrador",
+    "roleStudent": "Estudiante",
+    "roleProfessor": "Profesor",
+    "roleUser": "Usuario"
   }
 }

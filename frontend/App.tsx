@@ -32,6 +32,9 @@ import UserActivityScreen from './src/components/UserActivityScreen'
 import ActivityTracker from './src/components/ActivityTracker'
 import { getUserRole } from './src/utils/getUserRole'
 import ProfessorsAdminScreen from './src/components/ProfessorsAdminScreen'
+import { ImpersonationProvider } from './src/context/ImpersonationContext'
+import ImpersonationBanner from './src/components/impersonation/ImpersonationBanner'
+import ImpersonationModal from './src/components/impersonation/ImpersonationModal'
 // import LandingPage from './src/components/LandingPage'
 import './App.css'
 import 'material-icons/iconfont/outlined.css';
@@ -110,67 +113,71 @@ function App() {
   const userRole = getUserRole(user)
 
   return (
-    <Router>
-      {user && <ActivityTracker role={userRole} />}
-      <div className="App">
-        <Routes>
-          <Route
-            path="/login"
-            element={user ? <Navigate to="/dashboard" replace /> : <LoginScreen />}
-          />
-          <Route
-            path="/*"
-            element={
-              user ? (
-                <MainLayout user={user}>
-                  <Routes>
-                    <Route path="/dashboard" element={<DashboardScreen user={user} />} />
-                    <Route path="/course/:courseId" element={<CourseDetailScreen user={user} />} />
-                    <Route path="/progress" element={<ProgressScreen user={user} />} />
-                    <Route path="/students" element={<StudentsAdminScreen user={user} />} />
-                    <Route path="/professors" element={<ProfessorsAdminScreen user={user} />} />
-                    <Route path="/user-activity/:userId" element={<UserActivityScreen />} />
-                    <Route path="/content" element={<ExtraContentScreen user={user} />} />
-                    <Route path="/schedule" element={<ScheduleScreen user={user} />} />
-                    <Route path="/calendar" element={<CalendarScreen user={user} />} />
-                    <Route path="/alumnos" element={<StudentsScreen user={user} />} />
-                    <Route path="/alumnos/:studentId" element={<StudentProgressScreen user={user} />} />
-                    <Route path="/calificaciones" element={<GradesScreen user={user} />} />
-                    <Route path="/course/:courseId/content/:resourceId" element={<CoursePdfViewerScreen user={user} />} />
-                    <Route path="/profile" element={<ProfileScreen user={user} />} />
-                    <Route path="/admin" element={<HierarchyConfig user={user} />} />
-                    <Route path="/admin/school/:centerId" element={<SchoolDetailScreen user={user} />} />
-                    <Route path="/admin/school/:centerId/grade/:gradeId/course/new" element={<CourseFormScreen user={user} />} />
-                    <Route path="/admin/school/:centerId/grade/:gradeId/course/:courseId/edit" element={<CourseFormScreen user={user} />} />
-                    <Route path="/admin/school/:centerId/grade/:gradeId/course/:courseId/content" element={<CourseContentScreen user={user} />} />
-                    <Route path="/upload-content" element={user.user_metadata?.role === 'admin' ? <UploadContentScreen user={user} /> : <Navigate to="/dashboard" replace />} />
-                    <Route path="/assignments" element={<AssignmentsScreen user={user} />} />
-                    <Route path="/professor/assignments/courses" element={<ProfessorAssignmentCoursesScreen user={user} />} />
-                    <Route path="/professor/assignments/courses/:courseId/content" element={<ProfessorAssignmentContentScreen user={user} />} />
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/assignments/:assignmentId" element={<AssignmentDetailScreen user={user} />} />                  </Routes>
-                </MainLayout>
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route path="/course/:courseId/module/:moduleId/pdf" element={<PdfViewerPage />} />
-          <Route
-            path="/assignments"
-            element={user ? <AssignmentsScreen user={user} /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/course/:courseId/planet/:planetId"
-            element={user ? <PlanetDetailScreen user={user} /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/course/:courseId/module/:moduleId/items"
-            element={user ? <ModuleDraftScreen user={user} /> : <Navigate to="/login" replace />}
-          />
-        </Routes>
-      </div>
-    </Router>
+    <ImpersonationProvider>
+      <Router>
+        <ImpersonationBanner />
+        <ImpersonationModal />
+        {user && <ActivityTracker role={userRole} />}
+        <div className="App">
+          <Routes>
+            <Route
+              path="/login"
+              element={user ? <Navigate to="/dashboard" replace /> : <LoginScreen />}
+            />
+            <Route
+              path="/*"
+              element={
+                user ? (
+                  <MainLayout user={user}>
+                    <Routes>
+                      <Route path="/dashboard" element={<DashboardScreen user={user} />} />
+                      <Route path="/course/:courseId" element={<CourseDetailScreen user={user} />} />
+                      <Route path="/progress" element={<ProgressScreen user={user} />} />
+                      <Route path="/students" element={<StudentsAdminScreen user={user} />} />
+                      <Route path="/professors" element={<ProfessorsAdminScreen user={user} />} />
+                      <Route path="/user-activity/:userId" element={<UserActivityScreen />} />
+                      <Route path="/content" element={<ExtraContentScreen user={user} />} />
+                      <Route path="/schedule" element={<ScheduleScreen user={user} />} />
+                      <Route path="/calendar" element={<CalendarScreen user={user} />} />
+                      <Route path="/alumnos" element={<StudentsScreen user={user} />} />
+                      <Route path="/alumnos/:studentId" element={<StudentProgressScreen user={user} />} />
+                      <Route path="/calificaciones" element={<GradesScreen user={user} />} />
+                      <Route path="/course/:courseId/content/:resourceId" element={<CoursePdfViewerScreen user={user} />} />
+                      <Route path="/profile" element={<ProfileScreen user={user} />} />
+                      <Route path="/admin" element={<HierarchyConfig user={user} />} />
+                      <Route path="/admin/school/:centerId" element={<SchoolDetailScreen user={user} />} />
+                      <Route path="/admin/school/:centerId/grade/:gradeId/course/new" element={<CourseFormScreen user={user} />} />
+                      <Route path="/admin/school/:centerId/grade/:gradeId/course/:courseId/edit" element={<CourseFormScreen user={user} />} />
+                      <Route path="/admin/school/:centerId/grade/:gradeId/course/:courseId/content" element={<CourseContentScreen user={user} />} />
+                      <Route path="/upload-content" element={user.user_metadata?.role === 'admin' ? <UploadContentScreen user={user} /> : <Navigate to="/dashboard" replace />} />
+                      <Route path="/assignments" element={<AssignmentsScreen user={user} />} />
+                      <Route path="/professor/assignments/courses" element={<ProfessorAssignmentCoursesScreen user={user} />} />
+                      <Route path="/professor/assignments/courses/:courseId/content" element={<ProfessorAssignmentContentScreen user={user} />} />
+                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                      <Route path="/assignments/:assignmentId" element={<AssignmentDetailScreen user={user} />} />                  </Routes>
+                  </MainLayout>
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
+            />
+            <Route path="/course/:courseId/module/:moduleId/pdf" element={<PdfViewerPage />} />
+            <Route
+              path="/assignments"
+              element={user ? <AssignmentsScreen user={user} /> : <Navigate to="/login" replace />}
+            />
+            <Route
+              path="/course/:courseId/planet/:planetId"
+              element={user ? <PlanetDetailScreen user={user} /> : <Navigate to="/login" replace />}
+            />
+            <Route
+              path="/course/:courseId/module/:moduleId/items"
+              element={user ? <ModuleDraftScreen user={user} /> : <Navigate to="/login" replace />}
+            />
+          </Routes>
+        </div>
+      </Router>
+    </ImpersonationProvider>
   )
 }
 

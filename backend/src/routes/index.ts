@@ -17,3 +17,4 @@ export { default as quizzesRouter } from './quizzes';
 export { default as curriculumRouter } from './curriculum';
 export { default as thinkBlocksRouter } from './thinkBlocks';
 export { default as aiRouter } from './ai';
+export { default as impersonationRouter } from './impersonation';
