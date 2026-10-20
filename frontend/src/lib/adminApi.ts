@@ -144,6 +144,7 @@ export interface ModuleItem {
     is_visible: boolean
     show_student?: boolean
     show_teacher?: boolean
+    audience?: 'student' | 'teacher'
     created_at: string
     updated_at: string
     image_url?: string
@@ -880,7 +881,7 @@ export const copyModuleToSubject = async (
 
 export const createModuleItem = async (
     moduleId: string,
-    data: Partial<ModuleItem>
+    data: Partial<ModuleItem> & { audience?: 'student' | 'teacher' }
 ): Promise<ModuleItem> => {
     try {
         const response = await fetch(`${API_URL}/api/modules/${moduleId}/items`, {
@@ -888,7 +889,10 @@ export const createModuleItem = async (
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
         })
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        if (!response.ok) {
+            const errBody = await response.json().catch(() => ({}))
+            throw new Error(errBody.error || errBody.message || `HTTP error! status: ${response.status}`)
+        }
         return await response.json()
     } catch (error) {
         console.error('Error creating item:', error)
@@ -899,7 +903,7 @@ export const createModuleItem = async (
 export const uploadModuleItem = async (
     moduleId: string,
     file: File,
-    data: { title: string, description?: string, order_index?: number, is_editable?: boolean }
+    data: { title: string, description?: string, order_index?: number, is_editable?: boolean, audience?: 'student' | 'teacher' }
 ): Promise<ModuleItem> => {
     try {
         const formData = new FormData()
@@ -908,6 +912,7 @@ export const uploadModuleItem = async (
         if (data.description) formData.append('description', data.description)
         if (data.order_index) formData.append('order_index', data.order_index.toString())
         if (data.is_editable !== undefined) formData.append('is_editable', data.is_editable.toString())
+        if (data.audience) formData.append('audience', data.audience)
 
         const response = await fetch(`${API_URL}/api/modules/${moduleId}/items/upload`, {
             method: 'POST',

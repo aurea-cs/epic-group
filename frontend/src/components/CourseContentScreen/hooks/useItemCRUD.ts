@@ -9,6 +9,7 @@ import {
 } from '../../../lib/adminApi'
 
 type ItemType = 'pdf' | 'video' | 'link'
+type AudienceType = 'student' | 'teacher'
 
 interface ItemForm {
     type: ItemType
@@ -17,6 +18,7 @@ interface ItemForm {
     content_url: string
     image_url: string
     is_editable: boolean
+    audience: AudienceType
 }
 
 interface EditItemForm {
@@ -25,6 +27,7 @@ interface EditItemForm {
     content_url: string
     image_url: string
     is_editable: boolean
+    audience: AudienceType
 }
 
 export function useItemCRUD(onSuccess: () => Promise<void>) {
@@ -38,6 +41,7 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
         content_url: '',
         image_url: '',
         is_editable: false,
+        audience: 'student',
     })
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [saving, setSaving] = useState(false)
@@ -51,6 +55,7 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
         content_url: '',
         image_url: '',
         is_editable: false,
+        audience: 'student',
     })
 
     // Delete confirm state
@@ -68,6 +73,7 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
             content_url: '',
             image_url: '',
             is_editable: false,
+            audience: 'student',
         })
         setSelectedFile(null)
         setShowAddModal(true)
@@ -83,6 +89,7 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
                     description: itemForm.description,
                     order_index: 999,
                     is_editable: false,
+                    audience: itemForm.audience,
                 })
             } else {
                 await createModuleItem(activeModuleId, {
@@ -109,6 +116,7 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
             content_url: item.content_url || '',
             image_url: item.image_url || '',
             is_editable: false,
+            audience: item.show_teacher && !item.show_student ? 'teacher' : 'student',
         })
         setShowEditModal(true)
     }
@@ -123,6 +131,7 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
                 content_url: editItemForm.content_url,
                 image_url: editItemForm.image_url || undefined,
                 is_editable: false,
+                audience: editItemForm.audience,
             })
             await onSuccess()
             setShowEditModal(false)
