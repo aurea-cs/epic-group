@@ -8,6 +8,7 @@ interface EditItemForm {
     content_url: string
     image_url: string
     is_editable: boolean
+    audience: 'student' | 'teacher'
 }
 
 interface EditItemModalProps {
@@ -29,11 +30,68 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
 }) => (
     <div className="modal-overlay" onClick={onClose}>
         <div className="school-modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-                <h2>Editar Contenido</h2>
-            </div>
 
             <div className="form-grid">
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label style={{ marginBottom: '8px', display: 'block' }}>Audiencia</label>
+                    <div style={{
+                        display: 'flex',
+                        background: 'rgba(31, 41, 90, 0.06)',
+                        padding: '4px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(31, 41, 90, 0.12)',
+                        minHeight: '44px',
+                        boxSizing: 'border-box',
+                    }}>
+                        <button
+                            type="button"
+                            onClick={() => onFormChange({ ...editItemForm, audience: 'student' })}
+                            style={{
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                transition: 'all 0.2s ease',
+                                background: editItemForm.audience === 'student' ? '#10b981' : 'transparent',
+                                color: editItemForm.audience === 'student' ? '#ffffff' : '#64748b',
+                                boxShadow: editItemForm.audience === 'student' ? '0 2px 6px rgba(16, 185, 129, 0.35)' : 'none',
+                            }}
+                        >
+                            <span>🎓</span>
+                            <span>Estudiantes</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onFormChange({ ...editItemForm, audience: 'teacher' })}
+                            style={{
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                transition: 'all 0.2s ease',
+                                background: editItemForm.audience === 'teacher' ? '#8b5cf6' : 'transparent',
+                                color: editItemForm.audience === 'teacher' ? '#ffffff' : '#64748b',
+                                boxShadow: editItemForm.audience === 'teacher' ? '0 2px 6px rgba(139, 92, 246, 0.35)' : 'none',
+                            }}
+                        >
+                            <span>📚</span>
+                            <span>Profesores</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
                     <label>Título</label>
                     <input

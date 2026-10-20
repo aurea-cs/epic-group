@@ -157,21 +157,24 @@ router.post('/api/modules/:moduleId/duplicate', async (req, res) => {
 
         // 5. Insert duplicate items (referencing same storage files)
         if (srcItems && srcItems.length > 0) {
-            const duplicateItems = srcItems.map((item: any) => ({
-                module_id: newModule.id,
-                type: item.type,
-                title: item.title,
-                title_en: item.title_en ?? null,
-                description: item.description ?? null,
-                description_en: item.description_en ?? null,
-                content_url: item.content_url ?? null,
-                image_url: item.image_url ?? null,
-                order_index: item.order_index,
-                is_visible: item.is_visible,
-                show_student: item.show_student ?? null,
-                show_teacher: item.show_teacher ?? null,
-                is_editable: item.is_editable ?? false,
-            }));
+            const duplicateItems = srcItems.map((item: any) => {
+                const isTeacher = item.show_teacher === true && !item.show_student;
+                return {
+                    module_id: newModule.id,
+                    type: item.type,
+                    title: item.title,
+                    title_en: item.title_en ?? null,
+                    description: item.description ?? null,
+                    description_en: item.description_en ?? null,
+                    content_url: item.content_url ?? null,
+                    image_url: item.image_url ?? null,
+                    order_index: item.order_index,
+                    is_visible: item.is_visible,
+                    show_student: !isTeacher,
+                    show_teacher: isTeacher,
+                    is_editable: item.is_editable ?? false,
+                };
+            });
 
             const { error: insertItemsErr } = await supabase
                 .from('module_items')
@@ -293,7 +296,13 @@ router.delete('/api/modules/:id', async (req, res) => {
 router.post('/api/modules/:moduleId/items', async (req, res) => {
     try {
         const { moduleId } = req.params;
-        const { type, title, description, content_url, order_index, image_url, is_editable } = req.body;
+        const { type, title, description, content_url, order_index, image_url, is_editable, audience, show_student: bodyStudent, show_teacher: bodyTeacher } = req.body;
+
+        // Resolve audience flags (default: student). The DB constraint requires exactly one of
+        // show_student or show_teacher to be true (they are mutually exclusive).
+        const resolvedAudience = audience ? audience : (bodyTeacher && !bodyStudent ? 'teacher' : 'student');
+        const show_student = resolvedAudience === 'student';
+        const show_teacher = resolvedAudience === 'teacher';
 
         const title_en = await translateToEnglish(title);
         const description_en = description ? await translateToEnglish(description) : null;
@@ -311,7 +320,9 @@ router.post('/api/modules/:moduleId/items', async (req, res) => {
                 order_index,
                 image_url,
                 is_visible: true,
-                is_editable: is_editable ?? false
+                is_editable: is_editable ?? false,
+                show_student,
+                show_teacher,
             })
             .select()
             .single();
@@ -329,11 +340,16 @@ router.post('/api/modules/:moduleId/items/upload', upload.single('file'), async 
     try {
         const { moduleId } = req.params;
         const file = req.file;
-        const { title, description, order_index, is_editable } = req.body;
+        const { title, description, order_index, is_editable, audience } = req.body;
 
         if (!file) {
             return res.status(400).json({ error: 'No file provided' });
         }
+
+        // Resolve audience flags (default: student).
+        const resolvedAudience = audience === 'teacher' ? 'teacher' : 'student';
+        const show_student = resolvedAudience === 'student';
+        const show_teacher = resolvedAudience === 'teacher';
 
         // Generate file path
         const timestamp = Date.now();
@@ -367,7 +383,9 @@ router.post('/api/modules/:moduleId/items/upload', upload.single('file'), async 
                 content_url: filePath,
                 order_index: order_index || 999,
                 is_visible: true,
-                is_editable: is_editable === 'true' || is_editable === true
+                is_editable: is_editable === 'true' || is_editable === true,
+                show_student,
+                show_teacher,
             })
             .select()
             .single();
@@ -438,21 +456,24 @@ router.post('/api/modules/:moduleId/copy-to/:targetSubjectId', async (req, res) 
         if (itemsErr) throw itemsErr;
 
         if (srcItems && srcItems.length > 0) {
-            const copiedItems = srcItems.map((item: any) => ({
-                module_id: newModule.id,
-                type: item.type,
-                title: item.title,
-                title_en: item.title_en ?? null,
-                description: item.description ?? null,
-                description_en: item.description_en ?? null,
-                content_url: item.content_url ?? null,
-                image_url: item.image_url ?? null,
-                order_index: item.order_index,
-                is_visible: item.is_visible,
-                show_student: item.show_student ?? null,
-                show_teacher: item.show_teacher ?? null,
-                is_editable: item.is_editable ?? false,
-            }));
+            const copiedItems = srcItems.map((item: any) => {
+                const isTeacher = item.show_teacher === true && !item.show_student;
+                return {
+                    module_id: newModule.id,
+                    type: item.type,
+                    title: item.title,
+                    title_en: item.title_en ?? null,
+                    description: item.description ?? null,
+                    description_en: item.description_en ?? null,
+                    content_url: item.content_url ?? null,
+                    image_url: item.image_url ?? null,
+                    order_index: item.order_index,
+                    is_visible: item.is_visible,
+                    show_student: !isTeacher,
+                    show_teacher: isTeacher,
+                    is_editable: item.is_editable ?? false,
+                };
+            });
 
             const { error: insertItemsErr } = await supabase.from('module_items').insert(copiedItems);
             if (insertItemsErr) throw insertItemsErr;
