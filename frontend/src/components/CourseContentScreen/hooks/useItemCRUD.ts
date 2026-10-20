@@ -83,6 +83,10 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
         if (!activeModuleId) return
         setSaving(true)
         try {
+            // Translate the frontend-only 'audience' into the actual DB flags
+            const show_student = itemForm.audience === 'student'
+            const show_teacher = itemForm.audience === 'teacher'
+
             if (itemForm.type === 'pdf' && selectedFile) {
                 await uploadModuleItem(activeModuleId, selectedFile, {
                     title: itemForm.title,
@@ -93,10 +97,16 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
                 })
             } else {
                 await createModuleItem(activeModuleId, {
-                    ...itemForm,
-                    is_editable: false,
+                    type: itemForm.type,
+                    title: itemForm.title,
+                    description: itemForm.description,
+                    content_url: itemForm.content_url,
                     image_url: itemForm.image_url || undefined,
+                    is_editable: false,
                     order_index: 999,
+                    show_student,
+                    show_teacher,
+                    audience: itemForm.audience,
                 })
             }
             await onSuccess()
@@ -125,13 +135,18 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
         if (!editingItem) return
         setSaving(true)
         try {
+            // Translate the frontend-only 'audience' into the actual DB flags
+            const show_student = editItemForm.audience === 'student'
+            const show_teacher = editItemForm.audience === 'teacher'
+
             await updateModuleItem(editingItem.id, {
                 title: editItemForm.title,
                 description: editItemForm.description,
                 content_url: editItemForm.content_url,
                 image_url: editItemForm.image_url || undefined,
                 is_editable: false,
-                audience: editItemForm.audience,
+                show_student,
+                show_teacher,
             })
             await onSuccess()
             setShowEditModal(false)

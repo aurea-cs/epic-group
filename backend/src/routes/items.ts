@@ -7,10 +7,16 @@ const router = Router();
 router.put('/api/items/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, content_url, order_index, is_visible, image_url, is_editable, audience } = req.body;
+        const { title, description, content_url, order_index, is_visible, image_url, is_editable, audience, show_student, show_teacher } = req.body;
 
         const updateData: any = { title, description, content_url, order_index, is_visible, image_url, is_editable };
-        if (audience === 'student') {
+
+        // Prefer explicit show_student/show_teacher flags (the real DB columns).
+        // Fall back to translating the virtual 'audience' field for backward compat.
+        if (show_student !== undefined && show_teacher !== undefined) {
+            updateData.show_student = show_student;
+            updateData.show_teacher = show_teacher;
+        } else if (audience === 'student') {
             updateData.show_student = true;
             updateData.show_teacher = false;
         } else if (audience === 'teacher') {
