@@ -770,8 +770,8 @@
     "enter": "Enter",
     "questionSingle": "question",
     "questionPlural": "questions",
-    "experimentSingle": "experiment",
-    "experimentPlural": "experiments",
+    "experimentSingle": "aditional fact",
+    "experimentPlural": "aditional facts",
     "activities": "activities",
     "translateButton": "Translate",
     "translateToEnglish": "English",
@@ -781,7 +781,15 @@
     "defaultExitTicketDescription": "Quick assessment quiz to verify your learning at the end of this module.",
     "defaultQuizDescription": "Assessment quiz to test your knowledge about this module.",
     "defaultVrDescription": "Explore an immersive world where virtual reality transports you to new dimensions.",
-    "noUrlAlert": "This content does not have a configured URL yet."
+    "noUrlAlert": "This content does not have a configured URL yet.",
+    "assignments": "ASSIGNMENTS",
+    "assignment": "Assignment",
+    "viewAssignment": "View Assignment",
+    "defaultAssignmentDescription": "Assignment assigned to reinforce the knowledge in this module.",
+    "submitted": "Submitted",
+    "graded": "Graded",
+    "overdue": "Overdue",
+    "due": "Due"
   },
   "thinkBlockViewer": {
     "back": "Back to Module",

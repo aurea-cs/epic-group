@@ -1,0 +1,1 @@
+export type ViewPdfHandler = (url: string, itemId: string, isEditable: boolean) => void

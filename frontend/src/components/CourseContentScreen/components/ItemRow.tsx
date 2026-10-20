@@ -41,27 +41,17 @@ const ItemRow: React.FC<ItemRowProps> = ({
             <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.35rem' }}>
                 <span style={{
                     fontSize: '0.72rem',
-                    color: item.show_student ? '#6ee7a8' : 'rgba(255,255,255,0.35)',
+                    color: item.show_student ? '#6ee7a8' : '#c4b5fd',
                     display: 'flex', alignItems: 'center', gap: '0.25rem',
                 }}>
                     <span style={{
                         width: 6, height: 6, borderRadius: '50%',
-                        background: item.show_student ? '#6ee7a8' : 'rgba(255,255,255,0.3)',
+                        background: item.show_student ? '#6ee7a8' : '#c4b5fd',
                         display: 'inline-block',
                     }} />
-                    {i18n.language.startsWith('en') ? 'Students' : 'Estudiantes'}
-                </span>
-                <span style={{
-                    fontSize: '0.72rem',
-                    color: item.show_teacher ? '#c4b5fd' : 'rgba(255,255,255,0.35)',
-                    display: 'flex', alignItems: 'center', gap: '0.25rem',
-                }}>
-                    <span style={{
-                        width: 6, height: 6, borderRadius: '50%',
-                        background: item.show_teacher ? '#c4b5fd' : 'rgba(255,255,255,0.3)',
-                        display: 'inline-block',
-                    }} />
-                    {i18n.language.startsWith('en') ? 'Teachers' : 'Profesores'}
+                    {item.show_student
+                        ? (i18n.language.startsWith('en') ? 'Students' : 'Estudiantes')
+                        : (i18n.language.startsWith('en') ? 'Teachers' : 'Profesores')}
                 </span>
             </div>
         </div>

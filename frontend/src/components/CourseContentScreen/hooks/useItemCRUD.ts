@@ -4,8 +4,7 @@ import {
     uploadModuleItem,
     deleteModuleItem,
     updateModuleItem,
-    toggleItemVisibility,
-    toggleItemVisibilityProfessor,
+    setItemAudience,
     type ModuleItem,
 } from '../../../lib/adminApi'
 
@@ -145,25 +144,29 @@ export function useItemCRUD(onSuccess: () => Promise<void>) {
         setConfirmDelete(null)
     }
 
+    /** Flip the item's audience: if currently student → teacher, otherwise → student. */
     const toggleStudentVisibility = async (item: ModuleItem) => {
+        const next = item.show_student ? 'teacher' : 'student'
         try {
             setVisibilityLoading(item.id)
-            await toggleItemVisibility(item.id, !item.show_student)
+            await setItemAudience(item.id, next)
             await onSuccess()
         } catch (err: any) {
-            alert(err.message || 'Error al cambiar visibilidad para estudiantes')
+            alert(err.message || 'Error al cambiar audiencia del elemento')
         } finally {
             setVisibilityLoading(null)
         }
     }
 
+    /** Flip the item's audience: if currently teacher → student, otherwise → teacher. */
     const toggleProfessorVisibility = async (item: ModuleItem) => {
+        const next = item.show_teacher ? 'student' : 'teacher'
         try {
             setVisibilityLoading(item.id)
-            await toggleItemVisibilityProfessor(item.id, !item.show_teacher)
+            await setItemAudience(item.id, next)
             await onSuccess()
         } catch (err: any) {
-            alert(err.message || 'Error al cambiar visibilidad para profesores')
+            alert(err.message || 'Error al cambiar audiencia del elemento')
         } finally {
             setVisibilityLoading(null)
         }

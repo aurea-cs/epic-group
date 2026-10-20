@@ -42,19 +42,24 @@ router.delete('/api/items/:id', async (req, res) => {
     }
 });
 
-// Toggle item visibility for professors
-router.patch('/api/module-items-p/:itemId', async (req, res) => {
+// Set item audience: exclusively student or teacher.
+// Sending { audience: 'student' } sets show_student=true, show_teacher=false and vice-versa.
+router.patch('/api/module-items/:itemId/audience', async (req, res) => {
     try {
         const { itemId } = req.params;
-        const { show_teacher } = req.body;
+        const { audience } = req.body;
 
-        if (typeof show_teacher !== 'boolean') {
-            return res.status(400).json({ error: 'show_teacher must be a boolean' });
+        if (audience !== 'student' && audience !== 'teacher') {
+            return res.status(400).json({ error: "audience must be 'student' or 'teacher'" });
         }
+
+        const update = audience === 'student'
+            ? { show_student: true, show_teacher: false }
+            : { show_student: false, show_teacher: true };
 
         const { data, error } = await supabase
             .from('module_items')
-            .update({ show_teacher })
+            .update(update)
             .eq('id', itemId)
             .select()
             .single();
@@ -62,34 +67,49 @@ router.patch('/api/module-items-p/:itemId', async (req, res) => {
         if (error) throw error;
         res.json(data);
     } catch (error: any) {
-        console.error('Error toggling item visibility for professors:', error);
+        console.error('Error setting item audience:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Toggle item visibility for students
+// Legacy: keep old routes for backward compatibility but delegate to the same logic
+router.patch('/api/module-items-p/:itemId', async (req, res) => {
+    try {
+        const { itemId } = req.params;
+        const { show_teacher } = req.body;
+        if (typeof show_teacher !== 'boolean') {
+            return res.status(400).json({ error: 'show_teacher must be a boolean' });
+        }
+        const update = show_teacher
+            ? { show_student: false, show_teacher: true }
+            : { show_teacher: false };
+        const { data, error } = await supabase
+            .from('module_items').update(update).eq('id', itemId).select().single();
+        if (error) throw error;
+        res.json(data);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 router.patch('/api/module-items/:itemId', async (req, res) => {
     try {
         const { itemId } = req.params;
         const { show_student } = req.body;
-
         if (typeof show_student !== 'boolean') {
             return res.status(400).json({ error: 'show_student must be a boolean' });
         }
-
+        const update = show_student
+            ? { show_student: true, show_teacher: false }
+            : { show_student: false };
         const { data, error } = await supabase
-            .from('module_items')
-            .update({ show_student })
-            .eq('id', itemId)
-            .select()
-            .single();
-
+            .from('module_items').update(update).eq('id', itemId).select().single();
         if (error) throw error;
         res.json(data);
     } catch (error: any) {
-        console.error('Error toggling item visibility:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
 export default router;
+
