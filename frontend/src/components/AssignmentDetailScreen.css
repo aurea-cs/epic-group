@@ -11,21 +11,6 @@
   padding-top: 3rem;
 }
 
-.assignment-back-btn {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  margin-bottom: 1.25rem;
-}
-
-.assignment-back-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
 .assignment-header-card {
   background: white;
   border-radius: 16px;

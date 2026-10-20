@@ -152,8 +152,6 @@ const AssignmentDetailScreen: React.FC<AssignmentDetailScreenProps> = ({ user })
 
   return (
     <div className="assignment-detail-container">
-      <button className="assignment-back-btn" onClick={() => navigate(-1)}>‹ Volver al calendario</button>
-
       <div className="assignment-header-card">
         <div className="assignment-header-top">
           {assignment.subjects && (

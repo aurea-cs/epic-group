@@ -984,6 +984,21 @@ export const toggleItemVisibilityProfessor = async (itemId: string, show_teacher
     }
 }
 
+/** Exclusively assign an item to either students or teachers (mutually exclusive). */
+export const setItemAudience = async (itemId: string, audience: 'student' | 'teacher'): Promise<void> => {
+    try {
+        const response = await fetch(`${API_URL}/api/module-items/${itemId}/audience`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audience }),
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    } catch (error) {
+        console.error('Error setting item audience:', error)
+        throw error
+    }
+}
+
 // ============================================
 // AGENDA
 // ============================================
@@ -2073,4 +2088,75 @@ export const submitModuleQuizResponse = async (
         console.error('Error submitting module quiz response:', error)
         throw error
     }
-}
+}
+
+// ============================================
+// MODULE ASSIGNMENTS (HOMEWORK)
+// ============================================
+
+export interface AssignmentAttachment {
+    id: string
+    assignment_id: string
+    file_name: string
+    mime_type?: string | null
+    file_size_bytes?: number | null
+    storage_path?: string | null
+    file_url?: string | null
+    url?: string | null
+    created_at?: string
+}
+
+export interface AssignmentSubmissionSummary {
+    id: string
+    assignment_id: string
+    status: string
+    grade?: number | null
+    submitted_at: string
+    body_md?: string | null
+}
+
+export interface Assignment {
+    id: string
+    subject_id: string
+    module_id: string | null
+    professor_id: string
+    title: string | null
+    instructions_md: string | null
+    due_at: string | null
+    available_from: string | null
+    max_score: number | null
+    allowed_file_types: string[] | null
+    max_file_size_mb: number | null
+    allow_resubmission: boolean | null
+    status: string | null
+    created_at: string
+    updated_at: string | null
+    module_item_id?: string | null
+    assigned_pages?: string | null
+    attachments?: AssignmentAttachment[]
+    submission?: AssignmentSubmissionSummary | null
+}
+
+export const getModuleAssignments = async (
+    moduleId: string,
+    studentId?: string,
+    role?: string
+): Promise<Assignment[]> => {
+    try {
+        const queryParams = new URLSearchParams()
+        if (studentId) queryParams.append('student_id', studentId)
+        if (role) queryParams.append('role', role)
+        const qs = queryParams.toString() ? `?${queryParams.toString()}` : ''
+
+        const response = await fetch(`${API_URL}/api/modules/${moduleId}/assignments${qs}`)
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        return await response.json()
+    } catch (error) {
+        console.error('Error fetching module assignments:', error)
+        return []
+    }
+}
+

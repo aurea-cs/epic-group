@@ -478,8 +478,8 @@
     "enter": "Ingresar",
     "questionSingle": "pregunta",
     "questionPlural": "preguntas",
-    "experimentSingle": "experimento",
-    "experimentPlural": "experimentos",
+    "experimentSingle": "Dato curioso",
+    "experimentPlural": "Datos curiosos",
     "activities": "actividades",
     "translateButton": "Traducir",
     "translateToEnglish": "English",
@@ -489,7 +489,15 @@
     "defaultExitTicketDescription": "Cuestionario de evaluación rápida para comprobar tus aprendizajes al finalizar este módulo.",
     "defaultQuizDescription": "Cuestionario de evaluación para poner a prueba tus conocimientos sobre este módulo.",
     "defaultVrDescription": "Explora un mundo inmersivo donde la realidad virtual te transporta a nuevas dimensiones.",
-    "noUrlAlert": "Este contenido no tiene una URL configurada aún."
+    "noUrlAlert": "Este contenido no tiene una URL configurada aún.",
+    "assignments": "TAREAS",
+    "assignment": "Tarea",
+    "viewAssignment": "Ver Tarea",
+    "defaultAssignmentDescription": "Tarea asignada para reforzar los conocimientos de este módulo.",
+    "submitted": "Entregada",
+    "graded": "Calificada",
+    "overdue": "Vencida",
+    "due": "Vence"
   },
   "thinkBlockViewer": {
     "back": "Volver al Módulo",

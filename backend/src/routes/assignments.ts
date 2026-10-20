@@ -3,12 +3,79 @@ import { supabase } from '../config/supabase';
 import { upload, assignmentUpload } from '../middleware/upload';
 import {
     getAssignmentAttachments,
+    getAssignmentsAttachmentsMap,
     saveAssignmentAttachments,
     deleteAssignmentAttachments,
     deleteAssignmentAttachmentsByAssignment,
 } from '../utils/assignmentAttachments';
 
 const router = Router();
+
+// GET assignments by module_id
+router.get('/api/modules/:moduleId/assignments', async (req, res) => {
+    try {
+        const { moduleId } = req.params;
+        const { student_id, role } = req.query;
+
+        // Resolve curriculum_module_id if module exists in modules table
+        const { data: mod } = await supabase
+            .from('modules')
+            .select('id, curriculum_module_id')
+            .eq('id', moduleId)
+            .maybeSingle();
+
+        const targetModuleIds = [moduleId];
+        if (mod?.curriculum_module_id) {
+            targetModuleIds.push(mod.curriculum_module_id);
+        }
+
+        let query = supabase
+            .from('assignments')
+            .select(`
+                id, subject_id, module_id, professor_id, title, instructions_md,
+                due_at, available_from, max_score, allowed_file_types, max_file_size_mb,
+                allow_resubmission, status, created_at, updated_at, module_item_id, assigned_pages
+            `)
+            .in('module_id', targetModuleIds);
+
+        if (role === 'student') {
+            query = query.neq('status', 'draft');
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: true });
+        if (error) throw error;
+
+        const assignmentsList = data || [];
+        const ids = assignmentsList.map((a: any) => a.id);
+        const attachMap = await getAssignmentsAttachmentsMap(ids);
+
+        let subByAssignment: Record<string, any> = {};
+        if (student_id && ids.length > 0) {
+            const { data: subs, error: subError } = await supabase
+                .from('submissions')
+                .select('id, assignment_id, status, grade, submitted_at, body_md')
+                .in('assignment_id', ids)
+                .eq('student_id', student_id);
+
+            if (!subError && subs) {
+                for (const sub of subs) {
+                    subByAssignment[sub.assignment_id] = sub;
+                }
+            }
+        }
+
+        const result = assignmentsList.map((a: any) => ({
+            ...a,
+            attachments: attachMap[a.id] || [],
+            submission: subByAssignment[a.id] || null
+        }));
+
+        res.json(result);
+    } catch (error: any) {
+        console.error('Error fetching module assignments:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // GET assignment by module_item_id, with the current student's own submission (if any)
 // NOTE: this MUST be declared before /:id so Express doesn't swallow "by-item" as an :id param

@@ -1,7 +1,6 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import Toggle from './Toggle'
 import { type ModuleItem, type CourseModule } from '../../../lib/adminApi'
 
 interface ItemActionsMenuProps {
@@ -23,7 +22,6 @@ const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
     modules,
     visibilityLoading,
     onToggleStudent,
-    onToggleProfessor,
     onDelete,
     onClose,
 }) => {
@@ -49,6 +47,11 @@ const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
                 border: '1px solid rgba(0,0,0,0.08)',
             }}
         >
+            {/* Current audience + toggle */}
+            <div style={{ padding: '0.5rem 0.9rem 0.3rem', fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {i18n.language.startsWith('en') ? 'Audience' : 'Audiencia'}
+            </div>
+
             <button
                 onClick={() => { onToggleStudent(item); onClose() }}
                 disabled={visibilityLoading === item.id}
@@ -60,23 +63,25 @@ const ItemActionsMenu: React.FC<ItemActionsMenuProps> = ({
                 onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
                 onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
             >
-                <span>{i18n.language.startsWith('en') ? 'Content for students' : 'Contenido para estudiantes'}</span>
-                <Toggle on={item.show_student!} color="#22c55e" />
-            </button>
-
-            <button
-                onClick={() => { onToggleProfessor(item); onClose() }}
-                disabled={visibilityLoading === item.id}
-                style={{
-                    width: '100%', padding: '0.65rem 0.9rem', background: 'transparent',
-                    border: 'none', display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'center', cursor: 'pointer', color: '#1f295a', fontSize: '0.875rem',
-                }}
-                onMouseOver={e => (e.currentTarget.style.background = 'rgba(31,41,90,0.06)')}
-                onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
-            >
-                <span>{i18n.language.startsWith('en') ? 'Content for teachers' : 'Contenido para profesores'}</span>
-                <Toggle on={item.show_teacher!} color="#8b5cf6" />
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: '20px', height: '20px', borderRadius: '50%',
+                        background: item.show_student ? '#dcfce7' : '#ede9fe',
+                        fontSize: '0.75rem',
+                    }}>
+                        {item.show_student ? '🎓' : '📚'}
+                    </span>
+                    {item.show_student
+                        ? (i18n.language.startsWith('en') ? 'Students' : 'Estudiantes')
+                        : (i18n.language.startsWith('en') ? 'Teachers' : 'Profesores')}
+                </span>
+                <span style={{
+                    fontSize: '0.72rem', color: '#94a3b8', border: '1px solid #e2e8f0',
+                    borderRadius: '4px', padding: '2px 6px',
+                }}>
+                    {i18n.language.startsWith('en') ? 'Switch' : 'Cambiar'}
+                </span>
             </button>
 
             {item.content_url && (
